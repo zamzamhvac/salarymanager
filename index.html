@@ -1,0 +1,841 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PM's Salary Manager - Digital Munshi</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.22.2/firebase-app-compat.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.22.2/firebase-auth-compat.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.22.2/firebase-database-compat.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #6200EE;
+            --primary-variant-color: #3700B3;
+            --secondary-color: #03DAC6;
+            --background-color: #f5f5f5;
+            --surface-color: #FFFFFF;
+            --on-primary-color: #FFFFFF;
+            --on-surface-color: #000000;
+            --error-color: #B00020;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Roboto', sans-serif; background-color: var(--background-color); color: var(--on-surface-color); }
+        .header { background-color: var(--primary-color); color: var(--on-primary-color); padding: 0 16px; height: 64px; display: flex; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.2); position: fixed; top: 0; left: 0; right: 0; z-index: 1000; }
+        .header h1 { font-size: 20px; font-weight: 500; margin-left: 16px; }
+        .menu-icon { cursor: pointer; padding: 8px; border-radius: 50%; transition: background-color 0.3s; }
+        .menu-icon:hover { background-color: rgba(255,255,255,0.1); }
+        #userInfo { margin-left: auto; display: none; align-items: center; }
+        #userName { font-size: 14px; }
+        .side-nav { position: fixed; top: 0; left: -300px; width: 280px; height: 100%; background-color: var(--surface-color); box-shadow: 2px 0 5px rgba(0,0,0,0.2); z-index: 1100; transition: left 0.3s ease-in-out; display: flex; flex-direction: column; }
+        .side-nav.open { left: 0; }
+        .nav-header { padding: 16px; background-color: var(--primary-variant-color); color: var(--on-primary-color); }
+        .nav-header h2 { font-size: 18px; font-weight: 500; }
+        .nav-header p { font-size: 12px; opacity: 0.8; }
+        .nav-buttons-container { list-style: none; padding-top: 8px; flex-grow: 1; overflow-y: auto; }
+        .nav-btn { display: flex; align-items: center; padding: 12px 16px; cursor: pointer; transition: background-color 0.3s; border: none; background: none; width: 100%; text-align: left; font-size: 14px; color: var(--on-surface-color); }
+        .nav-btn .material-icons { margin-right: 24px; color: #5f6368; }
+        .nav-btn:hover { background-color: rgba(0,0,0,0.05); }
+        .nav-btn.active { background-color: rgba(98, 0, 238, 0.08); color: var(--primary-color); font-weight: 500; }
+        .nav-btn.active .material-icons { color: var(--primary-color); }
+        #main-content { padding: 76px 16px 16px 16px; width: 100%; }
+        .page { display: none; background: var(--surface-color); padding: 16px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24); }
+        .page.active { display: block; }
+        .page > h2 { font-size: 20px; font-weight: 500; margin-bottom: 4px; color: var(--primary-color); }
+        .page > p { margin-bottom: 12px; font-size: 14px; color: rgba(0,0,0,0.6); }
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; margin-bottom: 4px; font-weight: 500; font-size: 14px; color: #4a5568; }
+        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 16px; }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: none; border-color: var(--primary-color); box-shadow: 0 0 0 2px rgba(98, 0, 238, 0.2); }
+        .btn { background-color: var(--primary-color); color: var(--on-primary-color); border: none; padding: 10px 16px; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: 500; text-transform: uppercase; box-shadow: 0 2px 2px 0 rgba(0,0,0,0.14), 0 3px 1px -2px rgba(0,0,0,0.12), 0 1px 5px 0 rgba(0,0,0,0.2); transition: all 0.2s; margin: 4px; outline: none; display: inline-flex; align-items: center; justify-content: center; }
+        .btn:hover { background-color: var(--primary-variant-color); box-shadow: 0 3px 3px 0 rgba(0,0,0,0.14), 0 1px 7px 0 rgba(0,0,0,0.12), 0 3px 1px -1px rgba(0,0,0,0.2); }
+        .btn-danger { background-color: var(--error-color); }
+        .btn-danger:hover { background-color: #9a001b; }
+        .btn-success { background-color: #00C853; }
+        .btn-success:hover { background-color: #00b048; }
+        .overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1050; }
+        .overlay.open { display: block; }
+        .worker-checkbox { display: flex; align-items: center; margin: 0; padding: 8px; background: #f7fafc; border-radius: 4px; border: 1px solid #eee;}
+        .worker-checkbox input { width: auto; margin-right: 8px; }
+        .alert { padding: 15px; border-radius: 6px; margin: 15px 0; border: 1px solid transparent; }
+        .alert-success { background: #c6f6d5; color: #22543d; border-color: #9ae6b4; }
+        .alert-error { background: #fed7d7; color: #742a2a; border-color: #fc8181; }
+        .alert-info { background: #bee3f8; color: #2a4365; border-color: #90cdf4; }
+        .loading { text-align: center; padding: 20px; }
+        .spinner { border: 4px solid #f3f3f3; border-top: 4px solid var(--primary-color); border-radius: 50%; width: 40px; height: 40px; animation: spin 2s linear infinite; margin: 0 auto; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        #daily-entry-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        #daily-entry-left, #daily-entry-right { display: flex; flex-direction: column; }
+        #daily-entry-right h3 { font-size: 16px; font-weight: 500; margin-bottom: 8px; }
+        #workerAttendance { flex-grow: 1; overflow-y: auto; display: grid; gap: 8px; grid-template-columns: 1fr; padding-right: 8px; max-height: 230px; border: 1px solid #eee; padding: 8px; border-radius: 4px; }
+        .action-buttons { margin-top: auto; padding-top: 16px; text-align: center; }
+        .action-buttons .btn { width: 90%; max-width: 300px; }
+        @media (max-width: 600px) { #daily-entry-layout { grid-template-columns: 1fr; } #workerAttendance { max-height: 150px; } }
+        .two-column { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
+        .agreement-section { background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0; border: 1px solid #e9ecef; }
+        .agreement-section h3 { color: #495057; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 2px solid #dee2e6; }
+        .rate-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
+        .report-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-top: 20px; }
+        .report-card { background: #f7fafc; padding: 20px; border-radius: 8px; margin: 10px 0; border-left: 4px solid var(--primary-color); }
+        .history-selector-container { margin-top: 24px; padding: 16px; border: 1px solid #e0e0e0; border-radius: 8px; background: #fafafa; }
+        .history-table-container { margin-top: 16px; }
+        .history-table-wrapper { overflow-x: auto; }
+        .history-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+        .history-table th, .history-table td { padding: 8px; border: 1px solid #ddd; text-align: left; }
+        .history-table th { background-color: #f2f2f2; }
+        .history-table tr:nth-child(even) { background-color: #f9f9f9; }
+        .no-history { color: #777; font-style: italic; }
+        .settings-section { margin-top: 20px; padding-top: 20px; border-top: 1px solid #eee; }
+        .checkbox-group { display: flex; align-items: center; margin-bottom: 16px; }
+        .checkbox-group input { width: auto; margin-right: 10px; }
+        .sub-setting { padding-left: 30px; }
+    </style>
+</head>
+<body>
+    <!-- Header, Nav, Overlay -->
+    <header class="header" id="appHeader" style="display:none;"><i class="material-icons menu-icon" onclick="toggleNav()">menu</i><h1>🏗️ PM's Salary Manager</h1><div id="userInfo"><span id="userName"></span><button onclick="signOut()" class="btn btn-danger" style="padding: 5px 10px; font-size: 12px; margin-left: 8px;">Sign Out</button></div></header>
+    <nav class="side-nav" id="sideNav"><div class="nav-header"><h2>Digital Munshi</h2><p>Your Payroll Assistant</p></div><ul class="nav-buttons-container" id="navButtons"><li><button class="nav-btn" data-page="daily-entry"><i class="material-icons">edit_calendar</i> Daily Entry</button></li><li><button class="nav-btn" data-page="agreements"><i class="material-icons">gavel</i> Agreements</button></li><li><button class="nav-btn" data-page="salaries"><i class="material-icons">payments</i> Salaries</button></li><li><button class="nav-btn" data-page="bonus"><i class="material-icons">emoji_events</i> Bonus</button></li><li><button class="nav-btn" data-page="arrears"><i class="material-icons">calculate</i> Arrears</button></li><li><button class="nav-btn" data-page="leaves"><i class="material-icons">beach_access</i> Leaves</button></li><li><button class="nav-btn" data-page="settings"><i class="material-icons">settings</i> Settings</button></li></ul></nav>
+    <div class="overlay" id="overlay" onclick="toggleNav()"></div>
+
+    <main id="main-content">
+        <!-- Login Page -->
+        <div id="login-page" class="page active"><h2>Welcome to PM's Salary Manager</h2><p>Please sign in to continue</p><div class="form-group"><label>Email:</label><input type="email" id="loginEmail" placeholder="Enter your email"></div><div class="form-group"><label>Password:</label><input type="password" id="loginPassword" placeholder="Enter your password"></div><button onclick="signIn()" class="btn">Sign In</button><button onclick="showSignUp()" class="btn btn-success">Create New Account</button><div id="signUpForm" style="display: none; margin-top: 30px; padding-top: 30px; border-top: 2px solid #eee;"><h3>Create New Account</h3><div class="form-group"><label>Email:</label><input type="email" id="signupEmail" placeholder="Enter your email"></div><div class="form-group"><label>Password:</label><input type="password" id="signupPassword" placeholder="Choose a password (min 6 characters)"></div><div class="form-group"><label>Company/Business Name:</label><input type="text" id="companyName" placeholder="Enter your business name"></div><button onclick="signUp()" class="btn btn-success">Create Account</button><button onclick="hideSignUp()" class="btn">Back to Sign In</button></div></div>
+
+        <!-- Daily Entry Page -->
+        <div id="daily-entry" class="page">
+            <h2>📝 Daily Entry</h2>
+            <p>Record today's work details and attendance.</p>
+            <div id="daily-entry-layout">
+                <div id="daily-entry-left">
+                    <div class="form-group"><label>Date:</label><input type="date" id="entryDate"></div>
+                    <div class="form-group"><label>Day Type:</label><select id="dayType"><option value="work">Work Day</option><option value="rest">Rest Day</option><option value="special_overtime">Special Overtime</option></select></div>
+                    <div id="workDetails">
+                        <div class="form-group"><label>Total Tonnage:</label><input type="number" id="tonnage" step="0.1" placeholder="e.g., 150.5"></div>
+                        <div class="form-group" id="wagons-input-container"><label>Total Wagons:</label><input type="number" id="wagons" placeholder="e.g., 5"></div>
+                    </div>
+                    <div class="action-buttons">
+                        <button onclick="saveDailyEntry()" class="btn">Save Entry</button>
+                    </div>
+                </div>
+                <div id="daily-entry-right">
+                    <h3>Worker Attendance</h3>
+                    <div id="workerAttendance"><div class="loading"><p>Loading workers...</p></div></div>
+                </div>
+            </div>
+            <div class="history-selector-container">
+                <div class="form-group">
+                    <label for="historyPeriodSelector">Select History Period:</label>
+                    <select id="historyPeriodSelector" onchange="updateHistoryDisplay()"></select>
+                </div>
+            </div>
+            <div id="entryResults"></div>
+        </div>
+        
+        <!-- All Other Pages -->
+        <div id="agreements" class="page"><h2>📋 Agreements Management</h2><p>Manage current and new agreement rates</p><div class="two-column"><div class="agreement-section"><h3>Current Agreement</h3><div class="rate-grid"><div class="form-group"><label>Ton Rate (Rs):</label><input type="number" id="currentTonRate"></div><div class="form-group"><label>Rest Rate (Rs):</label><input type="number" id="currentRestRate"></div><div class="form-group"><label>Layoff Rate (Rs):</label><input type="number" id="currentLayoffRate"></div><div class="form-group wagon-rate-field"><label>Wagon Rate (Rs):</label><input type="number" id="currentWagonRate"></div><div class="form-group"><label>Monthly Allowance (Rs):</label><input type="number" id="currentAllowance"></div><div class="form-group"><label>Annual Benefits (Rs):</label><input type="number" id="currentAnnualBenefits"></div></div></div><div class="agreement-section"><h3>New Agreement</h3><div class="rate-grid"><div class="form-group"><label>Ton Rate (Rs):</label><input type="number" id="newTonRate"></div><div class="form-group"><label>Rest Rate (Rs):</label><input type="number" id="newRestRate"></div><div class="form-group"><label>Layoff Rate (Rs):</label><input type="number" id="newLayoffRate"></div><div class="form-group wagon-rate-field"><label>Wagon Rate (Rs):</label><input type="number" id="newWagonRate"></div><div class="form-group"><label>Monthly Allowance (Rs):</label><input type="number" id="newAllowance"></div><div class="form-group"><label>Annual Benefits (Rs):</label><input type="number" id="newAnnualBenefits"></div></div></div></div><button onclick="saveAgreements()" class="btn">Save Agreements</button></div>
+        <div id="salaries" class="page"><h2>💰 Salary Reports</h2><p>View salary reports for different pay periods</p><div class="form-group"><label>Select Pay Period:</label><select id="payPeriod"><option value="">Select Period</option></select></div><button onclick="generateSalaryReport()" class="btn">Generate Report</button><div id="salaryResults"></div></div>
+        <div id="bonus" class="page"><h2>🎁 Annual Bonus & Gratuity</h2><p>Calculate annual bonus, gratuity and paid leaves bonus</p><div class="form-group"><label>Select Fiscal Year:</label><select id="fiscalYear"><option value="">Select Year</option></select></div><button onclick="calculateBonus()" class="btn">Calculate Bonus</button><div id="bonusResults"></div></div>
+        <div id="arrears" class="page"><h2>📊 Arrears Calculation</h2><p>Calculate pending arrears based on agreement differences</p><button onclick="calculateArrears()" class="btn">Calculate Automatic Arrears</button><div id="arrearsResults"></div></div>
+        <div id="leaves" class="page"><h2>🏖️ Leaves Report</h2><p>Track annual leaves for all workers</p><div class="form-group"><label>Select Fiscal Year:</label><select id="leavesFiscalYear"><option value="">Select Year</option></select></div><button onclick="generateLeavesReport()" class="btn">Generate Leaves Report</button><div id="leavesResults"></div></div>
+        <div id="settings" class="page">
+            <h2>⚙️ Settings</h2><p>Configure your application settings</p>
+            <h3>General Settings</h3>
+            <div class="form-group"><label>Number of Workers:</label><input type="number" id="workerCount" placeholder="8"></div>
+            <div class="form-group"><label>Agreement Start Date:</label><input type="date" id="agreementStartDate"></div>
+            <div class="form-group"><label>Fiscal Year Start (MM-DD):</label><input type="text" id="fiscalYearStart" placeholder="10-10" pattern="[0-9]{2}-[0-9]{2}"></div>
+            
+            <div class="settings-section">
+                <h3>Feature Controls</h3>
+                <div class="checkbox-group">
+                    <input type="checkbox" id="enableWagonRate">
+                    <label for="enableWagonRate">Enable Wagon Rate Calculation</label>
+                </div>
+                <div class="checkbox-group">
+                    <input type="checkbox" id="enablePenalty">
+                    <label for="enablePenalty">Enable Excess Leave Penalty</label>
+                </div>
+                <div class="sub-setting" id="penaltyAmountContainer" style="display: none;">
+                    <div class="form-group">
+                        <label for="penaltyAmount">Penalty Amount (Normal Day)</label>
+                        <input type="number" id="penaltyAmount">
+                    </div>
+                </div>
+            </div>
+
+            <div class="settings-section">
+                <h3>Manage Workers</h3>
+                <div id="workersList"></div>
+                <button onclick="addWorker()" class="btn btn-success">Add Worker</button>
+            </div>
+            <button onclick="saveSettings()" class="btn">Save Settings</button>
+        </div>
+    </main>
+    
+    <script>
+        // --- MUKAMMAL JAVASCRIPT CODE ---
+            <script src="./firebase-config.js"></script>
+        let currentUser = null;
+        let appData = { salaries: {}, workers: [], configs: { workerCount: 8, agreementStartDate: '2023-10-10', fiscalYearStart: '10-10', isPenaltyEnabled: false, penaltyAmount: 231, isWagonRateEnabled: false }, agreements: { current: { tonRate: 22, restRate: 1100, layoffRate: 549, wagonRate: 0, allowance: 20000, annualBenefits: 0 }, new: { tonRate: 25, restRate: 1200, layoffRate: 600, wagonRate: 0, allowance: 26000, annualBenefits: 0 } } };
+        
+        function toggleNav() {
+            document.getElementById('sideNav').classList.toggle('open');
+            document.getElementById('overlay').classList.toggle('open');
+        }
+
+        function showPage(pageId) {
+            document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
+            document.getElementById(pageId).classList.add('active');
+            document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+            const activeButton = document.querySelector(`.nav-btn[data-page="${pageId}"]`);
+            if (activeButton) activeButton.classList.add('active');
+            if (window.innerWidth < 960 && document.getElementById('sideNav').classList.contains('open')) {
+                toggleNav();
+            }
+            switch(pageId) {
+                case 'daily-entry': 
+                    loadWorkerAttendance(); 
+                    populateHistorySelector();
+                    updateHistoryDisplay();
+                    break;
+                case 'agreements': loadAgreements(); break;
+                case 'salaries': loadPayPeriods(); break;
+                case 'bonus': case 'leaves': loadFiscalYears(); break;
+                case 'settings': loadSettings(); break;
+            }
+        }
+        function showMainApp() {
+            document.getElementById('login-page').classList.remove('active');
+            document.getElementById('appHeader').style.display = 'flex';
+            document.getElementById('userInfo').style.display = 'flex';
+            document.getElementById('sideNav').style.display = 'flex';
+            document.getElementById('userName').textContent = currentUser.displayName;
+            loadUserData();
+            setupUI();
+            toggleWagonUIElements(appData.configs.isWagonRateEnabled);
+            showPage('daily-entry');
+        }
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeApp();
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.addEventListener('click', () => showPage(btn.dataset.page));
+            });
+        });
+        function initializeApp() {
+            document.getElementById('entryDate').value = new Date().toISOString().split('T')[0];
+            const savedUser = localStorage.getItem('pmSalaryUser');
+            if (savedUser) {
+                currentUser = JSON.parse(savedUser);
+                showMainApp();
+            }
+            document.getElementById('dayType').addEventListener('change', function() {
+                const workDetails = document.getElementById('workDetails');
+                workDetails.style.display = this.value === 'rest' ? 'none' : 'block';
+            });
+            // Add event listeners for new settings checkboxes
+            document.getElementById('enablePenalty').addEventListener('change', (e) => {
+                document.getElementById('penaltyAmountContainer').style.display = e.target.checked ? 'block' : 'none';
+            });
+            document.getElementById('enableWagonRate').addEventListener('change', (e) => {
+                toggleWagonUIElements(e.target.checked);
+            });
+        }
+        function toggleWagonUIElements(isEnabled) {
+            const displayStyle = isEnabled ? 'block' : 'none';
+            document.getElementById('wagons-input-container').style.display = displayStyle;
+            document.querySelectorAll('.wagon-rate-field').forEach(el => el.style.display = displayStyle);
+        }
+        function signIn() {
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+            if (!email || !password) { showAlert('Please enter both email and password', 'error'); return; }
+            const userData = { uid: 'demo_' + email.replace(/[@.]/g, '_'), displayName: email.split('@')[0] };
+            currentUser = userData;
+            localStorage.setItem('pmSalaryUser', JSON.stringify(userData));
+            showMainApp();
+            showAlert('Successfully signed in!', 'success');
+        }
+        function signUp() {
+            const email = document.getElementById('signupEmail').value;
+            const password = document.getElementById('signupPassword').value;
+            const companyName = document.getElementById('companyName').value;
+            if (!email || !password || password.length < 6) { showAlert('Provide valid email and password (min 6 chars)', 'error'); return; }
+            const userData = { uid: 'demo_' + email.replace(/[@.]/g, '_'), displayName: companyName || email.split('@')[0] };
+            currentUser = userData;
+            localStorage.setItem('pmSalaryUser', JSON.stringify(userData));
+            initializeNewUserData();
+            showMainApp();
+            showAlert('Account created successfully!', 'success');
+        }
+        function signOut() {
+            currentUser = null;
+            localStorage.removeItem('pmSalaryUser');
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.getElementById('login-page').classList.add('active');
+            document.getElementById('appHeader').style.display = 'none';
+        }
+        function showSignUp() { document.getElementById('signUpForm').style.display = 'block'; }
+        function hideSignUp() { document.getElementById('signUpForm').style.display = 'none'; }
+        function loadUserData() {
+            const savedData = localStorage.getItem('pmSalaryData_' + currentUser.uid);
+            if (savedData) {
+                const parsedData = JSON.parse(savedData);
+                // Ensure new config properties exist to avoid errors
+                appData = {
+                    ...appData,
+                    ...parsedData,
+                    configs: {
+                        ...appData.configs,
+                        ...parsedData.configs
+                    }
+                };
+            } else {
+                initializeNewUserData();
+            }
+        }
+        function saveUserData() { localStorage.setItem('pmSalaryData_' + currentUser.uid, JSON.stringify(appData)); }
+        function initializeNewUserData() {
+            appData = { salaries: {}, workers: ['Worker 1', 'Worker 2', 'Worker 3', 'Worker 4', 'Worker 5', 'Worker 6', 'Worker 7', 'Worker 8'], configs: { workerCount: 8, agreementStartDate: '2023-10-10', fiscalYearStart: '10-10', isPenaltyEnabled: false, penaltyAmount: 231, isWagonRateEnabled: false }, agreements: { current: { tonRate: 22, restRate: 1100, layoffRate: 549, wagonRate: 0, allowance: 20000, annualBenefits: 0 }, new: { tonRate: 25, restRate: 1200, layoffRate: 600, wagonRate: 0, allowance: 26000, annualBenefits: 0 } } };
+            saveUserData();
+        }
+        function setupUI() { loadWorkerAttendance(); loadAgreements(); loadPayPeriods(); loadFiscalYears(); loadSettings(); }
+        function loadWorkerAttendance() {
+            const container = document.getElementById('workerAttendance');
+            container.innerHTML = '';
+            if(!appData.workers || appData.workers.length === 0){
+                container.innerHTML = "<p>No workers found.</p>"; return;
+            }
+            appData.workers.forEach(worker => {
+                const div = document.createElement('div');
+                div.className = 'worker-checkbox';
+                div.innerHTML = `<input type="checkbox" id="worker_${worker}" checked> <label for="worker_${worker}">${worker}</label>`;
+                container.appendChild(div);
+            });
+        }
+        function saveDailyEntry() {
+            const date = document.getElementById('entryDate').value;
+            const dayType = document.getElementById('dayType').value;
+            const tonnage = parseFloat(document.getElementById('tonnage').value) || 0;
+            const wagons = parseInt(document.getElementById('wagons').value) || 0;
+            if (!date) { showAlert('Please select a date', 'error'); return; }
+            const presentWorkers = appData.workers.filter(worker => document.getElementById(`worker_${worker}`).checked);
+            const earnings = calculateDayEarnings(date, dayType, tonnage, wagons, presentWorkers);
+            appData.salaries[date] = { date, type: dayType, tonnage, wagons, presentWorkers, earnings };
+            saveUserData();
+            populateHistorySelector();
+            updateHistoryDisplay();
+            showAlert('Daily entry saved successfully!', 'success');
+        }
+
+        // --- CORE CALCULATION LOGIC (UPDATED FOR PENALTY) ---
+        function calculateDayEarnings(entryDate, dayType, tonnage, wagons, presentWorkers) {
+            const earnings = {};
+            const rates = appData.agreements.current;
+            const allWorkers = appData.workers;
+            const absentWorkers = allWorkers.filter(w => !presentWorkers.includes(w));
+            let penaltyPerPresentWorker = 0;
+            const penaltyTriggeringAbsentees = [];
+
+            // Step 1: Check if penalty system is active and if any absentee triggers it
+            if (appData.configs.isPenaltyEnabled && absentWorkers.length > 0) {
+                const [fiscalYearStart, fiscalYearEnd] = getCurrentFiscalYearDates();
+                absentWorkers.forEach(worker => {
+                    // Check leaves only within the current fiscal year
+                    const totalLeaves = getWorkerTotalLeaves(worker, fiscalYearStart, fiscalYearEnd);
+                    if (totalLeaves > 32) { // 32 is the limit
+                        penaltyTriggeringAbsentees.push(worker);
+                    }
+                });
+
+                if (penaltyTriggeringAbsentees.length > 0) {
+                    const basePenalty = appData.configs.penaltyAmount;
+                    const multiplier = (dayType === 'special_overtime') ? 2 : 1;
+                    const totalPenalty = penaltyTriggeringAbsentees.length * basePenalty * multiplier;
+                    if (presentWorkers.length > 0) {
+                        penaltyPerPresentWorker = totalPenalty / presentWorkers.length;
+                    }
+                }
+            }
+
+            // Step 2: Calculate earnings for present workers
+            let grossEarningPerWorker = 0;
+            if (presentWorkers.length > 0) {
+                const tonnagePay = (tonnage * rates.tonRate) / presentWorkers.length;
+                const wagonPay = appData.configs.isWagonRateEnabled ? (wagons * rates.wagonRate) / presentWorkers.length : 0;
+                grossEarningPerWorker = tonnagePay + wagonPay;
+            }
+
+            // Step 3: Assign final earnings to all workers
+            allWorkers.forEach(worker => {
+                if (presentWorkers.includes(worker)) {
+                    let adjustedEarning = grossEarningPerWorker - penaltyPerPresentWorker;
+                    let minGuarantee = rates.layoffRate;
+                    if (dayType === 'special_overtime') {
+                        // For special overtime, gross pay is calculated differently and has a different guarantee
+                        const tonnagePay = (tonnage * rates.tonRate) / presentWorkers.length;
+                        const wagonPay = appData.configs.isWagonRateEnabled ? (wagons * rates.wagonRate) / presentWorkers.length : 0;
+                        const overtimeGross = (tonnagePay * 2) + rates.layoffRate + wagonPay;
+                        adjustedEarning = overtimeGross - penaltyPerPresentWorker;
+                        minGuarantee = rates.layoffRate * 3;
+                    } else if (dayType === 'rest') {
+                        adjustedEarning = rates.restRate; // No penalty on rest days
+                        minGuarantee = rates.restRate;
+                    }
+                    earnings[worker] = Math.max(adjustedEarning, minGuarantee);
+                } else { // Worker is absent
+                    if (penaltyTriggeringAbsentees.includes(worker)) {
+                        earnings[worker] = 0; // Penalty applied
+                    } else {
+                        earnings[worker] = rates.layoffRate; // Normal layoff
+                    }
+                }
+            });
+             if (dayType === 'rest') {
+                allWorkers.forEach(w => earnings[w] = rates.restRate);
+            }
+            return earnings;
+        }
+
+        function getCurrentFiscalYearDates() {
+            const today = new Date();
+            const [fiscalMonth, fiscalDay] = appData.configs.fiscalYearStart.split('-').map(Number);
+            let fiscalYearStartYear = today.getFullYear();
+            
+            const fiscalStartDateForCurrentYear = new Date(fiscalYearStartYear, fiscalMonth - 1, fiscalDay);
+            
+            if (today < fiscalStartDateForCurrentYear) {
+                fiscalYearStartYear--;
+            }
+            
+            const fiscalYearStartDate = new Date(fiscalYearStartYear, fiscalMonth - 1, fiscalDay);
+            const fiscalYearEndDate = new Date(fiscalYearStartYear + 1, fiscalMonth - 1, fiscalDay - 1);
+            
+            return [fiscalYearStartDate, fiscalYearEndDate];
+        }
+
+        function getWorkerTotalLeaves(workerName, fiscalYearStartDate, fiscalYearEndDate) {
+            let leaveCount = 0;
+            Object.values(appData.salaries).forEach(entry => {
+                const entryDate = new Date(entry.date + "T00:00:00");
+                if (entryDate >= fiscalYearStartDate && entryDate <= fiscalYearEndDate) {
+                    if (entry.type === 'rest' || !entry.presentWorkers.includes(workerName)) {
+                        leaveCount++;
+                    }
+                }
+            });
+            return leaveCount;
+        }
+
+        function populateHistorySelector() {
+            const selector = document.getElementById('historyPeriodSelector');
+            const currentValue = selector.value;
+            selector.innerHTML = '';
+            const agreementStart = new Date(appData.configs.agreementStartDate + "T00:00:00");
+            let loopDate = new Date(agreementStart.getFullYear(), agreementStart.getMonth(), 1);
+            const today = new Date();
+            let defaultValue = currentValue;
+            if (!defaultValue) {
+                const currentDay = today.getDate();
+                const currentYear = today.getFullYear();
+                const currentMonth = (today.getMonth() + 1).toString().padStart(2,'0');
+                const currentLastDay = new Date(currentYear, today.getMonth() + 1, 0).getDate();
+                defaultValue = currentDay <= 15 ? `${currentYear}-${currentMonth}-01,${currentYear}-${currentMonth}-15` : `${currentYear}-${currentMonth}-16,${currentYear}-${currentMonth}-${currentLastDay}`;
+            }
+            let optionsHtml = '';
+            while (loopDate <= today) {
+                const year = loopDate.getFullYear();
+                const month = (loopDate.getMonth() + 1).toString().padStart(2, '0');
+                const monthName = loopDate.toLocaleString('default', { month: 'long' });
+                const lastDay = new Date(year, loopDate.getMonth() + 1, 0).getDate();
+                const value2 = `${year}-${month}-16,${year}-${month}-${lastDay}`;
+                const text2 = `${monthName} ${year} (16 - ${lastDay})`;
+                optionsHtml = `<option value="${value2}">${text2}</option>` + optionsHtml;
+                const value1 = `${year}-${month}-01,${year}-${month}-15`;
+                const text1 = `${monthName} ${year} (1 - 15)`;
+                optionsHtml = `<option value="${value1}">${text1}</option>` + optionsHtml;
+                loopDate.setMonth(loopDate.getMonth() + 1);
+            }
+            selector.innerHTML = optionsHtml;
+            selector.value = defaultValue;
+        }
+
+        function updateHistoryDisplay() {
+            const selector = document.getElementById('historyPeriodSelector');
+            if (!selector.value) {
+                document.getElementById('entryResults').innerHTML = '';
+                return;
+            }
+            const [startDateStr, endDateStr] = selector.value.split(',');
+            const startDate = new Date(startDateStr + "T00:00:00");
+            const endDate = new Date(endDateStr + "T00:00:00");
+            const title = selector.options[selector.selectedIndex].text;
+            const allEntries = Object.values(appData.salaries || {});
+            const periodEntries = allEntries.filter(entry => {
+                const entryDate = new Date(entry.date + "T00:00:00");
+                return entryDate >= startDate && entryDate <= endDate;
+            }).sort((a,b) => new Date(b.date) - new Date(a.date));
+            document.getElementById('entryResults').innerHTML = generateHistoryTable(periodEntries, `History for: ${title}`);
+        }
+
+        function generateHistoryTable(entries, title) {
+            let tableHtml = `<div class="history-table-container"><h3>${title}</h3>`;
+            if (entries.length === 0) {
+                tableHtml += `<p class="no-history">No entries for this period.</p></div>`;
+                return tableHtml;
+            }
+            tableHtml += `<div class="history-table-wrapper"><table class="history-table"><thead><tr><th>Date</th><th>Tonnage</th><th>Workers</th><th>Pay/Worker</th></tr></thead><tbody>`;
+            entries.forEach(entry => {
+                let singlePay = 0;
+                if (entry.presentWorkers && entry.presentWorkers.length > 0) {
+                    const firstWorker = entry.presentWorkers[0];
+                    singlePay = entry.earnings[firstWorker] || 0;
+                } else if (entry.type === 'rest') {
+                    singlePay = appData.agreements.current.restRate;
+                } else {
+                    const anyWorker = appData.workers[0];
+                    singlePay = entry.earnings[anyWorker] || 0;
+                }
+                tableHtml += `<tr>
+                                <td>${entry.date}</td>
+                                <td>${entry.tonnage > 0 ? entry.tonnage.toFixed(2) : '-'}</td>
+                                <td>${entry.presentWorkers.length} / ${appData.workers.length}</td>
+                                <td>${singlePay.toFixed(2)}</td>
+                              </tr>`;
+            });
+            tableHtml += `</tbody></table></div></div>`;
+            return tableHtml;
+        }
+
+        function loadTodayEntry() {}
+
+        function loadAgreements() {
+            Object.keys(appData.agreements.current).forEach(key => { if(document.getElementById(`current${key.charAt(0).toUpperCase() + key.slice(1)}`)) document.getElementById(`current${key.charAt(0).toUpperCase() + key.slice(1)}`).value = appData.agreements.current[key]; });
+            Object.keys(appData.agreements.new).forEach(key => { if(document.getElementById(`new${key.charAt(0).toUpperCase() + key.slice(1)}`)) document.getElementById(`new${key.charAt(0).toUpperCase() + key.slice(1)}`).value = appData.agreements.new[key]; });
+        }
+        function saveAgreements() {
+            Object.keys(appData.agreements.current).forEach(key => { if(document.getElementById(`current${key.charAt(0).toUpperCase() + key.slice(1)}`)) appData.agreements.current[key] = parseFloat(document.getElementById(`current${key.charAt(0).toUpperCase() + key.slice(1)}`).value) || 0; });
+            Object.keys(appData.agreements.new).forEach(key => { if(document.getElementById(`new${key.charAt(0).toUpperCase() + key.slice(1)}`)) appData.agreements.new[key] = parseFloat(document.getElementById(`new${key.charAt(0).toUpperCase() + key.slice(1)}`).value) || 0; });
+            saveUserData();
+            showAlert('Agreements saved successfully!', 'success');
+        }
+        function loadPayPeriods() {
+            const select = document.getElementById('payPeriod');
+            select.innerHTML = '<option value="">Select Period</option>';
+            const today = new Date();
+            for (let i = 0; i < 12; i++) {
+                const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
+                const year = d.getFullYear();
+                const month = (d.getMonth() + 1).toString().padStart(2,'0');
+                const lastDay = new Date(year, d.getMonth() + 1, 0).getDate();
+                select.innerHTML += `<option value="${year}-${month}-01,${year}-${month}-15">${d.toLocaleString('default',{month:'long'})} ${year} (1-15)</option>`;
+                select.innerHTML += `<option value="${year}-${month}-16,${year}-${month}-${lastDay}">${d.toLocaleString('default',{month:'long'})} ${year} (16-End)</option>`;
+            }
+        }
+        function generateSalaryReport() {
+            const period = document.getElementById('payPeriod').value;
+            if (!period) { showAlert('Please select a pay period', 'error'); return; }
+            const [start, end] = period.split(',');
+            const salaryData = calculatePeriodSalary(start, end);
+            displaySalaryReport(salaryData, start, end);
+        }
+        function calculatePeriodSalary(startDate, endDate) {
+            const salaries = {};
+            appData.workers.forEach(w => salaries[w] = 0);
+            Object.keys(appData.salaries).filter(d => d >= startDate && d <= endDate).forEach(d => {
+                if(appData.salaries[d].earnings) {
+                    Object.keys(appData.salaries[d].earnings).forEach(w => {
+                        if(salaries[w] !== undefined) salaries[w] += appData.salaries[d].earnings[w];
+                    });
+                }
+            });
+            appData.workers.forEach(w => { if(salaries[w] !== undefined) salaries[w] += appData.agreements.current.allowance / 2; });
+            return salaries;
+        }
+        function displaySalaryReport(salaryData, startDate, endDate) {
+            const container = document.getElementById('salaryResults');
+            let total = 0;
+            let html = `<h3>Salary Report: ${startDate} to ${endDate}</h3><div class="report-grid">`;
+            Object.entries(salaryData).forEach(([worker, amount]) => {
+                total += amount;
+                html += `<div class="report-card"><strong>${worker}</strong><br>Rs. ${amount.toFixed(2)}</div>`;
+            });
+            html += `</div><div class="report-card" style="background: #e6fffa; border-left-color: #38a169;"><strong>Total Salary: Rs. ${total.toFixed(2)}</strong></div>`;
+            container.innerHTML = html;
+        }
+        function loadFiscalYears() {
+            const bonusSelect = document.getElementById('fiscalYear');
+            const leavesSelect = document.getElementById('leavesFiscalYear');
+            if (bonusSelect) bonusSelect.innerHTML = '<option value="">Select Year</option>';
+            if (leavesSelect) leavesSelect.innerHTML = '<option value="">Select Year</option>';
+            const currentYear = new Date().getFullYear();
+            const fiscalStart = appData.configs.fiscalYearStart.split('-');
+            const fiscalMonth = parseInt(fiscalStart[0]);
+            const fiscalDay = parseInt(fiscalStart[1]);
+            for (let i = 0; i < 3; i++) {
+                const yearStart = currentYear - i;
+                const yearEnd = yearStart + 1;
+                const fiscalYearLabel = `${yearStart}-${yearEnd}`;
+                const fiscalYearValue = `${yearStart}-${fiscalMonth.toString().padStart(2, '0')}-${fiscalDay.toString().padStart(2, '0')}`;
+                if (bonusSelect) bonusSelect.innerHTML += `<option value="${fiscalYearValue}">${fiscalYearLabel}</option>`;
+                if (leavesSelect) leavesSelect.innerHTML += `<option value="${fiscalYearValue}">${fiscalYearLabel}</option>`;
+            }
+        }
+        function calculateBonus() {
+            const fiscalYearStart = document.getElementById('fiscalYear').value;
+            if (!fiscalYearStart) { showAlert('Please select a fiscal year', 'error'); return; }
+            const bonusData = calculateAnnualBonus(fiscalYearStart);
+            displayBonusReport(bonusData, fiscalYearStart);
+        }
+        function calculateAnnualBonus(fiscalYearStart) {
+            const startDate = new Date(fiscalYearStart);
+            const endDate = new Date(startDate);
+            endDate.setFullYear(endDate.getFullYear() + 1);
+            endDate.setDate(endDate.getDate() - 1);
+            const workerBonuses = {};
+            appData.workers.forEach(worker => {
+                let annualEarnings = 0, workDays = 0, restDays = 0;
+                Object.entries(appData.salaries || {}).forEach(([date, entry]) => {
+                    const entryDate = new Date(date);
+                    if (entryDate >= startDate && entryDate <= endDate) {
+                        if (entry.earnings[worker] !== undefined) {
+                            annualEarnings += entry.earnings[worker];
+                            if (entry.type === 'rest') { restDays++; } else { workDays++; }
+                        }
+                    }
+                });
+                annualEarnings += appData.agreements.current.allowance * 12;
+                const avgMonthlySalary = annualEarnings / 12;
+                const bonus = avgMonthlySalary;
+                const gratuity = avgMonthlySalary;
+                const totalLeaves = restDays;
+                const unpaidLeaves = Math.min(totalLeaves, 20);
+                const paidLeaves = Math.min(Math.max(totalLeaves - 20, 0), 12);
+                const remainingPaidLeaves = 12 - paidLeaves;
+                const paidLeavesBonus = remainingPaidLeaves * appData.agreements.current.layoffRate;
+                const totalBonus = bonus + gratuity + paidLeavesBonus;
+                workerBonuses[worker] = { annualEarnings, avgMonthlySalary, bonus, gratuity, totalLeaves, unpaidLeaves, paidLeaves, remainingPaidLeaves, paidLeavesBonus, totalBonus };
+            });
+            return workerBonuses;
+        }
+        function displayBonusReport(bonusData, fiscalYearStart) {
+            const container = document.getElementById('bonusResults');
+            const startYear = new Date(fiscalYearStart).getFullYear();
+            let html = `<h3>Annual Bonus Report: ${startYear}-${startYear + 1}</h3><div class="report-grid">`;
+            let grandTotal = 0;
+            Object.entries(bonusData).forEach(([worker, data]) => {
+                grandTotal += data.totalBonus;
+                html += `<div class="report-card"><strong>${worker}</strong><br>Annual Earnings: Rs. ${data.annualEarnings.toFixed(2)}<br>Avg Monthly: Rs. ${data.avgMonthlySalary.toFixed(2)}<br>Bonus: Rs. ${data.bonus.toFixed(2)}<br>Gratuity: Rs. ${data.gratuity.toFixed(2)}<br>Paid Leaves Bonus: Rs. ${data.paidLeavesBonus.toFixed(2)}<br><strong>Total Bonus: Rs. ${data.totalBonus.toFixed(2)}</strong></div>`;
+            });
+            html += `</div><div class="report-card" style="background: #fff5f5; border-left-color: #e53e3e;"><strong>Grand Total Bonus: Rs. ${grandTotal.toFixed(2)}</strong></div>`;
+            container.innerHTML = html;
+        }
+        function calculateArrears() {
+            const container = document.getElementById('arrearsResults');
+            container.innerHTML = '<div class="loading"><div class="spinner"></div><p>Calculating arrears...</p></div>';
+            setTimeout(() => {
+                const arrearsData = calculateAllArrears();
+                displayArrearsReport(arrearsData);
+            }, 1000);
+        }
+        function calculateAllArrears() {
+            const agreementStartDate = new Date(appData.configs.agreementStartDate);
+            const currentDate = new Date();
+            const workerArrears = {};
+            appData.workers.forEach(worker => {
+                let salaryArrears = 0, allowanceArrears = 0, bonusArrears = 0;
+                const annualBenefitsArrears = appData.agreements.new.annualBenefits - appData.agreements.current.annualBenefits;
+                Object.entries(appData.salaries || {}).forEach(([date, entry]) => {
+                    const entryDate = new Date(date);
+                    if (entryDate >= agreementStartDate && entryDate <= currentDate) {
+                        if (entry.earnings[worker] !== undefined) {
+                            const newEarnings = calculateDayEarningsWithRates(entry.type, entry.tonnage, entry.wagons, entry.presentWorkers, appData.agreements.new);
+                            const currentEarning = entry.earnings[worker];
+                            const newEarning = newEarnings[worker] || 0;
+                            salaryArrears += (newEarning - currentEarning);
+                        }
+                    }
+                });
+                let allowanceCount = 0;
+                const startMonth = agreementStartDate.getMonth(), startYear = agreementStartDate.getFullYear();
+                const endMonth = currentDate.getMonth(), endYear = currentDate.getFullYear();
+                for (let year = startYear; year <= endYear; year++) {
+                    const monthStart = year === startYear ? startMonth : 0;
+                    const monthEnd = year === endYear ? endMonth : 11;
+                    for (let month = monthStart; month <= monthEnd; month++) { allowanceCount += 2; }
+                }
+                allowanceArrears = allowanceCount * ((appData.agreements.new.allowance / 2) - (appData.agreements.current.allowance / 2));
+                const newBonus = calculateAnnualBonusWithRates(appData.agreements.new, fiscalYearStart);
+                const currentBonus = calculateAnnualBonusWithRates(appData.agreements.current);
+                bonusArrears = (newBonus[worker]?.totalBonus || 0) - (currentBonus[worker]?.totalBonus || 0);
+                const totalArrears = salaryArrears + allowanceArrears + bonusArrears + annualBenefitsArrears;
+                workerArrears[worker] = { salaryArrears, allowanceArrears, bonusArrears, annualBenefitsArrears, totalArrears };
+            });
+            return workerArrears;
+        }
+        function calculateDayEarningsWithRates(dayType, tonnage, wagons, presentWorkers, rates) {
+            const earnings = {};
+            if (dayType === 'rest') { appData.workers.forEach(worker => { earnings[worker] = rates.restRate; }); }
+            else {
+                const presentCount = presentWorkers.length;
+                if (presentCount > 0) {
+                    let grossPay = (tonnage * rates.tonRate) / presentCount + (wagons * rates.wagonRate) / presentCount;
+                    if (dayType === 'special_overtime') { grossPay = ((tonnage * rates.tonRate) / presentCount * 2) + rates.layoffRate + (wagons * rates.wagonRate) / presentCount; }
+                    grossPay = Math.max(grossPay, dayType === 'special_overtime' ? rates.layoffRate * 3 : rates.layoffRate);
+                    presentWorkers.forEach(worker => { earnings[worker] = grossPay; });
+                }
+                appData.workers.forEach(worker => { if (!presentWorkers.includes(worker)) { earnings[worker] = rates.layoffRate; } });
+            }
+            return earnings;
+        }
+        function calculateAnnualBonusWithRates(rates, fiscalYearStart) {
+    const startDate = new Date(fiscalYearStart);
+    const endDate = new Date(startDate);
+    endDate.setFullYear(endDate.getFullYear() + 1);
+    
+    const workerBonuses = {};
+    appData.workers.forEach(worker => {
+        let annualEarnings = 0, totalLeaves = 0;
+        
+        // 1. ACTUAL EARNINGS (Tonnage Included)
+        Object.entries(appData.salaries || {}).forEach(([date, entry]) => {
+            const entryDate = new Date(date);
+            if (entryDate >= startDate && entryDate <= endDate) {
+                if (entry.earnings[worker] !== undefined) {
+                    annualEarnings += entry.earnings[worker];
+                    if (entry.type === 'rest' || !entry.presentWorkers.includes(worker)) {
+                        totalLeaves++;
+                    }
+                }
+            }
+        });
+
+        // 2. ACCURATE BONUS CALCULATION
+        annualEarnings += rates.allowance * 12;
+        const avgMonthlySalary = annualEarnings / 12;
+        const unpaidLeaves = Math.min(totalLeaves, 20);
+        const paidLeaves = Math.min(Math.max(totalLeaves - 20, 0), 12);
+        const remainingPaidLeaves = 12 - paidLeaves;
+        
+        workerBonuses[worker] = {
+            totalBonus: avgMonthlySalary * 2 + (remainingPaidLeaves * rates.layoffRate)
+        };
+    });
+    return workerBonuses;
+}
+        function displayArrearsReport(arrearsData) {
+            const container = document.getElementById('arrearsResults');
+            let html = `<h3>Arrears Calculation Report</h3><p>From Agreement Start Date: ${appData.configs.agreementStartDate}</p><div class="report-grid">`;
+            let grandTotal = 0;
+            Object.entries(arrearsData).forEach(([worker, data]) => {
+                grandTotal += data.totalArrears;
+                html += `<div class="report-card"><strong>${worker}</strong><br>Salary Arrears: Rs. ${data.salaryArrears.toFixed(2)}<br>Allowance Arrears: Rs. ${data.allowanceArrears.toFixed(2)}<br>Bonus Arrears: Rs. ${data.bonusArrears.toFixed(2)}<br>Annual Benefits Arrears: Rs. ${data.annualBenefitsArrears.toFixed(2)}<br><strong>Total Arrears: Rs. ${data.totalArrears.toFixed(2)}</strong></div>`;
+            });
+            html += `</div><div class="report-card" style="background: #fffaf0; border-left-color: #dd6b20;"><strong>Grand Total Arrears: Rs. ${grandTotal.toFixed(2)}</strong></div>`;
+            container.innerHTML = html;
+        }
+        function generateLeavesReport() {
+            const fiscalYearStart = document.getElementById('leavesFiscalYear').value;
+            if (!fiscalYearStart) { showAlert('Please select a fiscal year', 'error'); return; }
+            const leavesData = calculateLeavesReport(fiscalYearStart);
+            displayLeavesReport(leavesData, fiscalYearStart);
+        }
+        function calculateLeavesReport(fiscalYearStart) {
+            const startDate = new Date(fiscalYearStart);
+            const endDate = new Date(startDate);
+            endDate.setFullYear(endDate.getFullYear() + 1);
+            endDate.setDate(endDate.getDate() - 1);
+            const workerLeaves = {};
+            appData.workers.forEach(worker => {
+                let totalLeaves = 0, workDays = 0;
+                Object.entries(appData.salaries || {}).forEach(([date, entry]) => {
+                    const entryDate = new Date(date);
+                    if (entryDate >= startDate && entryDate <= endDate) {
+                        if (entry.type === 'rest' || !entry.presentWorkers.includes(worker)) {
+                            totalLeaves++;
+                        } else {
+                            workDays++;
+                        }
+                    }
+                });
+                const unpaidLeaves = Math.min(totalLeaves, 20);
+                const paidLeaves = Math.min(Math.max(totalLeaves - 20, 0), 12);
+                const excessLeaves = Math.max(totalLeaves - 32, 0);
+                const remainingPaidLeaves = 12 - paidLeaves;
+                workerLeaves[worker] = { totalLeaves, unpaidLeaves, paidLeaves, excessLeaves, remainingPaidLeaves, workDays };
+            });
+            return workerLeaves;
+        }
+        function displayLeavesReport(leavesData, fiscalYearStart) {
+            const container = document.getElementById('leavesResults');
+            const startYear = new Date(fiscalYearStart).getFullYear();
+            let html = `<h3>Leaves Report: ${startYear}-${startYear + 1}</h3><div class="alert alert-info"><strong>Leave Structure:</strong> 20 Unpaid Leaves + 12 Paid Leaves = 32 Total Annual Leaves</div><div class="report-grid">`;
+            Object.entries(leavesData).forEach(([worker, data]) => {
+                html += `<div class="report-card"><strong>${worker}</strong><br>Work Days: ${data.workDays}<br>Total Leaves: ${data.totalLeaves}<br>Unpaid Leaves: ${data.unpaidLeaves}/20<br>Paid Leaves Used: ${data.paidLeaves}/12<br>Remaining Paid: ${data.remainingPaidLeaves}<br>${data.excessLeaves > 0 ? `<span style="color: #e53e3e;">Excess Leaves: ${data.excessLeaves}</span>` : ''}</div>`;
+            });
+            html += '</div>';
+            container.innerHTML = html;
+        }
+        function loadSettings() {
+            document.getElementById('workerCount').value = appData.configs.workerCount;
+            document.getElementById('agreementStartDate').value = appData.configs.agreementStartDate;
+            document.getElementById('fiscalYearStart').value = appData.configs.fiscalYearStart;
+            // Load new settings
+            document.getElementById('enableWagonRate').checked = appData.configs.isWagonRateEnabled;
+            document.getElementById('enablePenalty').checked = appData.configs.isPenaltyEnabled;
+            document.getElementById('penaltyAmount').value = appData.configs.penaltyAmount;
+            // Trigger UI updates based on loaded settings
+            document.getElementById('penaltyAmountContainer').style.display = appData.configs.isPenaltyEnabled ? 'block' : 'none';
+            toggleWagonUIElements(appData.configs.isWagonRateEnabled);
+            loadWorkersList();
+        }
+        function loadWorkersList() {
+            const container = document.getElementById('workersList');
+            container.innerHTML = '';
+            appData.workers.forEach((worker, index) => {
+                const div = document.createElement('div');
+                div.className = 'form-group';
+                div.innerHTML = `<label>Worker ${index + 1}:</label><div style="display: flex; gap: 10px;"><input type="text" value="${worker}" onchange="updateWorkerName(${index}, this.value)" style="flex: 1;"><button onclick="removeWorker(${index})" class="btn btn-danger" style="padding: 8px 12px;">Remove</button></div>`;
+                container.appendChild(div);
+            });
+        }
+        function addWorker() {
+            appData.workers.push(`Worker ${appData.workers.length + 1}`);
+            loadWorkersList();
+            loadWorkerAttendance();
+            saveUserData();
+        }
+        function removeWorker(index) {
+            if (appData.workers.length <= 1) { showAlert('At least one worker is required', 'error'); return; }
+            appData.workers.splice(index, 1);
+            loadWorkersList();
+            loadWorkerAttendance();
+            saveUserData();
+        }
+        function updateWorkerName(index, newName) {
+            if (newName.trim()) { appData.workers[index] = newName.trim(); saveUserData(); }
+        }
+        function saveSettings() {
+            appData.configs.workerCount = parseInt(document.getElementById('workerCount').value) || 8;
+            appData.configs.agreementStartDate = document.getElementById('agreementStartDate').value;
+            appData.configs.fiscalYearStart = document.getElementById('fiscalYearStart').value;
+            // Save new settings
+            appData.configs.isWagonRateEnabled = document.getElementById('enableWagonRate').checked;
+            appData.configs.isPenaltyEnabled = document.getElementById('enablePenalty').checked;
+            appData.configs.penaltyAmount = parseFloat(document.getElementById('penaltyAmount').value) || 231;
+            saveUserData();
+            showAlert('Settings saved successfully!', 'success');
+        }
+        function showAlert(message, type = 'info') {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type}`;
+            alertDiv.textContent = message;
+            const currentPage = document.querySelector('.page.active');
+            if (currentPage) {
+                currentPage.insertBefore(alertDiv, currentPage.firstChild);
+                setTimeout(() => alertDiv.remove(), 5000);
+            }
+        }
+    </script>
+</body>
+</html>
