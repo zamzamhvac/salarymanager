@@ -29,7 +29,7 @@
         .menu-icon:hover { background-color: rgba(255,255,255,0.1); }
         #userInfo { margin-left: auto; display: none; align-items: center; }
         #userName { font-size: 14px; }
-        .side-nav { position: fixed; top: 0; left: -300px; width: 280px; height: 100%; background-color: var(--surface-color); box-shadow: 2px 0 5px rgba(0,0,0,0.2); z-index: 1100; transition: left 0.3s ease-in-out; display: flex; flex-direction: column; }
+        .side-nav { position: fixed; top: 0; left: -300px; width: 280px; height: 100%; background-color: var(--surface-color); box-shadow: 2px 0 5px rgba(0,0,0,0.2); z-index: 1100; display: flex; flex-direction: column; transition: left 0.3s ease-in-out; }
         .side-nav.open { left: 0; }
         .nav-header { padding: 16px; background-color: var(--primary-variant-color); color: var(--on-primary-color); }
         .nav-header h2 { font-size: 18px; font-weight: 500; }
@@ -51,7 +51,6 @@
         .form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: none; border-color: var(--primary-color); box-shadow: 0 0 0 2px rgba(98, 0, 238, 0.2); }
         .btn { background-color: var(--primary-color); color: var(--on-primary-color); border: none; padding: 10px 16px; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: 500; text-transform: uppercase; box-shadow: 0 2px 2px 0 rgba(0,0,0,0.14), 0 3px 1px -2px rgba(0,0,0,0.12), 0 1px 5px 0 rgba(0,0,0,0.2); transition: all 0.2s; margin: 4px; outline: none; display: inline-flex; align-items: center; justify-content: center; }
         .btn:hover { background-color: var(--primary-variant-color); box-shadow: 0 3px 3px 0 rgba(0,0,0,0.14), 0 1px 7px 0 rgba(0,0,0,0.12), 0 3px 1px -1px rgba(0,0,0,0.2); }
-        .btn:disabled { background-color: #e0e0e0; cursor: not-allowed; box-shadow: none; }
         .btn-danger { background-color: var(--error-color); }
         .btn-danger:hover { background-color: #9a001b; }
         .btn-success { background-color: #00C853; }
@@ -60,13 +59,53 @@
         .overlay.open { display: block; }
         .worker-checkbox { display: flex; align-items: center; margin: 0; padding: 8px; background: #f7fafc; border-radius: 4px; border: 1px solid #eee;}
         .worker-checkbox input { width: auto; margin-right: 8px; }
-        .alert { padding: 15px; border-radius: 6px; margin: 15px 0; border: 1px solid transparent; }
+        /* MODIFIED ALERT STYLE */
+        .alert {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 15px 25px;
+            border-radius: 8px;
+            border: 1px solid transparent;
+            z-index: 9999;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            font-size: 16px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            opacity: 0;
+            transition: opacity 0.5s ease, bottom 0.5s ease;
+        }
+        .alert.show {
+            opacity: 1;
+            bottom: 40px;
+        }
         .alert-success { background: #c6f6d5; color: #22543d; border-color: #9ae6b4; }
         .alert-error { background: #fed7d7; color: #742a2a; border-color: #fc8181; }
         .alert-info { background: #bee3f8; color: #2a4365; border-color: #90cdf4; }
+        /* NEW SETUP STYLES */
+        .setup-message {
+            background-color: #e6f7ff;
+            border-left: 5px solid #1890ff;
+            padding: 20px;
+            margin-bottom: 25px;
+            border-radius: 8px;
+        }
+        .setup-message h3 {
+            color: #1890ff;
+            margin-top: 0;
+            margin-bottom: 10px;
+            font-size: 18px;
+        }
+        .setup-message p {
+            font-size: 15px;
+            line-height: 1.6;
+        }
         .loading { text-align: center; padding: 20px; }
         .spinner { border: 4px solid #f3f3f3; border-top: 4px solid var(--primary-color); border-radius: 50%; width: 40px; height: 40px; animation: spin 2s linear infinite; margin: 0 auto; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
         #daily-entry-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
         #daily-entry-left, #daily-entry-right { display: flex; flex-direction: column; }
         #daily-entry-right h3 { font-size: 16px; font-weight: 500; margin-bottom: 8px; }
@@ -92,97 +131,6 @@
         .checkbox-group { display: flex; align-items: center; margin-bottom: 16px; }
         .checkbox-group input { width: auto; margin-right: 10px; }
         .sub-setting { padding-left: 30px; }
-
-        /* --- NAYA SETUP WIZARD STYLES --- */
-        #setup-wizard {
-            display: none; /* Initially hidden */
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(245, 245, 245, 0.95);
-            z-index: 2000;
-            justify-content: center;
-            align-items: center;
-            padding: 20px;
-        }
-        .setup-container {
-            background-color: var(--surface-color);
-            padding: 32px;
-            border-radius: 12px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-            width: 100%;
-            max-width: 700px;
-            text-align: center;
-        }
-        .setup-container h2 {
-            font-size: 24px;
-            color: var(--primary-color);
-            margin-bottom: 8px;
-        }
-        .setup-container p {
-            font-size: 16px;
-            margin-bottom: 24px;
-            color: rgba(0,0,0,0.7);
-        }
-        .setup-step {
-            display: none; /* Hide steps by default */
-        }
-        .setup-step.active {
-            display: block; /* Show active step */
-        }
-        #setup-workers-list {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 16px;
-            margin-top: 16px;
-            text-align: left;
-        }
-        input.locked-input {
-            background-color: #f2f2f2;
-            cursor: not-allowed;
-            color: #777;
-        }
-
-        /* --- NAYA POP-UP MODAL STYLES --- */
-        #setup-modal {
-            display: none; /* Hidden by default */
-            position: fixed;
-            z-index: 3000;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            overflow: auto;
-            background-color: rgba(0,0,0,0.6);
-        }
-        .modal-content {
-            background-color: #fefefe;
-            margin: 15% auto;
-            padding: 20px 30px;
-            border: 1px solid #888;
-            width: 90%;
-            max-width: 500px;
-            border-radius: 10px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-            text-align: center;
-            animation: fadeIn 0.3s;
-        }
-        .modal-content h3 {
-            color: var(--primary-color);
-            margin-bottom: 15px;
-            font-size: 22px;
-        }
-        .modal-content p {
-            font-size: 16px;
-            line-height: 1.6;
-            margin-bottom: 20px;
-        }
-        @keyframes fadeIn {
-            from {opacity: 0; transform: scale(0.95);}
-            to {opacity: 1; transform: scale(1);}
-        }
     </style>
 </head>
 <body>
@@ -226,15 +174,19 @@
         </div>
         
         <!-- All Other Pages -->
-        <div id="agreements" class="page"><h2>📋 Agreements Management</h2><p>Manage current and new agreement rates</p><div class="two-column"><div class="agreement-section"><h3>Current Agreement</h3><div class="rate-grid"><div class="form-group"><label>Ton Rate (Rs):</label><input type="number" id="currentTonRate"></div><div class="form-group"><label>Rest Rate (Rs):</label><input type="number" id="currentRestRate"></div><div class="form-group"><label>Layoff Rate (Rs):</label><input type="number" id="currentLayoffRate"></div><div class="form-group wagon-rate-field"><label>Wagon Rate (Rs):</label><input type="number" id="currentWagonRate"></div><div class="form-group"><label>Monthly Allowance (Rs):</label><input type="number" id="currentAllowance"></div><div class="form-group"><label>Annual Benefits (Rs):</label><input type="number" id="currentAnnualBenefits"></div></div></div><div class="agreement-section"><h3>New Agreement</h3><div class="rate-grid"><div class="form-group"><label>Ton Rate (Rs):</label><input type="number" id="newTonRate"></div><div class="form-group"><label>Rest Rate (Rs):</label><input type="number" id="newRestRate"></div><div class="form-group"><label>Layoff Rate (Rs):</label><input type="number" id="newLayoffRate"></div><div class="form-group wagon-rate-field"><label>Wagon Rate (Rs):</label><input type="number" id="newWagonRate"></div><div class="form-group"><label>Monthly Allowance (Rs):</label><input type="number" id="newAllowance"></div><div class="form-group"><label>Annual Benefits (Rs):</label><input type="number" id="newAnnualBenefits"></div></div></div></div><button onclick="saveAgreements()" class="btn">Save Agreements</button></div>
+        <div id="agreements" class="page">
+            <div id="agreement-setup-message" style="display: none;"></div>
+            <h2>📋 Agreements Management</h2>
+            <p>Manage current and new agreement rates</p><div class="two-column"><div class="agreement-section"><h3>Current Agreement</h3><div class="rate-grid"><div class="form-group"><label>Ton Rate (Rs):</label><input type="number" id="currentTonRate"></div><div class="form-group"><label>Rest Rate (Rs):</label><input type="number" id="currentRestRate"></div><div class="form-group"><label>Layoff Rate (Rs):</label><input type="number" id="currentLayoffRate"></div><div class="form-group wagon-rate-field"><label>Wagon Rate (Rs):</label><input type="number" id="currentWagonRate"></div><div class="form-group"><label>Monthly Allowance (Rs):</label><input type="number" id="currentAllowance"></div><div class="form-group"><label>Annual Benefits (Rs):</label><input type="number" id="currentAnnualBenefits"></div></div></div><div class="agreement-section"><h3>New Agreement</h3><div class="rate-grid"><div class="form-group"><label>Ton Rate (Rs):</label><input type="number" id="newTonRate"></div><div class="form-group"><label>Rest Rate (Rs):</label><input type="number" id="newRestRate"></div><div class="form-group"><label>Layoff Rate (Rs):</label><input type="number" id="newLayoffRate"></div><div class="form-group wagon-rate-field"><label>Wagon Rate (Rs):</label><input type="number" id="newWagonRate"></div><div class="form-group"><label>Monthly Allowance (Rs):</label><input type="number" id="newAllowance"></div><div class="form-group"><label>Annual Benefits (Rs):</label><input type="number" id="newAnnualBenefits"></div></div></div></div><button onclick="saveAgreements()" class="btn">Save Agreements</button></div>
         <div id="salaries" class="page"><h2>💰 Salary Reports</h2><p>View salary reports for different pay periods</p><div class="form-group"><label>Select Pay Period:</label><select id="payPeriod"><option value="">Select Period</option></select></div><button onclick="generateSalaryReport()" class="btn">Generate Report</button><div id="salaryResults"></div></div>
         <div id="bonus" class="page"><h2>🎁 Annual Bonus & Gratuity</h2><p>Calculate annual bonus, gratuity and paid leaves bonus</p><div class="form-group"><label>Select Fiscal Year:</label><select id="fiscalYear"><option value="">Select Year</option></select></div><button onclick="calculateBonus()" class="btn">Calculate Bonus</button><div id="bonusResults"></div></div>
         <div id="arrears" class="page"><h2>📊 Arrears Calculation</h2><p>Calculate pending arrears based on agreement differences</p><button onclick="calculateArrears()" class="btn">Calculate Automatic Arrears</button><div id="arrearsResults"></div></div>
         <div id="leaves" class="page"><h2>🏖️ Leaves Report</h2><p>Track annual leaves for all workers</p><div class="form-group"><label>Select Fiscal Year:</label><select id="leavesFiscalYear"><option value="">Select Year</option></select></div><button onclick="generateLeavesReport()" class="btn">Generate Leaves Report</button><div id="leavesResults"></div></div>
         <div id="settings" class="page">
+            <div id="worker-setup-message" style="display: none;"></div>
             <h2>⚙️ Settings</h2><p>Configure your application settings</p>
             <h3>General Settings</h3>
-            <div class="form-group"><label>Number of Workers:</label><input type="number" id="workerCount" placeholder="8" readonly class="locked-input"></div>
+            <div class="form-group"><label>Number of Workers:</label><input type="number" id="workerCount" placeholder="8"></div>
             <div class="form-group"><label>Agreement Start Date:</label><input type="date" id="agreementStartDate"></div>
             <div class="form-group"><label>Fiscal Year Start (MM-DD):</label><input type="text" id="fiscalYearStart" placeholder="10-10" pattern="[0-9]{2}-[0-9]{2}"></div>
             
@@ -258,65 +210,26 @@
 
             <div class="settings-section">
                 <h3>Manage Workers</h3>
-                <p style="color: #6200EE; font-style: italic;">Workers ke naam pehli baar setup ke waqt lock kar diye gaye hain.</p>
                 <div id="workersList"></div>
-                <div id="settings-worker-buttons"></div>
+                <div id="worker-buttons-container">
+                    <button onclick="addWorker()" class="btn btn-success">Add Worker</button>
+                </div>
             </div>
             <button onclick="saveSettings()" class="btn">Save Settings</button>
         </div>
     </main>
     
-    <!-- NAYA: SETUP WIZARD HTML -->
-    <div id="setup-wizard">
-        <div class="setup-container">
-            <!-- Step 1: Worker Setup -->
-            <div id="worker-setup-step" class="setup-step">
-                <h2>Welcome! Pehla Step Shuru Karain</h2>
-                <p>Apne business ka bunyadi structure set karain. Yeh maloomat baad mein tabdeel nahi hongi.</p>
-                <div class="form-group">
-                    <label for="setup-worker-count" style="font-size: 16px;">Aapki team mein kitne workers hain?</label>
-                    <input type="number" id="setup-worker-count" placeholder="Maslan: 8" oninput="generateSetupWorkerInputs()">
-                </div>
-                <div id="setup-workers-list"></div>
-                <button onclick="saveWorkerSetup()" class="btn btn-success" id="save-workers-btn" disabled>Workers Mehfooz Karain aur Agay Barhain</button>
-            </div>
-            <!-- Step 2: Agreement Setup -->
-            <div id="agreement-setup-step" class="setup-step">
-                <h2>Aakhri Step: Agreement Set Karain</h2>
-                <p>Apna mojooda salary agreement enter karain. Ghalat maloomat enter karne se bachne ke liye ehtiyat karain.</p>
-                <div class="agreement-section" style="padding: 16px; margin: 0;">
-                    <div class="rate-grid">
-                        <div class="form-group"><label>Ton Rate (Rs):</label><input type="number" id="setup-tonRate" placeholder="e.g. 22"></div>
-                        <div class="form-group"><label>Rest Rate (Rs):</label><input type="number" id="setup-restRate" placeholder="e.g. 1100"></div>
-                        <div class="form-group"><label>Layoff Rate (Rs):</label><input type="number" id="setup-layoffRate" placeholder="e.g. 549"></div>
-                        <div class="form-group"><label>Wagon Rate (Rs):</label><input type="number" id="setup-wagonRate" value="0"></div>
-                        <div class="form-group"><label>Monthly Allowance (Rs):</label><input type="number" id="setup-allowance" placeholder="e.g. 20000"></div>
-                        <div class="form-group"><label>Annual Benefits (Rs):</label><input type="number" id="setup-annualBenefits" value="0"></div>
-                    </div>
-                </div>
-                <button onclick="completeFullSetup()" class="btn btn-success">Setup Mukammal Karain</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- NAYA: SETUP POP-UP MODAL -->
-    <div id="setup-modal">
-        <div class="modal-content">
-            <h3 id="modal-title">Zaroori Aagahi</h3>
-            <p id="modal-message">Yeh aapke liye zaroori paigham hai.</p>
-            <button class="btn" onclick="document.getElementById('setup-modal').style.display = 'none'">Main Samajh Gaya</button>
-        </div>
-    </div>
-
-
     <script>
         // --- MUKAMMAL JAVASCRIPT CODE ---
 		
         let currentUser = null;
+        // Default App Data structure. This will be overwritten by data from Firebase.
         let appData = { 
             salaries: {}, 
             workers: [],
-            permissions: { viewableWorkers: [] },
+            permissions: {
+                viewableWorkers: []
+            },
             configs: { 
                 workerCount: 8, 
                 agreementStartDate: '2023-10-10', 
@@ -324,7 +237,8 @@
                 isPenaltyEnabled: false, 
                 penaltyAmount: 231, 
                 isWagonRateEnabled: false,
-                isSetupComplete: false // NAYA: Setup state flag
+                // NEW: Flag for setup process
+                isSetupComplete: true 
             }, 
             agreements: { 
                 current: { tonRate: 22, restRate: 1100, layoffRate: 549, wagonRate: 0, allowance: 20000, annualBenefits: 0 }, 
@@ -333,16 +247,29 @@
         };
         
         function toggleNav() {
+            // Disable nav during setup
+            if (appData.configs && !appData.configs.isSetupComplete) return;
             document.getElementById('sideNav').classList.toggle('open');
             document.getElementById('overlay').classList.toggle('open');
         }
 
         function showPage(pageId) {
+            // Prevent page switching during setup
+            if (appData.configs && !appData.configs.isSetupComplete && !['settings', 'agreements'].includes(pageId)) {
+                showAlert('Please complete the setup process first.', 'info');
+                return;
+            }
+
             document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
             document.getElementById(pageId).classList.add('active');
-            document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
-            const activeButton = document.querySelector(`.nav-btn[data-page="${pageId}"]`);
-            if (activeButton) activeButton.classList.add('active');
+            
+            // Don't change active button during setup
+            if (appData.configs && appData.configs.isSetupComplete) {
+                document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+                const activeButton = document.querySelector(`.nav-btn[data-page="${pageId}"]`);
+                if (activeButton) activeButton.classList.add('active');
+            }
+
             if (window.innerWidth < 960 && document.getElementById('sideNav').classList.contains('open')) {
                 toggleNav();
             }
@@ -360,34 +287,31 @@
             }
         }
 
-        // --- AUTHENTICATION & DATA FLOW (MODIFIED FOR SETUP) ---
+        // --- AUTHENTICATION & DATA FLOW (FIREBASE) ---
 
         async function startApp() {
             try {
                 // Step 1: Fetch configuration from Netlify Function
+                console.log("Configuration fetch karne ki koshish...");
                 const response = await fetch('/.netlify/functions/get-config');
                 if (!response.ok) {
                     throw new Error('Configuration fetch karne mein masla hua.');
                 }
                 const firebaseConfig = await response.json();
+                console.log("Configuration fetch ho gai.");
 
                 // Step 2: Initialize Firebase with the fetched config
                 firebase.initializeApp(firebaseConfig);
+                console.log("Firebase initialize ho gaya.");
 
                 // Step 3: Set up the Authentication State Listener
                 firebase.auth().onAuthStateChanged(async (user) => {
                     if (user) {
+                        console.log("User signed in:", user.uid);
                         currentUser = user;
-                        await loadUserData(); // Load data first
-
-                        // MODIFIED: Check if setup is complete
-                        if (appData.configs && appData.configs.isSetupComplete) {
-                            await showMainApp();
-                        } else {
-                            // If setup is not complete, start the wizard
-                            startSetupWizard();
-                        }
+                        await showMainApp();
                     } else {
+                        console.log("User is signed out.");
                         currentUser = null;
                         showLoginPage();
                     }
@@ -422,20 +346,45 @@
         document.addEventListener('DOMContentLoaded', startApp);
 
         async function showMainApp() {
-            document.getElementById('setup-wizard').style.display = 'none'; // Hide wizard if it was open
             document.getElementById('login-page').classList.remove('active');
-            document.getElementById('appHeader').style.display = 'flex';
-            document.getElementById('userInfo').style.display = 'flex';
-            document.getElementById('sideNav').style.display = 'flex';
-            document.getElementById('userName').textContent = currentUser.displayName || currentUser.email;
             
-            setupUI();
-            toggleWagonUIElements(appData.configs.isWagonRateEnabled);
-            showPage('daily-entry');
+            await loadUserData(); // Load data first
+
+            // NEW: Check if setup is complete
+            if (!appData.configs.isSetupComplete) {
+                startSetupProcess();
+            } else {
+                document.getElementById('appHeader').style.display = 'flex';
+                document.getElementById('userInfo').style.display = 'flex';
+                document.getElementById('sideNav').style.display = 'flex';
+                document.getElementById('userName').textContent = currentUser.displayName || currentUser.email;
+                setupUI();
+                toggleWagonUIElements(appData.configs.isWagonRateEnabled);
+                showPage('daily-entry');
+            }
+        }
+        
+        // NEW: Function to handle the initial setup process
+        function startSetupProcess() {
+            // Hide normal app UI
+            document.getElementById('appHeader').style.display = 'none';
+            document.getElementById('sideNav').style.display = 'none';
+            
+            // Show a message on the settings page
+            const workerSetupMessage = document.getElementById('worker-setup-message');
+            workerSetupMessage.innerHTML = `
+                <div class="setup-message">
+                    <h3>👋 Welcome! Let's Set Up Your Account (Step 1 of 2)</h3>
+                    <p>Pehle apne workers ki tadad aur unke naam set karein. <br>
+                    <strong>⚠️ Yaad rakhein:</strong> Workers ke naam sirf isi step mein tabdeel kiye ja sakte hain. Baad mein inhein badalne ki ijazat nahi hogi.</p>
+                </div>`;
+            workerSetupMessage.style.display = 'block';
+            
+            // Show the settings page
+            showPage('settings');
         }
 
         function showLoginPage() {
-            document.getElementById('setup-wizard').style.display = 'none';
             document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
             document.getElementById('login-page').classList.add('active');
             document.getElementById('appHeader').style.display = 'none';
@@ -449,16 +398,16 @@
             const email = document.getElementById('loginEmail').value;
             const password = document.getElementById('loginPassword').value;
             if (!email || !password) {
-                showAlert('Please enter both email and password', 'error');
+                showAlert('❌ Please enter both email and password', 'error');
                 return;
             }
             firebase.auth().signInWithEmailAndPassword(email, password)
                 .then((userCredential) => {
-                    showAlert('Successfully signed in!', 'success');
+                    showAlert('✅ Successfully signed in!', 'success');
                 })
                 .catch((error) => {
                     console.error("Sign in error:", error);
-                    showAlert(error.message, 'error');
+                    showAlert(`❌ ${error.message}`, 'error');
                 });
         }
 
@@ -467,11 +416,11 @@
             const password = document.getElementById('signupPassword').value;
             const companyName = document.getElementById('companyName').value.trim();
             if (!email || password.length < 6) {
-                showAlert('Provide a valid email and a password of at least 6 characters.', 'error');
+                showAlert('❌ Provide a valid email and a password of at least 6 characters.', 'error');
                 return;
             }
             if (!companyName) {
-                showAlert('Please enter your Company or Business Name.', 'error');
+                showAlert('❌ Please enter your Company or Business Name.', 'error');
                 return;
             }
 
@@ -482,65 +431,74 @@
                         displayName: companyName
                     }).then(() => {
                         currentUser = user; 
-                        return initializeNewUserData();
+                        return initializeNewUserData(); // This will now set isSetupComplete to false
                     });
                 })
                 .then(() => {
-                    showAlert('Account created! Please complete the initial setup.', 'success');
+                    // onAuthStateChanged will handle the rest, triggering the setup process
+                    showAlert('✅ Account created successfully! Redirecting to setup...', 'success');
                 })
                 .catch((error) => {
                     console.error("Sign up error:", error);
-                    showAlert(error.message, 'error');
+                    showAlert(`❌ ${error.message}`, 'error');
                 });
         }
 
         function signOut() {
             firebase.auth().signOut().catch((error) => {
                 console.error("Sign out error:", error);
-                showAlert(error.message, 'error');
+                showAlert(`❌ ${error.message}`, 'error');
             });
         }
 
         function showSignUp() { document.getElementById('signUpForm').style.display = 'block'; }
         function hideSignUp() { document.getElementById('signUpForm').style.display = 'none'; }
         
-        // --- FIREBASE DATABASE FUNCTIONS (MODIFIED) ---
+        // --- FIREBASE DATABASE FUNCTIONS ---
 
         async function loadUserData() {
             if (!currentUser) return;
             const userRef = firebase.database().ref('users/' + currentUser.uid);
             try {
                 const snapshot = await userRef.once('value');
-                const defaultAppData = JSON.parse(JSON.stringify(appData)); // Deep copy of default structure
-
                 if (snapshot.exists()) {
                     const savedData = snapshot.val();
                     // Merge saved data with default data
                     appData = {
-                        ...defaultAppData,
+                        ...appData,
                         ...savedData,
                         permissions: {
-                            ...(defaultAppData.permissions || {}),
+                            ...(appData.permissions || {}),
                             ...(savedData.permissions || {})
                         },
                         configs: {
-                            ...(defaultAppData.configs || {}),
+                            ...appData.configs,
                             ...(savedData.configs || {})
                         },
                         agreements: {
-                            current: { ...(defaultAppData.agreements.current || {}), ...(savedData.agreements?.current || {}) },
-                            new: { ...(defaultAppData.agreements.new || {}), ...(savedData.agreements?.new || {}) }
+                            current: { ...appData.agreements.current, ...(savedData.agreements?.current || {}) },
+                            new: { ...appData.agreements.new, ...(savedData.agreements?.new || {}) }
                         },
                         salaries: savedData.salaries || {},
                         workers: savedData.workers || []
                     };
+                    
+                    if (!appData.permissions.viewableWorkers || appData.permissions.viewableWorkers.length === 0) {
+                        if (appData.workers && appData.workers.length > 0) {
+                            appData.permissions.viewableWorkers = [appData.workers[0]]; 
+                        } else {
+                            appData.permissions.viewableWorkers = [];
+                        }
+                    }
+
+                    console.log("User data loaded from Firebase.");
                 } else {
                     console.log("No data found, initializing new user data in Firebase.");
                     await initializeNewUserData();
                 }
             } catch (error) {
                 console.error("Error loading user data:", error);
-                showAlert("Could not load your data from the server.", "error");
+                showAlert("❌ Could not load your data from the server.", "error");
             }
         }
         
@@ -548,161 +506,144 @@
             if (!currentUser) return;
             try {
                 await firebase.database().ref('users/' + currentUser.uid).set(appData);
+                console.log("User data saved to Firebase.");
             } catch (error) {
                 console.error("Error saving user data:", error);
-                showAlert("Failed to save data. Please check your connection.", "error");
+                showAlert("❌ Failed to save data. Please check your connection.", "error");
             }
         }
 
+        // MODIFIED: This function now sets up a new user for the setup process
         async function initializeNewUserData() {
-            // MODIFIED: New users start with setup incomplete and empty workers array
             appData = { 
                 salaries: {}, 
-                workers: [], // Start with empty workers
-                permissions: { viewableWorkers: [] },
+                workers: ['Worker 1', 'Worker 2', 'Worker 3', 'Worker 4', 'Worker 5', 'Worker 6', 'Worker 7', 'Worker 8'], 
+                permissions: {
+                    viewableWorkers: ['Worker 1']
+                },
                 configs: { 
-                    workerCount: 0, // Start with 0
-                    agreementStartDate: new Date().toISOString().split('T')[0], 
+                    workerCount: 8, 
+                    agreementStartDate: new Date().toISOString().split('T')[0], // Default to today
                     fiscalYearStart: '10-10', 
                     isPenaltyEnabled: false, 
                     penaltyAmount: 231, 
                     isWagonRateEnabled: false,
-                    isSetupComplete: false // IMPORTANT: New user flag
+                    // NEW: Key flag for new user setup
+                    isSetupComplete: false
                 }, 
                 agreements: { 
-                    current: {}, // Start with empty agreements
-                    new: {} 
+                    current: { tonRate: 22, restRate: 1100, layoffRate: 549, wagonRate: 0, allowance: 20000, annualBenefits: 0 }, 
+                    new: { tonRate: 25, restRate: 1200, layoffRate: 600, wagonRate: 0, allowance: 26000, annualBenefits: 0 } 
                 }
             };
             await saveUserData();
         }
+        
+        async function saveSettings() {
+            const isSetup = !appData.configs.isSetupComplete; // Check if we are in setup mode
 
-        // --- NAYA: SETUP WIZARD FUNCTIONS ---
-
-        function startSetupWizard() {
-            document.getElementById('login-page').classList.remove('active');
-            document.getElementById('appHeader').style.display = 'none';
-            document.getElementById('sideNav').style.display = 'none';
+            appData.configs.workerCount = parseInt(document.getElementById('workerCount').value) || 8;
+            appData.configs.agreementStartDate = document.getElementById('agreementStartDate').value;
+            appData.configs.fiscalYearStart = document.getElementById('fiscalYearStart').value;
+            appData.configs.isWagonRateEnabled = document.getElementById('enableWagonRate').checked;
+            appData.configs.isPenaltyEnabled = document.getElementById('enablePenalty').checked;
+            appData.configs.penaltyAmount = parseFloat(document.getElementById('penaltyAmount').value) || 231;
             
-            const wizard = document.getElementById('setup-wizard');
-            wizard.style.display = 'flex';
+            await saveUserData(); // Save to Firebase
             
-            showSetupStep('worker-setup-step');
-            
-            showSetupModal(
-                "Pehla Qadam: Workers Setup",
-                "Baraye meharbani apne workers ki tadaad aur unke naam enter karain. Yaad rahe, yeh naam sirf ek baar hi set kiye ja sakte hain aur baad mein tabdeel nahi ho sakte."
-            );
+            if (isSetup) {
+                // Move to the next step of setup
+                document.getElementById('worker-setup-message').style.display = 'none';
+                const agreementSetupMessage = document.getElementById('agreement-setup-message');
+                agreementSetupMessage.innerHTML = `
+                <div class="setup-message">
+                    <h3>⚙️ Great! Now for Step 2 of 2: Set Your Agreement</h3>
+                    <p>Ab "Current Agreement" ki tamam details pur karein. <br>
+                    <strong>⚠️ Buhat Eham:</strong> In rates ko ahtiyat se darj karein. Agar aap baad mein in rates ko tabdeel karte hain, to aapko sahi hisaab ke liye agreement ki shuruaat ki tareekh se tamam entries dobara karni par sakti hain.</p>
+                </div>`;
+                agreementSetupMessage.style.display = 'block';
+                showPage('agreements');
+            } else {
+                showAlert('✅ Settings saved successfully!', 'success');
+            }
         }
+        
+        async function saveAgreements() {
+            const isSetup = !appData.configs.isSetupComplete; // Check if we are in setup mode
 
-        function showSetupStep(stepId) {
-            document.querySelectorAll('.setup-step').forEach(step => step.classList.remove('active'));
-            document.getElementById(stepId).classList.add('active');
-        }
-
-        function showSetupModal(title, message) {
-            document.getElementById('modal-title').textContent = title;
-            document.getElementById('modal-message').textContent = message;
-            document.getElementById('setup-modal').style.display = 'block';
-        }
-
-        function generateSetupWorkerInputs() {
-            const count = parseInt(document.getElementById('setup-worker-count').value) || 0;
-            const container = document.getElementById('setup-workers-list');
-            const saveBtn = document.getElementById('save-workers-btn');
+            Object.keys(appData.agreements.current).forEach(key => { if(document.getElementById(`current${key.charAt(0).toUpperCase() + key.slice(1)}`)) appData.agreements.current[key] = parseFloat(document.getElementById(`current${key.charAt(0).toUpperCase() + key.slice(1)}`).value) || 0; });
+            Object.keys(appData.agreements.new).forEach(key => { if(document.getElementById(`new${key.charAt(0).toUpperCase() + key.slice(1)}`)) appData.agreements.new[key] = parseFloat(document.getElementById(`new${key.charAt(0).toUpperCase() + key.slice(1)}`).value) || 0; });
             
+            if (isSetup) {
+                // Finalize setup
+                appData.configs.isSetupComplete = true;
+                await saveUserData();
+                showAlert('🎉 Setup complete! Welcome to your dashboard.', 'success');
+                // Reload the app to show the main interface
+                location.reload(); 
+            } else {
+                await saveUserData(); // Save to Firebase
+                showAlert('✅ Agreements saved successfully!', 'success');
+            }
+        }
+        
+        // MODIFIED: To lock worker editing after setup
+        function loadWorkersList() {
+            const container = document.getElementById('workersList');
+            const buttonsContainer = document.getElementById('worker-buttons-container');
             container.innerHTML = '';
-            if (count > 0 && count <= 50) { // Limit to 50 workers
-                for (let i = 0; i < count; i++) {
+
+            const isSetupComplete = appData.configs.isSetupComplete;
+            
+            // Disable worker count input after setup
+            document.getElementById('workerCount').disabled = isSetupComplete;
+            
+            if (!isSetupComplete) { // Editable view for setup
+                (appData.workers || []).forEach((worker, index) => {
                     const div = document.createElement('div');
                     div.className = 'form-group';
-                    div.innerHTML = `
-                        <label>Worker ${i + 1} ka Naam:</label>
-                        <input type="text" class="setup-worker-name-input" placeholder="Naam likhain">
-                    `;
+                    div.innerHTML = `<label>Worker ${index + 1}:</label><div style="display: flex; gap: 10px;"><input type="text" value="${worker}" onchange="updateWorkerName(${index}, this.value)" style="flex: 1;"><button onclick="removeWorker(${index})" class="btn btn-danger" style="padding: 8px 12px;">Remove</button></div>`;
                     container.appendChild(div);
-                }
-                saveBtn.disabled = false;
-            } else {
-                saveBtn.disabled = true;
-                if(count > 50) { 
-                    container.innerHTML = '<p class="alert alert-error">Aap 50 se zyada workers nahi daal sakte.</p>';
-                } else if (count < 1) {
-                    container.innerHTML = '';
-                }
+                });
+                buttonsContainer.style.display = 'block';
+            } else { // Read-only view after setup
+                container.innerHTML = `<div class="alert alert-info" style="position: static; transform: none; margin-bottom: 15px; opacity: 1;">ℹ️ Worker names are locked after the initial setup.</div>`;
+                (appData.workers || []).forEach((worker, index) => {
+                    const p = document.createElement('p');
+                    p.innerHTML = `<strong>Worker ${index + 1}:</strong> ${worker}`;
+                    p.style.padding = '8px';
+                    p.style.borderBottom = '1px solid #eee';
+                    container.appendChild(p);
+                });
+                buttonsContainer.style.display = 'none';
             }
         }
-
-        async function saveWorkerSetup() {
-            const nameInputs = document.querySelectorAll('.setup-worker-name-input');
-            const workerNames = [];
-            let allNamesValid = true;
-
-            nameInputs.forEach(input => {
-                const name = input.value.trim();
-                if (name) {
-                    workerNames.push(name);
-                } else {
-                    allNamesValid = false;
-                }
-            });
-
-            if (!allNamesValid || workerNames.length === 0) {
-                showAlert("Baraye meharbani sabhi workers ke naam likhain.", "error", document.getElementById('worker-setup-step'));
-                return;
-            }
-
-            // Lock the inputs and save
-            nameInputs.forEach(input => {
-                input.readOnly = true;
-                input.classList.add('locked-input');
-            });
-            document.getElementById('setup-worker-count').readOnly = true;
-            document.getElementById('setup-worker-count').classList.add('locked-input');
-            document.getElementById('save-workers-btn').disabled = true;
-
-            // Update appData
-            appData.workers = workerNames;
-            appData.configs.workerCount = workerNames.length;
-            appData.permissions.viewableWorkers = [...workerNames]; 
-
-            // Move to the next step
-            showSetupStep('agreement-setup-step');
-            showSetupModal(
-                "Agla Qadam: Agreement",
-                "Ab, baraye meharbani apna mojooda agreement set karain. Agar aap ne baad mein isay tabdeel kiya, to puranay hisaab ko durust karne ke liye aapko agreement ki shuruwaat ki tareekh se sari entries dobara karni par sakti hain."
-            );
-        }
-
-        async function completeFullSetup() {
-            const currentAgreement = {
-                tonRate: parseFloat(document.getElementById('setup-tonRate').value) || 0,
-                restRate: parseFloat(document.getElementById('setup-restRate').value) || 0,
-                layoffRate: parseFloat(document.getElementById('setup-layoffRate').value) || 0,
-                wagonRate: parseFloat(document.getElementById('setup-wagonRate').value) || 0,
-                allowance: parseFloat(document.getElementById('setup-allowance').value) || 0,
-                annualBenefits: parseFloat(document.getElementById('setup-annualBenefits').value) || 0,
-            };
-
-            // Basic validation
-            if (currentAgreement.tonRate <= 0 || currentAgreement.restRate <= 0 || currentAgreement.layoffRate <= 0 || currentAgreement.allowance <= 0) {
-                showAlert("Baraye meharbani agreement ki zaroori raqam (Ton, Rest, Layoff, Allowance) enter karain.", "error", document.getElementById('agreement-setup-step'));
-                return;
-            }
-            
-            appData.agreements.current = currentAgreement;
-            appData.agreements.new = { ...currentAgreement };
-            appData.configs.isSetupComplete = true; 
-
-            await saveUserData(); 
-            
-            showAlert("Setup mukammal ho gaya! Application mein khush amdeed.", "success");
-
-            await showMainApp();
-        }
-
-        // --- UI and OTHER FUNCTIONS ---
         
+        async function addWorker() {
+            if (!appData.workers) { appData.workers = []; }
+            appData.workers.push(`Worker ${appData.workers.length + 1}`);
+            // Update worker count automatically
+            document.getElementById('workerCount').value = appData.workers.length;
+            appData.configs.workerCount = appData.workers.length;
+
+            loadWorkersList();
+            loadWorkerAttendance();
+            await saveUserData(); // Save immediately
+        }
+
+        async function removeWorker(index) {
+            if (appData.workers.length <= 1) { showAlert('❌ At least one worker is required', 'error'); return; }
+            appData.workers.splice(index, 1);
+            // Update worker count automatically
+            document.getElementById('workerCount').value = appData.workers.length;
+            appData.configs.workerCount = appData.workers.length;
+
+            loadWorkersList();
+            loadWorkerAttendance();
+            await saveUserData(); // Save immediately
+        }
+
+        // --- UI and OTHER FUNCTIONS (No changes to logic) ---
         function toggleWagonUIElements(isEnabled) {
             const displayStyle = isEnabled ? 'block' : 'none';
             document.getElementById('wagons-input-container').style.display = displayStyle;
@@ -730,19 +671,18 @@
             const dayType = document.getElementById('dayType').value;
             const tonnage = parseFloat(document.getElementById('tonnage').value) || 0;
             const wagons = parseInt(document.getElementById('wagons').value) || 0;
-            if (!date) { showAlert('Please select a date', 'error'); return; }
+            if (!date) { showAlert('❌ Please select a date', 'error'); return; }
             const presentWorkers = appData.workers.filter(worker => document.getElementById(`worker_${worker.replace(/\s/g, '_')}`).checked);
             const earnings = calculateDayEarnings(date, dayType, tonnage, wagons, presentWorkers);
-            if (!appData.salaries) { appData.salaries = {}; }
+            if (!appData.salaries) { appData.salaries = {}; } // Ensure salaries object exists
             appData.salaries[date] = { date, type: dayType, tonnage, wagons, presentWorkers, earnings };
-            await saveUserData();
+            await saveUserData(); // Save to Firebase
             populateHistorySelector();
             updateHistoryDisplay();
-            showAlert('Daily entry saved successfully!', 'success');
+            showAlert('✅ Daily entry saved successfully!', 'success');
         }
 
         // --- CORE CALCULATION LOGIC (UNCHANGED) ---
-        // NO CHANGES WERE MADE TO ANY CALCULATION FUNCTIONS
         function calculateDayEarnings(entryDate, dayType, tonnage, wagons, presentWorkers) {
             const earnings = {};
             const rates = appData.agreements.current;
@@ -918,13 +858,6 @@
             Object.keys(appData.agreements.new).forEach(key => { if(document.getElementById(`new${key.charAt(0).toUpperCase() + key.slice(1)}`)) document.getElementById(`new${key.charAt(0).toUpperCase() + key.slice(1)}`).value = appData.agreements.new[key]; });
         }
         
-        async function saveAgreements() {
-            Object.keys(appData.agreements.current).forEach(key => { if(document.getElementById(`current${key.charAt(0).toUpperCase() + key.slice(1)}`)) appData.agreements.current[key] = parseFloat(document.getElementById(`current${key.charAt(0).toUpperCase() + key.slice(1)}`).value) || 0; });
-            Object.keys(appData.agreements.new).forEach(key => { if(document.getElementById(`new${key.charAt(0).toUpperCase() + key.slice(1)}`)) appData.agreements.new[key] = parseFloat(document.getElementById(`new${key.charAt(0).toUpperCase() + key.slice(1)}`).value) || 0; });
-            await saveUserData();
-            showAlert('Agreements saved successfully!', 'success');
-        }
-
         function loadPayPeriods() {
             const select = document.getElementById('payPeriod');
             select.innerHTML = '<option value="">Select Period</option>';
@@ -940,7 +873,7 @@
         }
         function generateSalaryReport() {
             const period = document.getElementById('payPeriod').value;
-            if (!period) { showAlert('Please select a pay period', 'error'); return; }
+            if (!period) { showAlert('❌ Please select a pay period', 'error'); return; }
             const [start, end] = period.split(',');
             const salaryData = calculatePeriodSalary(start, end);
             displaySalaryReport(salaryData, start, end);
@@ -1015,7 +948,7 @@
         }
         function calculateBonus() {
             const fiscalYearStart = document.getElementById('fiscalYear').value;
-            if (!fiscalYearStart) { showAlert('Please select a fiscal year', 'error'); return; }
+            if (!fiscalYearStart) { showAlert('❌ Please select a fiscal year', 'error'); return; }
             const bonusData = calculateAnnualBonus(fiscalYearStart);
             displayBonusReport(bonusData, fiscalYearStart);
         }
@@ -1183,7 +1116,7 @@
 
         function generateLeavesReport() {
             const fiscalYearStart = document.getElementById('leavesFiscalYear').value;
-            if (!fiscalYearStart) { showAlert('Please select a fiscal year', 'error'); return; }
+            if (!fiscalYearStart) { showAlert('❌ Please select a fiscal year', 'error'); return; }
             const leavesData = calculateLeavesReport(fiscalYearStart);
             displayLeavesReport(leavesData, fiscalYearStart);
         }
@@ -1235,7 +1168,6 @@
             html += '</div>';
             container.innerHTML = html;
         }
-
         function loadSettings() {
             if (!appData.configs) return;
             document.getElementById('workerCount').value = appData.configs.workerCount;
@@ -1248,50 +1180,32 @@
             toggleWagonUIElements(appData.configs.isWagonRateEnabled);
             loadWorkersList();
         }
-
-        function loadWorkersList() {
-            const container = document.getElementById('workersList');
-            const buttonsContainer = document.getElementById('settings-worker-buttons');
-            container.innerHTML = '';
-            buttonsContainer.innerHTML = ''; 
-
-            const isSetupDone = appData.configs.isSetupComplete;
-
-            (appData.workers || []).forEach((worker, index) => {
-                const div = document.createElement('div');
-                div.className = 'form-group';
-                div.innerHTML = `<label>Worker ${index + 1}:</label>
-                                 <input type="text" value="${worker}" readonly class="locked-input">`;
-                container.appendChild(div);
-            });
+        
+        async function updateWorkerName(index, newName) {
+            if (newName.trim()) { 
+                appData.workers[index] = newName.trim(); 
+                // No need to save here, will be saved with "Save Settings"
+            }
         }
         
-        async function saveSettings() {
-            appData.configs.agreementStartDate = document.getElementById('agreementStartDate').value;
-            appData.configs.fiscalYearStart = document.getElementById('fiscalYearStart').value;
-            appData.configs.isWagonRateEnabled = document.getElementById('enableWagonRate').checked;
-            appData.configs.isPenaltyEnabled = document.getElementById('enablePenalty').checked;
-            appData.configs.penaltyAmount = parseFloat(document.getElementById('penaltyAmount').value) || 231;
-            await saveUserData();
-            showAlert('Settings saved successfully!', 'success');
-        }
-
-        function showAlert(message, type = 'info', container = null) {
+        // MODIFIED: Alert function for bottom-screen notifications
+        function showAlert(message, type = 'info') {
             document.querySelectorAll('.alert').forEach(a => a.remove());
             const alertDiv = document.createElement('div');
             alertDiv.className = `alert alert-${type}`;
             alertDiv.textContent = message;
             
-            if (!container) {
-                container = document.querySelector('.page.active') || document.getElementById('main-content');
-            }
+            document.body.appendChild(alertDiv);
             
-            container.insertBefore(alertDiv, container.firstChild);
-
+            // Trigger the animation
             setTimeout(() => {
-                alertDiv.style.transition = 'opacity 0.5s ease';
-                alertDiv.style.opacity = '0';
-                setTimeout(() => alertDiv.remove(), 500);
+                alertDiv.classList.add('show');
+            }, 10); // A small delay to allow the element to be in the DOM
+
+            // Hide and remove after 5 seconds
+            setTimeout(() => {
+                alertDiv.classList.remove('show');
+                setTimeout(() => alertDiv.remove(), 500); // Remove from DOM after transition
             }, 5000);
         }
     </script>
