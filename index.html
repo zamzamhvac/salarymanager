@@ -59,14 +59,32 @@
         .overlay.open { display: block; }
         .worker-checkbox { display: flex; align-items: center; margin: 0; padding: 8px; background: #f7fafc; border-radius: 4px; border: 1px solid #eee;}
         .worker-checkbox input { width: auto; margin-right: 8px; }
-        .alert { padding: 15px; border-radius: 6px; margin: 15px 0; border: 1px solid transparent; }
-        .alert-success { background: #c6f6d5; color: #22543d; border-color: #9ae6b4; }
-        .alert-error { background: #fed7d7; color: #742a2a; border-color: #fc8181; }
-        .alert-info { background: #bee3f8; color: #2a4365; border-color: #90cdf4; }
+        /* MODIFIED: Alert Styling */
+        .alert {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 15px 25px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 9999;
+            opacity: 0;
+            transition: opacity 0.5s ease, bottom 0.5s ease;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+        }
+        .alert.show {
+            opacity: 1;
+            bottom: 30px;
+        }
+        .alert-success { background: #c6f6d5; color: #22543d; border-left: 5px solid #38a169; }
+        .alert-error { background: #fed7d7; color: #742a2a; border-left: 5px solid #c53030; }
+        .alert-info { background: #bee3f8; color: #2a4365; border-left: 5px solid #3182ce; }
         .loading { text-align: center; padding: 20px; }
         .spinner { border: 4px solid #f3f3f3; border-top: 4px solid var(--primary-color); border-radius: 50%; width: 40px; height: 40px; animation: spin 2s linear infinite; margin: 0 auto; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        
         #daily-entry-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
         #daily-entry-left, #daily-entry-right { display: flex; flex-direction: column; }
         #daily-entry-right h3 { font-size: 16px; font-weight: 500; margin-bottom: 8px; }
@@ -92,6 +110,16 @@
         .checkbox-group { display: flex; align-items: center; margin-bottom: 16px; }
         .checkbox-group input { width: auto; margin-right: 10px; }
         .sub-setting { padding-left: 30px; }
+        /* NEW: Setup Wizard Styles */
+        #setup-wizard-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 2000; align-items: center; justify-content: center; }
+        .wizard-container { background: #fff; padding: 25px; border-radius: 10px; max-width: 600px; width: 90%; box-shadow: 0 5px 15px rgba(0,0,0,0.3); max-height: 90vh; display: flex; flex-direction: column; }
+        .wizard-step { display: none; }
+        .wizard-step.active { display: block; }
+        .wizard-container h2 { font-size: 22px; color: var(--primary-color); margin-bottom: 10px; text-align: center; }
+        .wizard-container p { text-align: center; margin-bottom: 20px; color: #555; }
+        .wizard-body { overflow-y: auto; padding-right: 15px; margin-bottom: 20px; }
+        .wizard-nav { display: flex; justify-content: space-between; padding-top: 15px; border-top: 1px solid #eee; }
+        .wizard-warning { background-color: #fffbe6; border-left: 4px solid #f59e0b; padding: 12px; margin-bottom: 15px; font-size: 14px; }
     </style>
 </head>
 <body>
@@ -143,7 +171,7 @@
         <div id="settings" class="page">
             <h2>⚙️ Settings</h2><p>Configure your application settings</p>
             <h3>General Settings</h3>
-            <div class="form-group"><label>Number of Workers:</label><input type="number" id="workerCount" placeholder="8"></div>
+            <div class="form-group"><label>Number of Workers:</label><input type="number" id="workerCount" placeholder="8" disabled></div>
             <div class="form-group"><label>Agreement Start Date:</label><input type="date" id="agreementStartDate"></div>
             <div class="form-group"><label>Fiscal Year Start (MM-DD):</label><input type="text" id="fiscalYearStart" placeholder="10-10" pattern="[0-9]{2}-[0-9]{2}"></div>
             
@@ -165,14 +193,89 @@
                 </div>
             </div>
 
-            <div class="settings-section">
+            <!-- MODIFIED: This section will be hidden after setup -->
+            <div class="settings-section" id="manageWorkersSection">
                 <h3>Manage Workers</h3>
+                <p class="wizard-warning">Worker names can only be set once during the initial setup wizard.</p>
                 <div id="workersList"></div>
-                <button onclick="addWorker()" class="btn btn-success">Add Worker</button>
             </div>
             <button onclick="saveSettings()" class="btn">Save Settings</button>
         </div>
     </main>
+
+    <!-- NEW: Setup Wizard HTML -->
+    <div id="setup-wizard-overlay">
+        <div class="wizard-container">
+            <!-- Step 1: Worker Count -->
+            <div id="wizard-step-1" class="wizard-step">
+                <h2>👨‍👩‍👧‍👦 Step 1: Team Size</h2>
+                <p>Aap ki team mein kitne workers hain?</p>
+                <div class="wizard-body">
+                    <div class="form-group">
+                        <label for="wizardWorkerCount">Total Workers</label>
+                        <input type="number" id="wizardWorkerCount" placeholder="e.g., 8">
+                    </div>
+                </div>
+                <div class="wizard-nav">
+                    <span></span> <!-- for alignment -->
+                    <button onclick="wizardNext(1)" class="btn">Next</button>
+                </div>
+            </div>
+
+            <!-- Step 2: Worker Names -->
+            <div id="wizard-step-2" class="wizard-step">
+                <h2>📝 Step 2: Worker Names</h2>
+                <p>Ab apne tamam workers ke naam darj karen.</p>
+                <div class="wizard-warning">
+                    <strong>Tawajjuh Farmayen:</strong> Workers ke naam aur unki tarteeb (position) yahan set karne ke baad tabdeel nahi ki ja sakti. Ghalat naam ya tarteeb se future mein hisaab mein masla ho sakta hai.
+                </div>
+                <div class="wizard-body" id="wizardWorkerNamesContainer">
+                    <!-- Worker name inputs will be generated here -->
+                </div>
+                <div class="wizard-nav">
+                    <button onclick="wizardBack(2)" class="btn btn-danger">Back</button>
+                    <button onclick="wizardNext(2)" class="btn">Next</button>
+                </div>
+            </div>
+
+            <!-- Step 3: Agreement Details -->
+            <div id="wizard-step-3" class="wizard-step">
+                <h2>🤝 Step 3: Agreement Details</h2>
+                <p>Apna mojooda (current) agreement ki rates darj karen.</p>
+                <div class="wizard-warning">
+                    <strong>Zaroori Hidayat:</strong> Agreement ki details bilkul sahi darj karen. Agar aap inko baad mein tabdeel karte hain, to aapko pichhli tamam entries agreement ki shuru ki tareekh se dobara karni par sakti hain takay hisaab durust ho.
+                </div>
+                <div class="wizard-body rate-grid">
+                    <div class="form-group"><label>Ton Rate (Rs):</label><input type="number" id="wizardTonRate"></div>
+                    <div class="form-group"><label>Rest Rate (Rs):</label><input type="number" id="wizardRestRate"></div>
+                    <div class="form-group"><label>Layoff Rate (Rs):</label><input type="number" id="wizardLayoffRate"></div>
+                    <div class="form-group"><label>Wagon Rate (Rs):</label><input type="number" id="wizardWagonRate"></div>
+                    <div class="form-group"><label>Monthly Allowance (Rs):</label><input type="number" id="wizardAllowance"></div>
+                    <div class="form-group"><label>Annual Benefits (Rs):</label><input type="number" id="wizardAnnualBenefits"></div>
+                </div>
+                <div class="wizard-nav">
+                    <button onclick="wizardBack(3)" class="btn btn-danger">Back</button>
+                    <button onclick="wizardNext(3)" class="btn">Next</button>
+                </div>
+            </div>
+
+            <!-- Step 4: Agreement Start Date -->
+            <div id="wizard-step-4" class="wizard-step">
+                <h2>📅 Step 4: Agreement Start Date</h2>
+                <p>Yeh agreement kis tareekh se shuru hua hai?</p>
+                <div class="wizard-body">
+                    <div class="form-group">
+                        <label for="wizardAgreementStartDate">Agreement Start Date</label>
+                        <input type="date" id="wizardAgreementStartDate">
+                    </div>
+                </div>
+                <div class="wizard-nav">
+                    <button onclick="wizardBack(4)" class="btn btn-danger">Back</button>
+                    <button onclick="finishWizard()" class="btn btn-success">Finish Setup</button>
+                </div>
+            </div>
+        </div>
+    </div>
     
     <script>
         // --- MUKAMMAL JAVASCRIPT CODE ---
@@ -182,17 +285,17 @@
         let appData = { 
             salaries: {}, 
             workers: [],
-            // NEW: Permissions structure
             permissions: {
                 viewableWorkers: []
             },
             configs: { 
-                workerCount: 8, 
+                workerCount: 0, // MODIFIED: Default to 0, will be set by wizard
                 agreementStartDate: '2023-10-10', 
                 fiscalYearStart: '10-10', 
                 isPenaltyEnabled: false, 
                 penaltyAmount: 231, 
-                isWagonRateEnabled: false 
+                isWagonRateEnabled: false,
+                isSetupComplete: false // NEW: Flag to track if wizard is done
             }, 
             agreements: { 
                 current: { tonRate: 22, restRate: 1100, layoffRate: 549, wagonRate: 0, allowance: 20000, annualBenefits: 0 }, 
@@ -246,15 +349,12 @@
                 console.log("Firebase initialize ho gaya.");
 
                 // Step 3: Set up the Authentication State Listener
-                // This is the core of the new login system. It runs whenever the user's login state changes.
                 firebase.auth().onAuthStateChanged(async (user) => {
                     if (user) {
-                        // User is signed in.
                         console.log("User signed in:", user.uid);
                         currentUser = user;
                         await showMainApp();
                     } else {
-                        // User is signed out.
                         console.log("User is signed out.");
                         currentUser = null;
                         showLoginPage();
@@ -280,7 +380,7 @@
             } catch (error) {
                 console.error("Application start karne mein error:", error);
                 document.getElementById('main-content').innerHTML = `
-                    <div class="alert alert-error">
+                    <div class="alert alert-error show">
                         <h2>Application Error</h2>
                         <p>Application configuration load nahi ho saki. Baraye meharbani baad mein try karen.</p>
                     </div>`;
@@ -296,16 +396,19 @@
             document.getElementById('sideNav').style.display = 'flex';
             document.getElementById('userName').textContent = currentUser.displayName || currentUser.email;
             
-            // Load user data from Firebase before setting up the UI
             await loadUserData(); 
             
-            setupUI();
-            toggleWagonUIElements(appData.configs.isWagonRateEnabled);
-            showPage('daily-entry');
+            // NEW: Check if setup is complete. If not, show wizard.
+            if (!appData.configs.isSetupComplete) {
+                showSetupWizard();
+            } else {
+                setupUI();
+                toggleWagonUIElements(appData.configs.isWagonRateEnabled);
+                showPage('daily-entry');
+            }
         }
 
         function showLoginPage() {
-            // Hide all app pages and show the login page
             document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
             document.getElementById('login-page').classList.add('active');
             document.getElementById('appHeader').style.display = 'none';
@@ -324,11 +427,9 @@
             }
             firebase.auth().signInWithEmailAndPassword(email, password)
                 .then((userCredential) => {
-                    // Success. The onAuthStateChanged listener will handle the UI change.
                     showAlert('Successfully signed in!', 'success');
                 })
                 .catch((error) => {
-                    // Handle Errors here.
                     console.error("Sign in error:", error);
                     showAlert(error.message, 'error');
                 });
@@ -350,18 +451,15 @@
             firebase.auth().createUserWithEmailAndPassword(email, password)
                 .then((userCredential) => {
                     const user = userCredential.user;
-                    // Set the user's display name
                     return user.updateProfile({
                         displayName: companyName
                     }).then(() => {
-                        // After setting the display name, initialize their data in the database
-                        currentUser = user; // Set current user temporarily to initialize data
+                        currentUser = user; 
                         return initializeNewUserData();
                     });
                 })
                 .then(() => {
-                    // Success. onAuthStateChanged will handle the rest.
-                    showAlert('Account created successfully!', 'success');
+                    showAlert('Account created successfully! Please complete the setup.', 'success');
                 })
                 .catch((error) => {
                     console.error("Sign up error:", error);
@@ -388,11 +486,10 @@
                 const snapshot = await userRef.once('value');
                 if (snapshot.exists()) {
                     const savedData = snapshot.val();
-                    // Merge saved data with default data to avoid errors if new properties were added
                     appData = {
-                        ...appData, // a default object
+                        ...appData,
                         ...savedData,
-                        permissions: { // MODIFIED: Gracefully merge permissions
+                        permissions: {
                             ...(appData.permissions || {}),
                             ...(savedData.permissions || {})
                         },
@@ -408,10 +505,9 @@
                         workers: savedData.workers || []
                     };
                     
-                    // NEW: Ensure backward compatibility for old users without permissions
                     if (!appData.permissions.viewableWorkers || appData.permissions.viewableWorkers.length === 0) {
                         if (appData.workers && appData.workers.length > 0) {
-                            appData.permissions.viewableWorkers = [appData.workers[0]]; // Grant access to the first worker
+                            appData.permissions.viewableWorkers = appData.workers; // Grant access to all their own workers
                         } else {
                             appData.permissions.viewableWorkers = [];
                         }
@@ -419,7 +515,6 @@
 
                     console.log("User data loaded from Firebase.");
                 } else {
-                    // This is a new user, initialize their data
                     console.log("No data found, initializing new user data in Firebase.");
                     await initializeNewUserData();
                 }
@@ -434,39 +529,118 @@
             try {
                 await firebase.database().ref('users/' + currentUser.uid).set(appData);
                 console.log("User data saved to Firebase.");
-            } catch (error)
-                {
+            } catch (error) {
                 console.error("Error saving user data:", error);
                 showAlert("Failed to save data. Please check your connection.", "error");
             }
         }
 
         async function initializeNewUserData() {
-            // This function sets the default data for a new user and saves it to Firebase.
+            // MODIFIED: This function now sets defaults for the wizard
             appData = { 
                 salaries: {}, 
-                workers: ['Worker 1', 'Worker 2', 'Worker 3', 'Worker 4', 'Worker 5', 'Worker 6', 'Worker 7', 'Worker 8'], 
-                // MODIFIED: Set default permission for new users
+                workers: [], // Will be populated by wizard
                 permissions: {
-                    viewableWorkers: ['Worker 1']
+                    viewableWorkers: [] // Will be populated by wizard
                 },
                 configs: { 
-                    workerCount: 8, 
-                    agreementStartDate: '2023-10-10', 
+                    workerCount: 0, 
+                    agreementStartDate: new Date().toISOString().split('T')[0], 
                     fiscalYearStart: '10-10', 
                     isPenaltyEnabled: false, 
                     penaltyAmount: 231, 
-                    isWagonRateEnabled: false 
+                    isWagonRateEnabled: false,
+                    isSetupComplete: false // NEW: This is key
                 }, 
                 agreements: { 
-                    current: { tonRate: 22, restRate: 1100, layoffRate: 549, wagonRate: 0, allowance: 20000, annualBenefits: 0 }, 
-                    new: { tonRate: 25, restRate: 1200, layoffRate: 600, wagonRate: 0, allowance: 26000, annualBenefits: 0 } 
+                    current: { tonRate: 0, restRate: 0, layoffRate: 0, wagonRate: 0, allowance: 0, annualBenefits: 0 }, 
+                    new: { tonRate: 0, restRate: 0, layoffRate: 0, wagonRate: 0, allowance: 0, annualBenefits: 0 } 
                 }
             };
             await saveUserData();
         }
 
-        // --- UI and OTHER FUNCTIONS (No changes to logic) ---
+        // --- NEW: SETUP WIZARD FUNCTIONS ---
+        function showSetupWizard() {
+            const overlay = document.getElementById('setup-wizard-overlay');
+            overlay.style.display = 'flex';
+            document.getElementById('wizard-step-1').classList.add('active');
+        }
+
+        function wizardNext(currentStep) {
+            // Validation
+            if (currentStep === 1) {
+                const count = parseInt(document.getElementById('wizardWorkerCount').value);
+                if (!count || count <= 0) {
+                    showAlert('Please enter a valid number of workers.', 'error');
+                    return;
+                }
+                // Generate worker name inputs for the next step
+                const container = document.getElementById('wizardWorkerNamesContainer');
+                container.innerHTML = '';
+                for (let i = 0; i < count; i++) {
+                    container.innerHTML += `<div class="form-group"><label>Worker ${i + 1} Name:</label><input type="text" class="wizard-worker-name" value="Worker ${i + 1}"></div>`;
+                }
+            } else if (currentStep === 2) {
+                const names = Array.from(document.querySelectorAll('.wizard-worker-name')).map(input => input.value.trim());
+                if (names.some(name => name === '')) {
+                    showAlert('Please provide a name for every worker.', 'error');
+                    return;
+                }
+            } else if (currentStep === 3) {
+                 // Simple validation to ensure some value is entered. Can be made more robust.
+                 const tonRate = document.getElementById('wizardTonRate').value;
+                 if(tonRate === '' || parseFloat(tonRate) < 0) {
+                     showAlert('Please enter a valid Ton Rate.', 'error');
+                     return;
+                 }
+            }
+
+            document.getElementById(`wizard-step-${currentStep}`).classList.remove('active');
+            document.getElementById(`wizard-step-${currentStep + 1}`).classList.add('active');
+        }
+
+        function wizardBack(currentStep) {
+            document.getElementById(`wizard-step-${currentStep}`).classList.remove('active');
+            document.getElementById(`wizard-step-${currentStep - 1}`).classList.add('active');
+        }
+
+        async function finishWizard() {
+            // Final Validation
+            const agreementDate = document.getElementById('wizardAgreementStartDate').value;
+            if (!agreementDate) {
+                showAlert('Please select the agreement start date.', 'error');
+                return;
+            }
+
+            // Collect all data from wizard
+            appData.configs.workerCount = parseInt(document.getElementById('wizardWorkerCount').value);
+            appData.workers = Array.from(document.querySelectorAll('.wizard-worker-name')).map(input => input.value.trim());
+            // User has permission to see all their workers
+            appData.permissions.viewableWorkers = [...appData.workers];
+
+            appData.agreements.current.tonRate = parseFloat(document.getElementById('wizardTonRate').value) || 0;
+            appData.agreements.current.restRate = parseFloat(document.getElementById('wizardRestRate').value) || 0;
+            appData.agreements.current.layoffRate = parseFloat(document.getElementById('wizardLayoffRate').value) || 0;
+            appData.agreements.current.wagonRate = parseFloat(document.getElementById('wizardWagonRate').value) || 0;
+            appData.agreements.current.allowance = parseFloat(document.getElementById('wizardAllowance').value) || 0;
+            appData.agreements.current.annualBenefits = parseFloat(document.getElementById('wizardAnnualBenefits').value) || 0;
+            
+            appData.configs.agreementStartDate = agreementDate;
+            appData.configs.isSetupComplete = true; // Mark setup as complete
+
+            // Save data to Firebase
+            await saveUserData();
+
+            // Hide wizard and setup the main app UI
+            document.getElementById('setup-wizard-overlay').style.display = 'none';
+            showAlert('Setup complete! Welcome.', 'success');
+            setupUI();
+            toggleWagonUIElements(appData.configs.isWagonRateEnabled);
+            showPage('daily-entry');
+        }
+
+        // --- UI and OTHER FUNCTIONS ---
         
         function toggleWagonUIElements(isEnabled) {
             const displayStyle = isEnabled ? 'block' : 'none';
@@ -480,7 +654,7 @@
             const container = document.getElementById('workerAttendance');
             container.innerHTML = '';
             if(!appData.workers || appData.workers.length === 0){
-                container.innerHTML = "<p>No workers found. Add workers in Settings.</p>"; return;
+                container.innerHTML = "<p>No workers found. Please complete the setup wizard.</p>"; return;
             }
             appData.workers.forEach(worker => {
                 const div = document.createElement('div');
@@ -498,16 +672,14 @@
             if (!date) { showAlert('Please select a date', 'error'); return; }
             const presentWorkers = appData.workers.filter(worker => document.getElementById(`worker_${worker.replace(/\s/g, '_')}`).checked);
             const earnings = calculateDayEarnings(date, dayType, tonnage, wagons, presentWorkers);
-            if (!appData.salaries) { appData.salaries = {}; } // Ensure salaries object exists
+            if (!appData.salaries) { appData.salaries = {}; } 
             appData.salaries[date] = { date, type: dayType, tonnage, wagons, presentWorkers, earnings };
-            await saveUserData(); // Save to Firebase
+            await saveUserData();
             populateHistorySelector();
             updateHistoryDisplay();
             showAlert('Daily entry saved successfully!', 'success');
         }
 
-        // --- CORE CALCULATION LOGIC (UNCHANGED) ---
-        // NO CHANGES WERE MADE TO ANY CALCULATION FUNCTIONS
         function calculateDayEarnings(entryDate, dayType, tonnage, wagons, presentWorkers) {
             const earnings = {};
             const rates = appData.agreements.current;
@@ -686,7 +858,7 @@
         async function saveAgreements() {
             Object.keys(appData.agreements.current).forEach(key => { if(document.getElementById(`current${key.charAt(0).toUpperCase() + key.slice(1)}`)) appData.agreements.current[key] = parseFloat(document.getElementById(`current${key.charAt(0).toUpperCase() + key.slice(1)}`).value) || 0; });
             Object.keys(appData.agreements.new).forEach(key => { if(document.getElementById(`new${key.charAt(0).toUpperCase() + key.slice(1)}`)) appData.agreements.new[key] = parseFloat(document.getElementById(`new${key.charAt(0).toUpperCase() + key.slice(1)}`).value) || 0; });
-            await saveUserData(); // Save to Firebase
+            await saveUserData();
             showAlert('Agreements saved successfully!', 'success');
         }
 
@@ -724,7 +896,6 @@
             return salaries;
         }
         
-        // MODIFIED: This function now respects user permissions
         function displaySalaryReport(salaryData, startDate, endDate) {
             const container = document.getElementById('salaryResults');
             const viewableWorkers = appData.permissions?.viewableWorkers || [];
@@ -817,7 +988,6 @@
             return workerBonuses;
         }
 
-        // MODIFIED: This function now respects user permissions
         function displayBonusReport(bonusData, fiscalYearStart) {
             const container = document.getElementById('bonusResults');
             const viewableWorkers = appData.permissions?.viewableWorkers || [];
@@ -927,7 +1097,6 @@
             return workerBonuses;
         }
         
-        // MODIFIED: This function now respects user permissions
         function displayArrearsReport(arrearsData) {
             const container = document.getElementById('arrearsResults');
             const viewableWorkers = appData.permissions?.viewableWorkers || [];
@@ -982,12 +1151,11 @@
             return workerLeaves;
         }
 
-        // MODIFIED: This function now respects user permissions
         function displayLeavesReport(leavesData, fiscalYearStart) {
             const container = document.getElementById('leavesResults');
             const viewableWorkers = appData.permissions?.viewableWorkers || [];
             const startYear = new Date(fiscalYearStart).getFullYear();
-            let html = `<h3>Leaves Report: ${startYear}-${startYear + 1}</h3><div class="alert alert-info"><strong>Leave Structure:</strong> 20 Unpaid Leaves + 12 Paid Leaves = 32 Total Annual Leaves</div><div class="report-grid">`;
+            let html = `<h3>Leaves Report: ${startYear}-${startYear + 1}</h3><div class="alert alert-info show"><strong>Leave Structure:</strong> 20 Unpaid Leaves + 12 Paid Leaves = 32 Total Annual Leaves</div><div class="report-grid">`;
             
             appData.workers.forEach(worker => {
                 if (viewableWorkers.includes(worker)) {
@@ -1014,61 +1182,69 @@
             document.getElementById('penaltyAmount').value = appData.configs.penaltyAmount;
             document.getElementById('penaltyAmountContainer').style.display = appData.configs.isPenaltyEnabled ? 'block' : 'none';
             toggleWagonUIElements(appData.configs.isWagonRateEnabled);
-            loadWorkersList();
+            
+            // MODIFIED: Hide worker management section if setup is complete
+            if (appData.configs.isSetupComplete) {
+                document.getElementById('manageWorkersSection').style.display = 'none';
+            } else {
+                 document.getElementById('manageWorkersSection').style.display = 'block';
+                 loadWorkersList();
+            }
         }
         function loadWorkersList() {
             const container = document.getElementById('workersList');
-            container.innerHTML = '';
+            container.innerHTML = ''; // This will be empty after setup, which is fine
             (appData.workers || []).forEach((worker, index) => {
                 const div = document.createElement('div');
                 div.className = 'form-group';
-                div.innerHTML = `<label>Worker ${index + 1}:</label><div style="display: flex; gap: 10px;"><input type="text" value="${worker}" onchange="updateWorkerName(${index}, this.value)" style="flex: 1;"><button onclick="removeWorker(${index})" class="btn btn-danger" style="padding: 8px 12px;">Remove</button></div>`;
+                // This UI is now informational only as it's hidden from interaction
+                div.innerHTML = `<label>Worker ${index + 1}:</label><input type="text" value="${worker}" disabled>`;
                 container.appendChild(div);
             });
         }
-        async function addWorker() {
-            if (!appData.workers) { appData.workers = []; }
-            appData.workers.push(`Worker ${appData.workers.length + 1}`);
-            loadWorkersList();
-            loadWorkerAttendance();
-            await saveUserData();
-        }
-        async function removeWorker(index) {
-            if (appData.workers.length <= 1) { showAlert('At least one worker is required', 'error'); return; }
-            appData.workers.splice(index, 1);
-            loadWorkersList();
-            loadWorkerAttendance();
-            await saveUserData();
-        }
-        async function updateWorkerName(index, newName) {
-            if (newName.trim()) { 
-                appData.workers[index] = newName.trim(); 
-                await saveUserData(); 
-            }
-        }
+        // These functions below are now effectively disabled as the UI is hidden
+        async function addWorker() { showAlert('Cannot add workers after initial setup.', 'error'); }
+        async function removeWorker(index) { showAlert('Cannot remove workers after initial setup.', 'error'); }
+        async function updateWorkerName(index, newName) { showAlert('Cannot change worker names after initial setup.', 'error'); }
+        
         async function saveSettings() {
-            appData.configs.workerCount = parseInt(document.getElementById('workerCount').value) || 8;
+            // Note: workerCount and worker names are no longer saved from here
             appData.configs.agreementStartDate = document.getElementById('agreementStartDate').value;
             appData.configs.fiscalYearStart = document.getElementById('fiscalYearStart').value;
             appData.configs.isWagonRateEnabled = document.getElementById('enableWagonRate').checked;
             appData.configs.isPenaltyEnabled = document.getElementById('enablePenalty').checked;
             appData.configs.penaltyAmount = parseFloat(document.getElementById('penaltyAmount').value) || 231;
-            await saveUserData(); // Save to Firebase
+            await saveUserData();
             showAlert('Settings saved successfully!', 'success');
         }
+
+        // MODIFIED: showAlert function
         function showAlert(message, type = 'info') {
-            // Remove existing alerts to prevent stacking
-            document.querySelectorAll('.alert').forEach(a => a.remove());
+            // Remove any existing alert
+            const existingAlert = document.getElementById('custom-alert');
+            if (existingAlert) {
+                existingAlert.remove();
+            }
+
             const alertDiv = document.createElement('div');
+            alertDiv.id = 'custom-alert';
             alertDiv.className = `alert alert-${type}`;
             alertDiv.textContent = message;
-            const activePageQuery = document.querySelector('.page.active');
-            const container = activePageQuery || document.getElementById('main-content');
-            container.insertBefore(alertDiv, container.firstChild);
+            
+            document.body.appendChild(alertDiv);
+
+            // Trigger the animation
             setTimeout(() => {
-                alertDiv.style.transition = 'opacity 0.5s ease';
-                alertDiv.style.opacity = '0';
-                setTimeout(() => alertDiv.remove(), 500);
+                alertDiv.classList.add('show');
+            }, 10); // A small delay is needed to ensure the transition works
+
+            // Auto-hide the alert
+            setTimeout(() => {
+                alertDiv.classList.remove('show');
+                // Remove the element from DOM after transition ends
+                alertDiv.addEventListener('transitionend', () => {
+                    if(alertDiv) alertDiv.remove();
+                });
             }, 5000);
         }
     </script>
