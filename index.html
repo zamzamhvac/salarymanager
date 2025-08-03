@@ -99,7 +99,6 @@
         .checkbox-group input { width: auto; margin-right: 10px; }
         .sub-setting { padding-left: 30px; }
         
-        /* MODIFIED: Setup Wizard Styles for Responsiveness */
         #setup-wizard-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 2000; align-items: center; justify-content: center; padding: 15px; }
         .wizard-container { background: #fff; padding: 25px; border-radius: 10px; max-width: 600px; width: 100%; box-shadow: 0 5px 15px rgba(0,0,0,0.3); max-height: 90vh; display: flex; flex-direction: column; }
         .wizard-step { display: none; }
@@ -114,8 +113,8 @@
             .wizard-container { padding: 15px; max-height: 95vh; }
             .wizard-container h2 { font-size: 20px; }
             .wizard-container p { font-size: 14px; }
-            .wizard-body { max-height: calc(95vh - 200px); } /* Adjust height for smaller screens */
-            .rate-grid { grid-template-columns: 1fr; } /* Stack agreement inputs on small screens */
+            .wizard-body { max-height: calc(95vh - 200px); }
+            .rate-grid { grid-template-columns: 1fr; }
             .wizard-nav .btn { padding: 8px 12px; font-size: 13px; }
         }
     </style>
@@ -200,7 +199,7 @@
         </div>
     </main>
 
-    <!-- MODIFIED: Setup Wizard HTML with Back buttons -->
+    <!-- FIXED: Setup Wizard HTML with corrected buttons -->
     <div id="setup-wizard-overlay">
         <div class="wizard-container">
             <!-- Step 1: Worker Count -->
@@ -306,7 +305,6 @@
         }
 
         function showPage(pageId) {
-            // NEW: Prevent navigation if setup is not complete
             if (!appData.configs.isSetupComplete && pageId !== 'login-page') {
                 showAlert('Please complete the setup wizard first.', 'error');
                 return;
@@ -396,12 +394,11 @@
             
             await loadUserData(); 
             
-            // NEW: Check if setup is complete. If not, show wizard.
             if (!appData.configs.isSetupComplete) {
-                document.getElementById('appHeader').style.display = 'flex'; // Show header for sign out
+                document.getElementById('appHeader').style.display = 'flex';
                 document.getElementById('userInfo').style.display = 'flex';
                 document.getElementById('userName').textContent = currentUser.displayName || currentUser.email;
-                document.getElementById('sideNav').style.display = 'none'; // Hide nav during setup
+                document.getElementById('sideNav').style.display = 'none';
                 showSetupWizard();
             } else {
                 document.getElementById('appHeader').style.display = 'flex';
@@ -565,7 +562,7 @@
             await saveUserData();
         }
 
-        // --- NEW/MODIFIED: SETUP WIZARD FUNCTIONS ---
+        // --- SETUP WIZARD FUNCTIONS ---
         function showSetupWizard() {
             document.querySelectorAll('.wizard-step').forEach(s => s.classList.remove('active'));
             const overlay = document.getElementById('setup-wizard-overlay');
@@ -581,7 +578,6 @@
                     showAlert('Please enter a valid number of workers.', 'error');
                     return;
                 }
-                // Generate worker name inputs for the next step
                 const container = document.getElementById('wizardWorkerNamesContainer');
                 container.innerHTML = '';
                 for (let i = 0; i < count; i++) {
@@ -611,14 +607,12 @@
         }
 
         async function finishWizard() {
-            // Final Validation
             const agreementDate = document.getElementById('wizardAgreementStartDate').value;
             if (!agreementDate) {
                 showAlert('Please select the agreement start date.', 'error');
                 return;
             }
 
-            // Collect all data from wizard
             appData.configs.workerCount = parseInt(document.getElementById('wizardWorkerCount').value);
             appData.workers = Array.from(document.querySelectorAll('.wizard-worker-name')).map(input => input.value.trim());
             appData.permissions.viewableWorkers = [...appData.workers];
@@ -631,16 +625,13 @@
             appData.agreements.current.annualBenefits = parseFloat(document.getElementById('wizardAnnualBenefits').value) || 0;
             
             appData.configs.agreementStartDate = agreementDate;
-            appData.configs.isSetupComplete = true; // Mark setup as complete
+            appData.configs.isSetupComplete = true;
 
-            // Save data to Firebase
             await saveUserData();
 
-            // Hide wizard and setup the main app UI
             document.getElementById('setup-wizard-overlay').style.display = 'none';
             showAlert('Setup complete! Welcome.', 'success');
             
-            // Reload the main app view
             showMainApp();
         }
 
