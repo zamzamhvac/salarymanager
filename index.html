@@ -59,28 +59,43 @@
         .overlay.open { display: block; }
         .worker-checkbox { display: flex; align-items: center; margin: 0; padding: 8px; background: #f7fafc; border-radius: 4px; border: 1px solid #eee;}
         .worker-checkbox input { width: auto; margin-right: 8px; }
-        .alert { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); padding: 15px 25px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 9999; opacity: 0; transition: opacity 0.5s ease, bottom 0.5s ease; font-weight: 500; display: flex; align-items: center; }
-        .alert.show { opacity: 1; bottom: 30px; }
-        .alert-success { background: #c6f6d5; color: #22543d; border-left: 5px solid #38a169; }
-        .alert-error { background: #fed7d7; color: #742a2a; border-left: 5px solid #c53030; }
-        .alert-info { background: #bee3f8; color: #2a4365; border-left: 5px solid #3182ce; }
+        
+        /* MODIFIED: Alert Styling for Bottom Position */
+        .alert {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 15px 25px;
+            border-radius: 8px;
+            border: 1px solid transparent;
+            z-index: 9999;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            opacity: 0;
+            transition: opacity 0.5s ease, bottom 0.5s ease;
+        }
+        .alert-showing {
+            opacity: 1;
+        }
+        .alert-success { background: #c6f6d5; color: #22543d; border-color: #9ae6b4; }
+        .alert-error { background: #fed7d7; color: #742a2a; border-color: #fc8181; }
+        .alert-info { background: #bee3f8; color: #2a4365; border-color: #90cdf4; }
+
         .loading { text-align: center; padding: 20px; }
         .spinner { border: 4px solid #f3f3f3; border-top: 4px solid var(--primary-color); border-radius: 50%; width: 40px; height: 40px; animation: spin 2s linear infinite; margin: 0 auto; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
         #daily-entry-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
         #daily-entry-left, #daily-entry-right { display: flex; flex-direction: column; }
         #daily-entry-right h3 { font-size: 16px; font-weight: 500; margin-bottom: 8px; }
         #workerAttendance { flex-grow: 1; overflow-y: auto; display: grid; gap: 8px; grid-template-columns: 1fr; padding-right: 8px; max-height: 230px; border: 1px solid #eee; padding: 8px; border-radius: 4px; }
         .action-buttons { margin-top: auto; padding-top: 16px; text-align: center; }
         .action-buttons .btn { width: 90%; max-width: 300px; }
-        @media (max-width: 768px) { 
-            #daily-entry-layout { grid-template-columns: 1fr; } 
-            #workerAttendance { max-height: 180px; } 
-        }
+        @media (max-width: 600px) { #daily-entry-layout { grid-template-columns: 1fr; } #workerAttendance { max-height: 150px; } }
         .two-column { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
-        @media (max-width: 768px) {
-            .two-column { grid-template-columns: 1fr; }
-        }
         .agreement-section { background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0; border: 1px solid #e9ecef; }
         .agreement-section h3 { color: #495057; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 2px solid #dee2e6; }
         .rate-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
@@ -99,23 +114,66 @@
         .checkbox-group input { width: auto; margin-right: 10px; }
         .sub-setting { padding-left: 30px; }
         
-        #setup-wizard-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 2000; align-items: center; justify-content: center; padding: 15px; }
-        .wizard-container { background: #fff; padding: 25px; border-radius: 10px; max-width: 600px; width: 100%; box-shadow: 0 5px 15px rgba(0,0,0,0.3); max-height: 90vh; display: flex; flex-direction: column; }
-        .wizard-step { display: none; }
-        .wizard-step.active { display: block; }
-        .wizard-container h2 { font-size: 22px; color: var(--primary-color); margin-bottom: 10px; text-align: center; }
-        .wizard-container p { text-align: center; margin-bottom: 20px; color: #555; font-size: 15px;}
-        .wizard-body { overflow-y: auto; padding-right: 15px; margin-bottom: 20px; max-height: 60vh; }
-        .wizard-nav { display: flex; justify-content: space-between; align-items: center; padding-top: 15px; border-top: 1px solid #eee; }
-        .wizard-warning { background-color: #fffbe6; border-left: 4px solid #f59e0b; padding: 12px; margin-bottom: 15px; font-size: 14px; }
-        
-        @media (max-width: 600px) {
-            .wizard-container { padding: 15px; max-height: 95vh; }
-            .wizard-container h2 { font-size: 20px; }
-            .wizard-container p { font-size: 14px; }
-            .wizard-body { max-height: calc(95vh - 200px); }
-            .rate-grid { grid-template-columns: 1fr; }
-            .wizard-nav .btn { padding: 8px 12px; font-size: 13px; }
+        /* NEW: Setup Wizard Styles */
+        .wizard-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.6);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+        }
+        .wizard-container {
+            background: var(--surface-color);
+            padding: 24px;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 600px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+        .wizard-step {
+            display: none;
+        }
+        .wizard-step.active {
+            display: block;
+        }
+        .wizard-step h2 {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: var(--primary-color);
+            margin-bottom: 8px;
+        }
+        .wizard-step p {
+             margin-bottom: 16px;
+             font-size: 14px;
+             color: #5f6368;
+        }
+        .wizard-buttons {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 24px;
+        }
+        .worker-name-inputs {
+            max-height: 250px;
+            overflow-y: auto;
+            padding-right: 10px;
+        }
+        .info-box {
+            background-color: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            padding: 12px;
+            margin: 16px 0;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .info-box p {
+            margin: 0;
+            color: #1e88e5;
         }
     </style>
 </head>
@@ -167,6 +225,9 @@
         <div id="leaves" class="page"><h2>🏖️ Leaves Report</h2><p>Track annual leaves for all workers</p><div class="form-group"><label>Select Fiscal Year:</label><select id="leavesFiscalYear"><option value="">Select Year</option></select></div><button onclick="generateLeavesReport()" class="btn">Generate Leaves Report</button><div id="leavesResults"></div></div>
         <div id="settings" class="page">
             <h2>⚙️ Settings</h2><p>Configure your application settings</p>
+            <div id="settings-info-box" class="info-box" style="display: none;">
+                <p>⚙️ Workers ki settings ab tabdeel nahi ho sakti. Agar aap ko workers ki tadaad ya naam badalne hain to aap ko naya account banana paray ga.</p>
+            </div>
             <h3>General Settings</h3>
             <div class="form-group"><label>Number of Workers:</label><input type="number" id="workerCount" placeholder="8" disabled></div>
             <div class="form-group"><label>Agreement Start Date:</label><input type="date" id="agreementStartDate"></div>
@@ -190,84 +251,71 @@
                 </div>
             </div>
 
-            <div class="settings-section" id="manageWorkersSection">
+            <div class="settings-section">
                 <h3>Manage Workers</h3>
-                <p class="wizard-warning">Worker names can only be set once during the initial setup wizard.</p>
                 <div id="workersList"></div>
+                <button id="addWorkerBtn" onclick="addWorker()" class="btn btn-success" style="display:none;">Add Worker</button>
             </div>
             <button onclick="saveSettings()" class="btn">Save Settings</button>
         </div>
     </main>
-
-    <!-- FIXED: Setup Wizard HTML with corrected buttons -->
-    <div id="setup-wizard-overlay">
+    
+    <!-- NEW: Setup Wizard Modal -->
+    <div class="wizard-overlay" id="setupWizard">
         <div class="wizard-container">
             <!-- Step 1: Worker Count -->
-            <div id="wizard-step-1" class="wizard-step">
-                <h2>👨‍👩‍👧‍👦 Step 1: Team Size</h2>
-                <p>Aap ki team mein kitne workers hain?</p>
-                <div class="wizard-body">
-                    <div class="form-group">
-                        <label for="wizardWorkerCount">Total Workers</label>
-                        <input type="number" id="wizardWorkerCount" placeholder="e.g., 8">
-                    </div>
+            <div class="wizard-step active" id="wizardStep1">
+                <h2><i class="material-icons">groups</i> Welcome! Let's Set Up Your Account</h2>
+                <p>Sab se pehle, batayen ke aap ki team mein kitne workers hain.</p>
+                <div class="form-group">
+                    <label for="wizardWorkerCount">Number of Workers:</label>
+                    <input type="number" id="wizardWorkerCount" placeholder="e.g., 8">
                 </div>
-                <div class="wizard-nav">
-                    <span></span> <!-- for alignment -->
-                    <button onclick="wizardNext(1)" class="btn">Next</button>
+                <div class="wizard-buttons">
+                    <button class="btn" onclick="goToWizardStep(2)">Next <i class="material-icons" style="font-size: 16px; margin-left: 5px;">arrow_forward</i></button>
                 </div>
             </div>
 
             <!-- Step 2: Worker Names -->
-            <div id="wizard-step-2" class="wizard-step">
-                <h2>📝 Step 2: Worker Names</h2>
-                <p>Ab apne tamam workers ke naam darj karen.</p>
-                <div class="wizard-warning">
-                    <strong>Tawajjuh Farmayen:</strong> Workers ke naam aur unki tarteeb (position) yahan set karne ke baad tabdeel nahi ki ja sakti. Ghalat naam ya tarteeb se future mein hisaab mein masla ho sakta hai.
-                </div>
-                <div class="wizard-body" id="wizardWorkerNamesContainer">
+            <div class="wizard-step" id="wizardStep2">
+                <h2><i class="material-icons">badge</i> Set Worker Names</h2>
+                <p>Ab apne workers ke naam enter karen. <strong> Yaad rakhen: Yeh naam baad mein tabdeel nahi ho sakenge.</strong></p>
+                <div class="worker-name-inputs" id="wizardWorkerNamesContainer">
                     <!-- Worker name inputs will be generated here -->
                 </div>
-                <div class="wizard-nav">
-                    <button onclick="wizardBack(2)" class="btn btn-danger">Back</button>
-                    <button onclick="wizardNext(2)" class="btn">Next</button>
+                <div class="wizard-buttons">
+                    <button class="btn" onclick="goToWizardStep(3)">Next <i class="material-icons" style="font-size: 16px; margin-left: 5px;">arrow_forward</i></button>
                 </div>
             </div>
-
+            
             <!-- Step 3: Agreement Details -->
-            <div id="wizard-step-3" class="wizard-step">
-                <h2>🤝 Step 3: Agreement Details</h2>
-                <p>Apna mojooda (current) agreement ki rates darj karen.</p>
-                <div class="wizard-warning">
-                    <strong>Zaroori Hidayat:</strong> Agreement ki details bilkul sahi darj karen. Agar aap inko baad mein tabdeel karte hain, to aapko pichhli tamam entries agreement ki shuru ki tareekh se dobara karni par sakti hain takay hisaab durust ho.
-                </div>
-                <div class="wizard-body rate-grid">
-                    <div class="form-group"><label>Ton Rate (Rs):</label><input type="number" id="wizardTonRate" placeholder="0"></div>
-                    <div class="form-group"><label>Rest Rate (Rs):</label><input type="number" id="wizardRestRate" placeholder="0"></div>
-                    <div class="form-group"><label>Layoff Rate (Rs):</label><input type="number" id="wizardLayoffRate" placeholder="0"></div>
-                    <div class="form-group"><label>Wagon Rate (Rs):</label><input type="number" id="wizardWagonRate" placeholder="0"></div>
-                    <div class="form-group"><label>Monthly Allowance (Rs):</label><input type="number" id="wizardAllowance" placeholder="0"></div>
-                    <div class="form-group"><label>Annual Benefits (Rs):</label><input type="number" id="wizardAnnualBenefits" placeholder="0"></div>
-                </div>
-                <div class="wizard-nav">
-                    <button onclick="wizardBack(3)" class="btn btn-danger">Back</button>
-                    <button onclick="wizardNext(3)" class="btn">Next</button>
-                </div>
+            <div class="wizard-step" id="wizardStep3">
+                 <h2><i class="material-icons">gavel</i> Set Agreement Details</h2>
+                <p>Ab, aaiye aap ke business ka agreement set karte hain. Sahi details enter karna bohot zaroori hai.</p>
+                 <div class="info-box">
+                     <p>⚠️ <strong>Important:</strong> Agar aap ne ghalat details fill kar di aur baad mein usay theek kiya to naye agreement ki start date se sari purani entries par asar par sakta hai aur aap ko entries dobara karni par sakti hain.</p>
+                 </div>
+                 <div class="rate-grid">
+                     <div class="form-group"><label>Ton Rate (Rs):</label><input type="number" id="wizardTonRate" placeholder="22"></div>
+                     <div class="form-group"><label>Rest Rate (Rs):</label><input type="number" id="wizardRestRate" placeholder="1100"></div>
+                     <div class="form-group"><label>Layoff Rate (Rs):</label><input type="number" id="wizardLayoffRate" placeholder="549"></div>
+                     <div class="form-group"><label>Monthly Allowance (Rs):</label><input type="number" id="wizardAllowance" placeholder="20000"></div>
+                 </div>
+                 <div class="wizard-buttons">
+                     <button class="btn" onclick="goToWizardStep(4)">Next <i class="material-icons" style="font-size: 16px; margin-left: 5px;">arrow_forward</i></button>
+                 </div>
             </div>
 
             <!-- Step 4: Agreement Start Date -->
-            <div id="wizard-step-4" class="wizard-step">
-                <h2>📅 Step 4: Agreement Start Date</h2>
-                <p>Yeh agreement kis tareekh se shuru hua hai?</p>
-                <div class="wizard-body">
-                    <div class="form-group">
-                        <label for="wizardAgreementStartDate">Agreement Start Date</label>
-                        <input type="date" id="wizardAgreementStartDate">
-                    </div>
+            <div class="wizard-step" id="wizardStep4">
+                <h2><i class="material-icons">event</i> Agreement Start Date</h2>
+                <p>Aakhri step! Woh tareekh (date) select karen jab se yeh agreement shuru hua hai.</p>
+                <div class="form-group">
+                    <label for="wizardAgreementDate">Agreement Start Date:</label>
+                    <input type="date" id="wizardAgreementDate">
                 </div>
-                <div class="wizard-nav">
-                    <button onclick="wizardBack(4)" class="btn btn-danger">Back</button>
-                    <button onclick="finishWizard()" class="btn btn-success">Finish Setup</button>
+                <div class="wizard-buttons">
+                    <button class="btn btn-success" onclick="finishSetup()">Finish Setup <i class="material-icons" style="font-size: 16px; margin-left: 5px;">done_all</i></button>
                 </div>
             </div>
         </div>
@@ -285,13 +333,13 @@
                 viewableWorkers: []
             },
             configs: { 
-                workerCount: 0, 
+                workerCount: 8, 
                 agreementStartDate: '2023-10-10', 
                 fiscalYearStart: '10-10', 
                 isPenaltyEnabled: false, 
                 penaltyAmount: 231, 
                 isWagonRateEnabled: false,
-                isSetupComplete: false 
+                setupComplete: false // NEW: Wizard completion flag
             }, 
             agreements: { 
                 current: { tonRate: 22, restRate: 1100, layoffRate: 549, wagonRate: 0, allowance: 20000, annualBenefits: 0 }, 
@@ -305,10 +353,6 @@
         }
 
         function showPage(pageId) {
-            if (!appData.configs.isSetupComplete && pageId !== 'login-page') {
-                showAlert('Please complete the setup wizard first.', 'error');
-                return;
-            }
             document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
             document.getElementById(pageId).classList.add('active');
             document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
@@ -380,7 +424,7 @@
             } catch (error) {
                 console.error("Application start karne mein error:", error);
                 document.getElementById('main-content').innerHTML = `
-                    <div class="alert alert-error show">
+                    <div class="alert alert-error">
                         <h2>Application Error</h2>
                         <p>Application configuration load nahi ho saki. Baraye meharbani baad mein try karen.</p>
                     </div>`;
@@ -391,20 +435,17 @@
 
         async function showMainApp() {
             document.getElementById('login-page').classList.remove('active');
+            document.getElementById('appHeader').style.display = 'flex';
+            document.getElementById('userInfo').style.display = 'flex';
+            document.getElementById('sideNav').style.display = 'flex';
+            document.getElementById('userName').textContent = currentUser.displayName || currentUser.email;
             
             await loadUserData(); 
             
-            if (!appData.configs.isSetupComplete) {
-                document.getElementById('appHeader').style.display = 'flex';
-                document.getElementById('userInfo').style.display = 'flex';
-                document.getElementById('userName').textContent = currentUser.displayName || currentUser.email;
-                document.getElementById('sideNav').style.display = 'none';
-                showSetupWizard();
+            // NEW: Check if setup is complete. If not, show wizard.
+            if (!appData.configs.setupComplete) {
+                openSetupWizard();
             } else {
-                document.getElementById('appHeader').style.display = 'flex';
-                document.getElementById('userInfo').style.display = 'flex';
-                document.getElementById('sideNav').style.display = 'flex';
-                document.getElementById('userName').textContent = currentUser.displayName || currentUser.email;
                 setupUI();
                 toggleWagonUIElements(appData.configs.isWagonRateEnabled);
                 showPage('daily-entry');
@@ -457,12 +498,13 @@
                     return user.updateProfile({
                         displayName: companyName
                     }).then(() => {
-                        currentUser = user; 
-                        return initializeNewUserData();
+                        currentUser = user;
+                        return initializeNewUserData(); // This will set setupComplete to false
                     });
                 })
                 .then(() => {
                     showAlert('Account created successfully! Please complete the setup.', 'success');
+                    // onAuthStateChanged will now automatically handle showing the app and the wizard
                 })
                 .catch((error) => {
                     console.error("Sign up error:", error);
@@ -510,12 +552,11 @@
                     
                     if (!appData.permissions.viewableWorkers || appData.permissions.viewableWorkers.length === 0) {
                         if (appData.workers && appData.workers.length > 0) {
-                            appData.permissions.viewableWorkers = appData.workers; 
+                            appData.permissions.viewableWorkers = [appData.workers[0]];
                         } else {
                             appData.permissions.viewableWorkers = [];
                         }
                     }
-
                     console.log("User data loaded from Firebase.");
                 } else {
                     console.log("No data found, initializing new user data in Firebase.");
@@ -532,107 +573,124 @@
             try {
                 await firebase.database().ref('users/' + currentUser.uid).set(appData);
                 console.log("User data saved to Firebase.");
-            } catch (error) {
+            } catch (error)
+                {
                 console.error("Error saving user data:", error);
                 showAlert("Failed to save data. Please check your connection.", "error");
             }
         }
 
+        // MODIFIED: This function now sets the default data WITH setupComplete: false
         async function initializeNewUserData() {
+            const today = new Date().toISOString().split('T')[0];
             appData = { 
                 salaries: {}, 
-                workers: [], 
+                workers: [], // Will be set in wizard
                 permissions: {
-                    viewableWorkers: [] 
+                    viewableWorkers: [] // Will be set after workers are created
                 },
                 configs: { 
-                    workerCount: 0, 
-                    agreementStartDate: new Date().toISOString().split('T')[0], 
+                    workerCount: 0, // Will be set in wizard
+                    agreementStartDate: today, // Will be set in wizard
                     fiscalYearStart: '10-10', 
                     isPenaltyEnabled: false, 
                     penaltyAmount: 231, 
                     isWagonRateEnabled: false,
-                    isSetupComplete: false
+                    setupComplete: false // IMPORTANT
                 }, 
                 agreements: { 
-                    current: { tonRate: 0, restRate: 0, layoffRate: 0, wagonRate: 0, allowance: 0, annualBenefits: 0 }, 
-                    new: { tonRate: 0, restRate: 0, layoffRate: 0, wagonRate: 0, allowance: 0, annualBenefits: 0 } 
+                    current: { tonRate: 22, restRate: 1100, layoffRate: 549, wagonRate: 0, allowance: 20000, annualBenefits: 0 }, 
+                    new: { tonRate: 25, restRate: 1200, layoffRate: 600, wagonRate: 0, allowance: 26000, annualBenefits: 0 } 
                 }
             };
             await saveUserData();
         }
 
-        // --- SETUP WIZARD FUNCTIONS ---
-        function showSetupWizard() {
-            document.querySelectorAll('.wizard-step').forEach(s => s.classList.remove('active'));
-            const overlay = document.getElementById('setup-wizard-overlay');
-            overlay.style.display = 'flex';
-            document.getElementById('wizard-step-1').classList.add('active');
+        // --- NEW: SETUP WIZARD FUNCTIONS ---
+
+        function openSetupWizard() {
+            document.getElementById('wizardAgreementDate').value = new Date().toISOString().split('T')[0];
+            document.getElementById('setupWizard').style.display = 'flex';
+        }
+        
+        function closeSetupWizard() {
+            document.getElementById('setupWizard').style.display = 'none';
         }
 
-        function wizardNext(currentStep) {
-            // Validation
-            if (currentStep === 1) {
-                const count = parseInt(document.getElementById('wizardWorkerCount').value);
-                if (!count || count <= 0) {
+        function goToWizardStep(step) {
+            // --- Validation for Step 1 ---
+            if (step === 2) {
+                const workerCount = parseInt(document.getElementById('wizardWorkerCount').value);
+                if (!workerCount || workerCount <= 0) {
                     showAlert('Please enter a valid number of workers.', 'error');
                     return;
                 }
+                appData.configs.workerCount = workerCount; // Temporarily store
                 const container = document.getElementById('wizardWorkerNamesContainer');
                 container.innerHTML = '';
-                for (let i = 0; i < count; i++) {
+                for (let i = 0; i < workerCount; i++) {
                     container.innerHTML += `<div class="form-group"><label>Worker ${i + 1} Name:</label><input type="text" class="wizard-worker-name" value="Worker ${i + 1}"></div>`;
                 }
-            } else if (currentStep === 2) {
-                const names = Array.from(document.querySelectorAll('.wizard-worker-name')).map(input => input.value.trim());
-                if (names.some(name => name === '')) {
-                    showAlert('Please provide a name for every worker.', 'error');
-                    return;
-                }
-            } else if (currentStep === 3) {
-                 const tonRate = document.getElementById('wizardTonRate').value;
-                 if(tonRate === '' || parseFloat(tonRate) < 0) {
-                     showAlert('Please enter a valid Ton Rate.', 'error');
+            }
+
+            // --- Validation for Step 3 ---
+            if (step === 3) {
+                 const workerNames = [];
+                 const inputs = document.querySelectorAll('.wizard-worker-name');
+                 let allNamesValid = true;
+                 inputs.forEach(input => {
+                     if (input.value.trim() === '') {
+                         allNamesValid = false;
+                     }
+                     workerNames.push(input.value.trim());
+                 });
+
+                 if (!allNamesValid) {
+                     showAlert('Please provide a name for every worker.', 'error');
+                     return;
+                 }
+                 appData.workers = workerNames; // Temporarily store
+                 appData.permissions.viewableWorkers = workerNames; // Grant view permission for all workers to the admin user
+            }
+            
+            // --- Validation for Step 4 ---
+            if (step === 4) {
+                 appData.agreements.current.tonRate = parseFloat(document.getElementById('wizardTonRate').value) || 0;
+                 appData.agreements.current.restRate = parseFloat(document.getElementById('wizardRestRate').value) || 0;
+                 appData.agreements.current.layoffRate = parseFloat(document.getElementById('wizardLayoffRate').value) || 0;
+                 appData.agreements.current.allowance = parseFloat(document.getElementById('wizardAllowance').value) || 0;
+                 if(appData.agreements.current.tonRate === 0 || appData.agreements.current.restRate === 0 || appData.agreements.current.layoffRate === 0) {
+                     showAlert('Please fill all agreement fields with valid numbers.', 'error');
                      return;
                  }
             }
 
-            document.getElementById(`wizard-step-${currentStep}`).classList.remove('active');
-            document.getElementById(`wizard-step-${currentStep + 1}`).classList.add('active');
+            document.querySelectorAll('.wizard-step').forEach(s => s.classList.remove('active'));
+            document.getElementById(`wizardStep${step}`).classList.add('active');
         }
 
-        function wizardBack(currentStep) {
-            document.getElementById(`wizard-step-${currentStep}`).classList.remove('active');
-            document.getElementById(`wizard-step-${currentStep - 1}`).classList.add('active');
-        }
-
-        async function finishWizard() {
-            const agreementDate = document.getElementById('wizardAgreementStartDate').value;
+        async function finishSetup() {
+            const agreementDate = document.getElementById('wizardAgreementDate').value;
             if (!agreementDate) {
                 showAlert('Please select the agreement start date.', 'error');
                 return;
             }
 
-            appData.configs.workerCount = parseInt(document.getElementById('wizardWorkerCount').value);
-            appData.workers = Array.from(document.querySelectorAll('.wizard-worker-name')).map(input => input.value.trim());
-            appData.permissions.viewableWorkers = [...appData.workers];
-
-            appData.agreements.current.tonRate = parseFloat(document.getElementById('wizardTonRate').value) || 0;
-            appData.agreements.current.restRate = parseFloat(document.getElementById('wizardRestRate').value) || 0;
-            appData.agreements.current.layoffRate = parseFloat(document.getElementById('wizardLayoffRate').value) || 0;
-            appData.agreements.current.wagonRate = parseFloat(document.getElementById('wizardWagonRate').value) || 0;
-            appData.agreements.current.allowance = parseFloat(document.getElementById('wizardAllowance').value) || 0;
-            appData.agreements.current.annualBenefits = parseFloat(document.getElementById('wizardAnnualBenefits').value) || 0;
-            
+            // Finalize data from wizard
             appData.configs.agreementStartDate = agreementDate;
-            appData.configs.isSetupComplete = true;
-
-            await saveUserData();
-
-            document.getElementById('setup-wizard-overlay').style.display = 'none';
-            showAlert('Setup complete! Welcome.', 'success');
+            appData.configs.setupComplete = true; // Mark setup as complete
             
-            showMainApp();
+            // Save all the new data to Firebase
+            await saveUserData();
+            
+            // Close wizard and start the app
+            closeSetupWizard();
+            showAlert('Setup complete! Welcome to Digital Munshi.', 'success');
+            
+            // Fully load the main app UI now
+            setupUI();
+            toggleWagonUIElements(appData.configs.isWagonRateEnabled);
+            showPage('daily-entry');
         }
 
         // --- UI and OTHER FUNCTIONS ---
@@ -649,7 +707,7 @@
             const container = document.getElementById('workerAttendance');
             container.innerHTML = '';
             if(!appData.workers || appData.workers.length === 0){
-                container.innerHTML = "<p>No workers found. Please complete the setup wizard.</p>"; return;
+                container.innerHTML = "<p>No workers found. Add workers in Settings.</p>"; return;
             }
             appData.workers.forEach(worker => {
                 const div = document.createElement('div');
@@ -667,14 +725,16 @@
             if (!date) { showAlert('Please select a date', 'error'); return; }
             const presentWorkers = appData.workers.filter(worker => document.getElementById(`worker_${worker.replace(/\s/g, '_')}`).checked);
             const earnings = calculateDayEarnings(date, dayType, tonnage, wagons, presentWorkers);
-            if (!appData.salaries) { appData.salaries = {}; } 
+            if (!appData.salaries) { appData.salaries = {}; } // Ensure salaries object exists
             appData.salaries[date] = { date, type: dayType, tonnage, wagons, presentWorkers, earnings };
-            await saveUserData();
+            await saveUserData(); // Save to Firebase
             populateHistorySelector();
             updateHistoryDisplay();
             showAlert('Daily entry saved successfully!', 'success');
         }
 
+        // --- CORE CALCULATION LOGIC (UNCHANGED) ---
+        // NO CHANGES WERE MADE TO ANY CALCULATION FUNCTIONS
         function calculateDayEarnings(entryDate, dayType, tonnage, wagons, presentWorkers) {
             const earnings = {};
             const rates = appData.agreements.current;
@@ -853,7 +913,7 @@
         async function saveAgreements() {
             Object.keys(appData.agreements.current).forEach(key => { if(document.getElementById(`current${key.charAt(0).toUpperCase() + key.slice(1)}`)) appData.agreements.current[key] = parseFloat(document.getElementById(`current${key.charAt(0).toUpperCase() + key.slice(1)}`).value) || 0; });
             Object.keys(appData.agreements.new).forEach(key => { if(document.getElementById(`new${key.charAt(0).toUpperCase() + key.slice(1)}`)) appData.agreements.new[key] = parseFloat(document.getElementById(`new${key.charAt(0).toUpperCase() + key.slice(1)}`).value) || 0; });
-            await saveUserData();
+            await saveUserData(); // Save to Firebase
             showAlert('Agreements saved successfully!', 'success');
         }
 
@@ -891,6 +951,7 @@
             return salaries;
         }
         
+        // MODIFIED: This function now respects user permissions
         function displaySalaryReport(salaryData, startDate, endDate) {
             const container = document.getElementById('salaryResults');
             const viewableWorkers = appData.permissions?.viewableWorkers || [];
@@ -983,6 +1044,7 @@
             return workerBonuses;
         }
 
+        // MODIFIED: This function now respects user permissions
         function displayBonusReport(bonusData, fiscalYearStart) {
             const container = document.getElementById('bonusResults');
             const viewableWorkers = appData.permissions?.viewableWorkers || [];
@@ -1092,6 +1154,7 @@
             return workerBonuses;
         }
         
+        // MODIFIED: This function now respects user permissions
         function displayArrearsReport(arrearsData) {
             const container = document.getElementById('arrearsResults');
             const viewableWorkers = appData.permissions?.viewableWorkers || [];
@@ -1146,11 +1209,12 @@
             return workerLeaves;
         }
 
+        // MODIFIED: This function now respects user permissions
         function displayLeavesReport(leavesData, fiscalYearStart) {
             const container = document.getElementById('leavesResults');
             const viewableWorkers = appData.permissions?.viewableWorkers || [];
             const startYear = new Date(fiscalYearStart).getFullYear();
-            let html = `<h3>Leaves Report: ${startYear}-${startYear + 1}</h3><div class="alert alert-info show"><strong>Leave Structure:</strong> 20 Unpaid Leaves + 12 Paid Leaves = 32 Total Annual Leaves</div><div class="report-grid">`;
+            let html = `<h3>Leaves Report: ${startYear}-${startYear + 1}</h3><div class="alert alert-info"><strong>Leave Structure:</strong> 20 Unpaid Leaves + 12 Paid Leaves = 32 Total Annual Leaves</div><div class="report-grid">`;
             
             appData.workers.forEach(worker => {
                 if (viewableWorkers.includes(worker)) {
@@ -1167,9 +1231,13 @@
             html += '</div>';
             container.innerHTML = html;
         }
+
+        // MODIFIED: Settings page is now mostly read-only after setup
         function loadSettings() {
             if (!appData.configs) return;
-            document.getElementById('workerCount').value = appData.configs.workerCount;
+            const isSetupComplete = appData.configs.setupComplete;
+
+            document.getElementById('workerCount').value = appData.workers.length; // Use actual worker length
             document.getElementById('agreementStartDate').value = appData.configs.agreementStartDate;
             document.getElementById('fiscalYearStart').value = appData.configs.fiscalYearStart;
             document.getElementById('enableWagonRate').checked = appData.configs.isWagonRateEnabled;
@@ -1178,60 +1246,82 @@
             document.getElementById('penaltyAmountContainer').style.display = appData.configs.isPenaltyEnabled ? 'block' : 'none';
             toggleWagonUIElements(appData.configs.isWagonRateEnabled);
             
-            if (appData.configs.isSetupComplete) {
-                document.getElementById('manageWorkersSection').style.display = 'none';
-            } else {
-                 document.getElementById('manageWorkersSection').style.display = 'block';
-                 loadWorkersList();
+            // Lock worker settings if setup is done
+            if(isSetupComplete) {
+                document.getElementById('settings-info-box').style.display = 'block';
+                document.getElementById('addWorkerBtn').style.display = 'none';
             }
+
+            loadWorkersList(isSetupComplete);
         }
-        function loadWorkersList() {
+        
+        // MODIFIED: Worker list inputs are disabled after setup
+        function loadWorkersList(isSetupComplete) {
             const container = document.getElementById('workersList');
             container.innerHTML = '';
             (appData.workers || []).forEach((worker, index) => {
                 const div = document.createElement('div');
                 div.className = 'form-group';
-                div.innerHTML = `<label>Worker ${index + 1}:</label><input type="text" value="${worker}" disabled>`;
+                const inputField = `<input type="text" value="${worker}" ${isSetupComplete ? 'disabled' : ''} onchange="updateWorkerName(${index}, this.value)" style="flex: 1;">`;
+                const removeButton = isSetupComplete ? '' : `<button onclick="removeWorker(${index})" class="btn btn-danger" style="padding: 8px 12px;">Remove</button>`;
+                div.innerHTML = `<label>Worker ${index + 1}:</label><div style="display: flex; gap: 10px;">${inputField}${removeButton}</div>`;
                 container.appendChild(div);
             });
         }
-        
-        async function addWorker() { showAlert('Cannot add workers after initial setup.', 'error'); }
-        async function removeWorker(index) { showAlert('Cannot remove workers after initial setup.', 'error'); }
-        async function updateWorkerName(index, newName) { showAlert('Cannot change worker names after initial setup.', 'error'); }
+
+        async function addWorker() {
+            // This function is now effectively disabled from the UI after setup
+            if (!appData.workers) { appData.workers = []; }
+            appData.workers.push(`Worker ${appData.workers.length + 1}`);
+            loadWorkersList(false);
+            loadWorkerAttendance();
+            await saveUserData();
+        }
+        async function removeWorker(index) {
+             // This function is now effectively disabled from the UI after setup
+            if (appData.workers.length <= 1) { showAlert('At least one worker is required', 'error'); return; }
+            appData.workers.splice(index, 1);
+            loadWorkersList(false);
+            loadWorkerAttendance();
+            await saveUserData();
+        }
+        async function updateWorkerName(index, newName) {
+            // This function is now effectively disabled from the UI after setup
+            if (newName.trim()) { 
+                appData.workers[index] = newName.trim(); 
+                await saveUserData(); 
+            }
+        }
         
         async function saveSettings() {
+            // User can't change worker count from here anymore
             appData.configs.agreementStartDate = document.getElementById('agreementStartDate').value;
             appData.configs.fiscalYearStart = document.getElementById('fiscalYearStart').value;
             appData.configs.isWagonRateEnabled = document.getElementById('enableWagonRate').checked;
             appData.configs.isPenaltyEnabled = document.getElementById('enablePenalty').checked;
             appData.configs.penaltyAmount = parseFloat(document.getElementById('penaltyAmount').value) || 231;
-            await saveUserData();
+            await saveUserData(); // Save to Firebase
             showAlert('Settings saved successfully!', 'success');
         }
-
+        
+        // MODIFIED: showAlert now positions the alert at the bottom
         function showAlert(message, type = 'info') {
-            const existingAlert = document.getElementById('custom-alert');
-            if (existingAlert) {
-                existingAlert.remove();
-            }
-
+            document.querySelectorAll('.alert').forEach(a => a.remove());
             const alertDiv = document.createElement('div');
-            alertDiv.id = 'custom-alert';
             alertDiv.className = `alert alert-${type}`;
             alertDiv.textContent = message;
             
             document.body.appendChild(alertDiv);
-
+            
+            // Animate in
             setTimeout(() => {
-                alertDiv.classList.add('show');
+                alertDiv.classList.add('alert-showing');
             }, 10);
 
+            // Animate out and remove
             setTimeout(() => {
-                alertDiv.classList.remove('show');
-                alertDiv.addEventListener('transitionend', () => {
-                    if(alertDiv) alertDiv.remove();
-                });
+                alertDiv.classList.remove('alert-showing');
+                setTimeout(() => alertDiv.remove(), 500);
             }, 5000);
         }
     </script>
