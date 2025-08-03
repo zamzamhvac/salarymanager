@@ -59,26 +59,8 @@
         .overlay.open { display: block; }
         .worker-checkbox { display: flex; align-items: center; margin: 0; padding: 8px; background: #f7fafc; border-radius: 4px; border: 1px solid #eee;}
         .worker-checkbox input { width: auto; margin-right: 8px; }
-        /* MODIFIED: Alert Styling */
-        .alert {
-            position: fixed;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            padding: 15px 25px;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            z-index: 9999;
-            opacity: 0;
-            transition: opacity 0.5s ease, bottom 0.5s ease;
-            font-weight: 500;
-            display: flex;
-            align-items: center;
-        }
-        .alert.show {
-            opacity: 1;
-            bottom: 30px;
-        }
+        .alert { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); padding: 15px 25px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 9999; opacity: 0; transition: opacity 0.5s ease, bottom 0.5s ease; font-weight: 500; display: flex; align-items: center; }
+        .alert.show { opacity: 1; bottom: 30px; }
         .alert-success { background: #c6f6d5; color: #22543d; border-left: 5px solid #38a169; }
         .alert-error { background: #fed7d7; color: #742a2a; border-left: 5px solid #c53030; }
         .alert-info { background: #bee3f8; color: #2a4365; border-left: 5px solid #3182ce; }
@@ -91,8 +73,14 @@
         #workerAttendance { flex-grow: 1; overflow-y: auto; display: grid; gap: 8px; grid-template-columns: 1fr; padding-right: 8px; max-height: 230px; border: 1px solid #eee; padding: 8px; border-radius: 4px; }
         .action-buttons { margin-top: auto; padding-top: 16px; text-align: center; }
         .action-buttons .btn { width: 90%; max-width: 300px; }
-        @media (max-width: 600px) { #daily-entry-layout { grid-template-columns: 1fr; } #workerAttendance { max-height: 150px; } }
+        @media (max-width: 768px) { 
+            #daily-entry-layout { grid-template-columns: 1fr; } 
+            #workerAttendance { max-height: 180px; } 
+        }
         .two-column { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
+        @media (max-width: 768px) {
+            .two-column { grid-template-columns: 1fr; }
+        }
         .agreement-section { background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0; border: 1px solid #e9ecef; }
         .agreement-section h3 { color: #495057; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 2px solid #dee2e6; }
         .rate-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
@@ -110,16 +98,26 @@
         .checkbox-group { display: flex; align-items: center; margin-bottom: 16px; }
         .checkbox-group input { width: auto; margin-right: 10px; }
         .sub-setting { padding-left: 30px; }
-        /* NEW: Setup Wizard Styles */
-        #setup-wizard-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 2000; align-items: center; justify-content: center; }
-        .wizard-container { background: #fff; padding: 25px; border-radius: 10px; max-width: 600px; width: 90%; box-shadow: 0 5px 15px rgba(0,0,0,0.3); max-height: 90vh; display: flex; flex-direction: column; }
+        
+        /* MODIFIED: Setup Wizard Styles for Responsiveness */
+        #setup-wizard-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 2000; align-items: center; justify-content: center; padding: 15px; }
+        .wizard-container { background: #fff; padding: 25px; border-radius: 10px; max-width: 600px; width: 100%; box-shadow: 0 5px 15px rgba(0,0,0,0.3); max-height: 90vh; display: flex; flex-direction: column; }
         .wizard-step { display: none; }
         .wizard-step.active { display: block; }
         .wizard-container h2 { font-size: 22px; color: var(--primary-color); margin-bottom: 10px; text-align: center; }
-        .wizard-container p { text-align: center; margin-bottom: 20px; color: #555; }
-        .wizard-body { overflow-y: auto; padding-right: 15px; margin-bottom: 20px; }
-        .wizard-nav { display: flex; justify-content: space-between; padding-top: 15px; border-top: 1px solid #eee; }
+        .wizard-container p { text-align: center; margin-bottom: 20px; color: #555; font-size: 15px;}
+        .wizard-body { overflow-y: auto; padding-right: 15px; margin-bottom: 20px; max-height: 60vh; }
+        .wizard-nav { display: flex; justify-content: space-between; align-items: center; padding-top: 15px; border-top: 1px solid #eee; }
         .wizard-warning { background-color: #fffbe6; border-left: 4px solid #f59e0b; padding: 12px; margin-bottom: 15px; font-size: 14px; }
+        
+        @media (max-width: 600px) {
+            .wizard-container { padding: 15px; max-height: 95vh; }
+            .wizard-container h2 { font-size: 20px; }
+            .wizard-container p { font-size: 14px; }
+            .wizard-body { max-height: calc(95vh - 200px); } /* Adjust height for smaller screens */
+            .rate-grid { grid-template-columns: 1fr; } /* Stack agreement inputs on small screens */
+            .wizard-nav .btn { padding: 8px 12px; font-size: 13px; }
+        }
     </style>
 </head>
 <body>
@@ -193,7 +191,6 @@
                 </div>
             </div>
 
-            <!-- MODIFIED: This section will be hidden after setup -->
             <div class="settings-section" id="manageWorkersSection">
                 <h3>Manage Workers</h3>
                 <p class="wizard-warning">Worker names can only be set once during the initial setup wizard.</p>
@@ -203,7 +200,7 @@
         </div>
     </main>
 
-    <!-- NEW: Setup Wizard HTML -->
+    <!-- MODIFIED: Setup Wizard HTML with Back buttons -->
     <div id="setup-wizard-overlay">
         <div class="wizard-container">
             <!-- Step 1: Worker Count -->
@@ -246,12 +243,12 @@
                     <strong>Zaroori Hidayat:</strong> Agreement ki details bilkul sahi darj karen. Agar aap inko baad mein tabdeel karte hain, to aapko pichhli tamam entries agreement ki shuru ki tareekh se dobara karni par sakti hain takay hisaab durust ho.
                 </div>
                 <div class="wizard-body rate-grid">
-                    <div class="form-group"><label>Ton Rate (Rs):</label><input type="number" id="wizardTonRate"></div>
-                    <div class="form-group"><label>Rest Rate (Rs):</label><input type="number" id="wizardRestRate"></div>
-                    <div class="form-group"><label>Layoff Rate (Rs):</label><input type="number" id="wizardLayoffRate"></div>
-                    <div class="form-group"><label>Wagon Rate (Rs):</label><input type="number" id="wizardWagonRate"></div>
-                    <div class="form-group"><label>Monthly Allowance (Rs):</label><input type="number" id="wizardAllowance"></div>
-                    <div class="form-group"><label>Annual Benefits (Rs):</label><input type="number" id="wizardAnnualBenefits"></div>
+                    <div class="form-group"><label>Ton Rate (Rs):</label><input type="number" id="wizardTonRate" placeholder="0"></div>
+                    <div class="form-group"><label>Rest Rate (Rs):</label><input type="number" id="wizardRestRate" placeholder="0"></div>
+                    <div class="form-group"><label>Layoff Rate (Rs):</label><input type="number" id="wizardLayoffRate" placeholder="0"></div>
+                    <div class="form-group"><label>Wagon Rate (Rs):</label><input type="number" id="wizardWagonRate" placeholder="0"></div>
+                    <div class="form-group"><label>Monthly Allowance (Rs):</label><input type="number" id="wizardAllowance" placeholder="0"></div>
+                    <div class="form-group"><label>Annual Benefits (Rs):</label><input type="number" id="wizardAnnualBenefits" placeholder="0"></div>
                 </div>
                 <div class="wizard-nav">
                     <button onclick="wizardBack(3)" class="btn btn-danger">Back</button>
@@ -289,13 +286,13 @@
                 viewableWorkers: []
             },
             configs: { 
-                workerCount: 0, // MODIFIED: Default to 0, will be set by wizard
+                workerCount: 0, 
                 agreementStartDate: '2023-10-10', 
                 fiscalYearStart: '10-10', 
                 isPenaltyEnabled: false, 
                 penaltyAmount: 231, 
                 isWagonRateEnabled: false,
-                isSetupComplete: false // NEW: Flag to track if wizard is done
+                isSetupComplete: false 
             }, 
             agreements: { 
                 current: { tonRate: 22, restRate: 1100, layoffRate: 549, wagonRate: 0, allowance: 20000, annualBenefits: 0 }, 
@@ -309,6 +306,11 @@
         }
 
         function showPage(pageId) {
+            // NEW: Prevent navigation if setup is not complete
+            if (!appData.configs.isSetupComplete && pageId !== 'login-page') {
+                showAlert('Please complete the setup wizard first.', 'error');
+                return;
+            }
             document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
             document.getElementById(pageId).classList.add('active');
             document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
@@ -391,17 +393,21 @@
 
         async function showMainApp() {
             document.getElementById('login-page').classList.remove('active');
-            document.getElementById('appHeader').style.display = 'flex';
-            document.getElementById('userInfo').style.display = 'flex';
-            document.getElementById('sideNav').style.display = 'flex';
-            document.getElementById('userName').textContent = currentUser.displayName || currentUser.email;
             
             await loadUserData(); 
             
             // NEW: Check if setup is complete. If not, show wizard.
             if (!appData.configs.isSetupComplete) {
+                document.getElementById('appHeader').style.display = 'flex'; // Show header for sign out
+                document.getElementById('userInfo').style.display = 'flex';
+                document.getElementById('userName').textContent = currentUser.displayName || currentUser.email;
+                document.getElementById('sideNav').style.display = 'none'; // Hide nav during setup
                 showSetupWizard();
             } else {
+                document.getElementById('appHeader').style.display = 'flex';
+                document.getElementById('userInfo').style.display = 'flex';
+                document.getElementById('sideNav').style.display = 'flex';
+                document.getElementById('userName').textContent = currentUser.displayName || currentUser.email;
                 setupUI();
                 toggleWagonUIElements(appData.configs.isWagonRateEnabled);
                 showPage('daily-entry');
@@ -507,7 +513,7 @@
                     
                     if (!appData.permissions.viewableWorkers || appData.permissions.viewableWorkers.length === 0) {
                         if (appData.workers && appData.workers.length > 0) {
-                            appData.permissions.viewableWorkers = appData.workers; // Grant access to all their own workers
+                            appData.permissions.viewableWorkers = appData.workers; 
                         } else {
                             appData.permissions.viewableWorkers = [];
                         }
@@ -536,12 +542,11 @@
         }
 
         async function initializeNewUserData() {
-            // MODIFIED: This function now sets defaults for the wizard
             appData = { 
                 salaries: {}, 
-                workers: [], // Will be populated by wizard
+                workers: [], 
                 permissions: {
-                    viewableWorkers: [] // Will be populated by wizard
+                    viewableWorkers: [] 
                 },
                 configs: { 
                     workerCount: 0, 
@@ -550,7 +555,7 @@
                     isPenaltyEnabled: false, 
                     penaltyAmount: 231, 
                     isWagonRateEnabled: false,
-                    isSetupComplete: false // NEW: This is key
+                    isSetupComplete: false
                 }, 
                 agreements: { 
                     current: { tonRate: 0, restRate: 0, layoffRate: 0, wagonRate: 0, allowance: 0, annualBenefits: 0 }, 
@@ -560,8 +565,9 @@
             await saveUserData();
         }
 
-        // --- NEW: SETUP WIZARD FUNCTIONS ---
+        // --- NEW/MODIFIED: SETUP WIZARD FUNCTIONS ---
         function showSetupWizard() {
+            document.querySelectorAll('.wizard-step').forEach(s => s.classList.remove('active'));
             const overlay = document.getElementById('setup-wizard-overlay');
             overlay.style.display = 'flex';
             document.getElementById('wizard-step-1').classList.add('active');
@@ -588,7 +594,6 @@
                     return;
                 }
             } else if (currentStep === 3) {
-                 // Simple validation to ensure some value is entered. Can be made more robust.
                  const tonRate = document.getElementById('wizardTonRate').value;
                  if(tonRate === '' || parseFloat(tonRate) < 0) {
                      showAlert('Please enter a valid Ton Rate.', 'error');
@@ -616,7 +621,6 @@
             // Collect all data from wizard
             appData.configs.workerCount = parseInt(document.getElementById('wizardWorkerCount').value);
             appData.workers = Array.from(document.querySelectorAll('.wizard-worker-name')).map(input => input.value.trim());
-            // User has permission to see all their workers
             appData.permissions.viewableWorkers = [...appData.workers];
 
             appData.agreements.current.tonRate = parseFloat(document.getElementById('wizardTonRate').value) || 0;
@@ -635,9 +639,9 @@
             // Hide wizard and setup the main app UI
             document.getElementById('setup-wizard-overlay').style.display = 'none';
             showAlert('Setup complete! Welcome.', 'success');
-            setupUI();
-            toggleWagonUIElements(appData.configs.isWagonRateEnabled);
-            showPage('daily-entry');
+            
+            // Reload the main app view
+            showMainApp();
         }
 
         // --- UI and OTHER FUNCTIONS ---
@@ -1183,7 +1187,6 @@
             document.getElementById('penaltyAmountContainer').style.display = appData.configs.isPenaltyEnabled ? 'block' : 'none';
             toggleWagonUIElements(appData.configs.isWagonRateEnabled);
             
-            // MODIFIED: Hide worker management section if setup is complete
             if (appData.configs.isSetupComplete) {
                 document.getElementById('manageWorkersSection').style.display = 'none';
             } else {
@@ -1193,22 +1196,20 @@
         }
         function loadWorkersList() {
             const container = document.getElementById('workersList');
-            container.innerHTML = ''; // This will be empty after setup, which is fine
+            container.innerHTML = '';
             (appData.workers || []).forEach((worker, index) => {
                 const div = document.createElement('div');
                 div.className = 'form-group';
-                // This UI is now informational only as it's hidden from interaction
                 div.innerHTML = `<label>Worker ${index + 1}:</label><input type="text" value="${worker}" disabled>`;
                 container.appendChild(div);
             });
         }
-        // These functions below are now effectively disabled as the UI is hidden
+        
         async function addWorker() { showAlert('Cannot add workers after initial setup.', 'error'); }
         async function removeWorker(index) { showAlert('Cannot remove workers after initial setup.', 'error'); }
         async function updateWorkerName(index, newName) { showAlert('Cannot change worker names after initial setup.', 'error'); }
         
         async function saveSettings() {
-            // Note: workerCount and worker names are no longer saved from here
             appData.configs.agreementStartDate = document.getElementById('agreementStartDate').value;
             appData.configs.fiscalYearStart = document.getElementById('fiscalYearStart').value;
             appData.configs.isWagonRateEnabled = document.getElementById('enableWagonRate').checked;
@@ -1218,9 +1219,7 @@
             showAlert('Settings saved successfully!', 'success');
         }
 
-        // MODIFIED: showAlert function
         function showAlert(message, type = 'info') {
-            // Remove any existing alert
             const existingAlert = document.getElementById('custom-alert');
             if (existingAlert) {
                 existingAlert.remove();
@@ -1233,15 +1232,12 @@
             
             document.body.appendChild(alertDiv);
 
-            // Trigger the animation
             setTimeout(() => {
                 alertDiv.classList.add('show');
-            }, 10); // A small delay is needed to ensure the transition works
+            }, 10);
 
-            // Auto-hide the alert
             setTimeout(() => {
                 alertDiv.classList.remove('show');
-                // Remove the element from DOM after transition ends
                 alertDiv.addEventListener('transitionend', () => {
                     if(alertDiv) alertDiv.remove();
                 });
