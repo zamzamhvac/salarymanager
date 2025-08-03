@@ -6,6 +6,7 @@
     <title>PM's Salary Manager - Digital Munshi</title>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <!-- Firebase Libraries (already included) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.22.2/firebase-app-compat.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.22.2/firebase-auth-compat.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.22.2/firebase-database-compat.min.js"></script>
@@ -177,7 +178,23 @@
         // --- MUKAMMAL JAVASCRIPT CODE ---
 		
         let currentUser = null;
-        let appData = { salaries: {}, workers: [], configs: { workerCount: 8, agreementStartDate: '2023-10-10', fiscalYearStart: '10-10', isPenaltyEnabled: false, penaltyAmount: 231, isWagonRateEnabled: false }, agreements: { current: { tonRate: 22, restRate: 1100, layoffRate: 549, wagonRate: 0, allowance: 20000, annualBenefits: 0 }, new: { tonRate: 25, restRate: 1200, layoffRate: 600, wagonRate: 0, allowance: 26000, annualBenefits: 0 } } };
+        // Default App Data structure. This will be overwritten by data from Firebase.
+        let appData = { 
+            salaries: {}, 
+            workers: [], 
+            configs: { 
+                workerCount: 8, 
+                agreementStartDate: '2023-10-10', 
+                fiscalYearStart: '10-10', 
+                isPenaltyEnabled: false, 
+                penaltyAmount: 231, 
+                isWagonRateEnabled: false 
+            }, 
+            agreements: { 
+                current: { tonRate: 22, restRate: 1100, layoffRate: 549, wagonRate: 0, allowance: 20000, annualBenefits: 0 }, 
+                new: { tonRate: 25, restRate: 1200, layoffRate: 600, wagonRate: 0, allowance: 26000, annualBenefits: 0 } 
+            } 
+        };
         
         function toggleNav() {
             document.getElementById('sideNav').classList.toggle('open');
@@ -193,6 +210,7 @@
             if (window.innerWidth < 960 && document.getElementById('sideNav').classList.contains('open')) {
                 toggleNav();
             }
+            // Trigger page-specific load functions
             switch(pageId) {
                 case 'daily-entry': 
                     loadWorkerAttendance(); 
@@ -205,157 +223,268 @@
                 case 'settings': loadSettings(); break;
             }
         }
-        function showMainApp() {
+
+        // --- AUTHENTICATION & DATA FLOW (FIREBASE) ---
+
+        async function startApp() {
+            try {
+                // Step 1: Fetch configuration from Netlify Function
+                console.log("Configuration fetch karne ki koshish...");
+                const response = await fetch('/.netlify/functions/get-config');
+                if (!response.ok) {
+                    throw new Error('Configuration fetch karne mein masla hua.');
+                }
+                const firebaseConfig = await response.json();
+                console.log("Configuration fetch ho gai.");
+
+                // Step 2: Initialize Firebase with the fetched config
+                firebase.initializeApp(firebaseConfig);
+                console.log("Firebase initialize ho gaya.");
+
+                // Step 3: Set up the Authentication State Listener
+                // This is the core of the new login system. It runs whenever the user's login state changes.
+                firebase.auth().onAuthStateChanged(async (user) => {
+                    if (user) {
+                        // User is signed in.
+                        console.log("User signed in:", user.uid);
+                        currentUser = user;
+                        await showMainApp();
+                    } else {
+                        // User is signed out.
+                        console.log("User is signed out.");
+                        currentUser = null;
+                        showLoginPage();
+                    }
+                });
+                
+                // --- Initial UI Setup (Listeners) ---
+                document.querySelectorAll('.nav-btn').forEach(btn => {
+                    btn.addEventListener('click', () => showPage(btn.dataset.page));
+                });
+                document.getElementById('entryDate').value = new Date().toISOString().split('T')[0];
+                document.getElementById('dayType').addEventListener('change', function() {
+                    const workDetails = document.getElementById('workDetails');
+                    workDetails.style.display = this.value === 'rest' ? 'none' : 'block';
+                });
+                document.getElementById('enablePenalty').addEventListener('change', (e) => {
+                    document.getElementById('penaltyAmountContainer').style.display = e.target.checked ? 'block' : 'none';
+                });
+                document.getElementById('enableWagonRate').addEventListener('change', (e) => {
+                    toggleWagonUIElements(e.target.checked);
+                });
+
+            } catch (error) {
+                console.error("Application start karne mein error:", error);
+                document.getElementById('main-content').innerHTML = `
+                    <div class="alert alert-error">
+                        <h2>Application Error</h2>
+                        <p>Application configuration load nahi ho saki. Baraye meharbani baad mein try karen.</p>
+                    </div>`;
+            }
+        }
+        
+        document.addEventListener('DOMContentLoaded', startApp);
+
+        async function showMainApp() {
             document.getElementById('login-page').classList.remove('active');
             document.getElementById('appHeader').style.display = 'flex';
             document.getElementById('userInfo').style.display = 'flex';
             document.getElementById('sideNav').style.display = 'flex';
-            document.getElementById('userName').textContent = currentUser.displayName;
-            loadUserData();
+            document.getElementById('userName').textContent = currentUser.displayName || currentUser.email;
+            
+            // Load user data from Firebase before setting up the UI
+            await loadUserData(); 
+            
             setupUI();
             toggleWagonUIElements(appData.configs.isWagonRateEnabled);
             showPage('daily-entry');
         }
-        // --- Naya Asynchronous Start Function (Isay Yahan Paste Karen) ---
-async function startApp() {
-    try {
-        // Step 1: Netlify Function se configuration fetch karen
-        console.log("Configuration fetch karne ki koshish...");
-        const response = await fetch('/.netlify/functions/get-config');
-        if (!response.ok) {
-            throw new Error('Configuration fetch karne mein masla hua.');
+
+        function showLoginPage() {
+            // Hide all app pages and show the login page
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.getElementById('login-page').classList.add('active');
+            document.getElementById('appHeader').style.display = 'none';
+            document.getElementById('sideNav').style.display = 'none';
+            if (document.getElementById('sideNav').classList.contains('open')) {
+                toggleNav();
+            }
         }
-        const firebaseConfig = await response.json();
-        console.log("Configuration fetch ho gai.");
 
-        // Step 2: Fetch ki hui config se Firebase ko initialize karen
-        // Yeh line bohot zaroori hai
-        firebase.initializeApp(firebaseConfig);
-        console.log("Firebase initialize ho gaya.");
-
-        // Step 3: Ab baqi app ko setup karen
-        document.querySelectorAll('.nav-btn').forEach(btn => {
-            btn.addEventListener('click', () => showPage(btn.dataset.page));
-        });
-
-        document.getElementById('entryDate').value = new Date().toISOString().split('T')[0];
-        const savedUser = localStorage.getItem('pmSalaryUser');
-        if (savedUser) {
-            currentUser = JSON.parse(savedUser);
-            showMainApp();
+        function signIn() {
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+            if (!email || !password) {
+                showAlert('Please enter both email and password', 'error');
+                return;
+            }
+            firebase.auth().signInWithEmailAndPassword(email, password)
+                .then((userCredential) => {
+                    // Success. The onAuthStateChanged listener will handle the UI change.
+                    showAlert('Successfully signed in!', 'success');
+                })
+                .catch((error) => {
+                    // Handle Errors here.
+                    console.error("Sign in error:", error);
+                    showAlert(error.message, 'error');
+                });
         }
-        document.getElementById('dayType').addEventListener('change', function() {
-            const workDetails = document.getElementById('workDetails');
-            workDetails.style.display = this.value === 'rest' ? 'none' : 'block';
-        });
-        document.getElementById('enablePenalty').addEventListener('change', (e) => {
-            document.getElementById('penaltyAmountContainer').style.display = e.target.checked ? 'block' : 'none';
-        });
-        document.getElementById('enableWagonRate').addEventListener('change', (e) => {
-            toggleWagonUIElements(e.target.checked);
-        });
 
-    } catch (error) {
-        console.error("Application start karne mein error:", error);
-        document.getElementById('main-content').innerHTML = `
-            <div class="alert alert-error">
-                <h2>Application Error</h2>
-                <p>Application configuration load nahi ho saki. Baraye meharbani baad mein try karen.</p>
-            </div>
-        `;
-    }
-}
+        function signUp() {
+            const email = document.getElementById('signupEmail').value;
+            const password = document.getElementById('signupPassword').value;
+            const companyName = document.getElementById('companyName').value.trim();
+            if (!email || password.length < 6) {
+                showAlert('Provide a valid email and a password of at least 6 characters.', 'error');
+                return;
+            }
+            if (!companyName) {
+                showAlert('Please enter your Company or Business Name.', 'error');
+                return;
+            }
 
-// Puranay 'DOMContentLoaded' ki jagah isay istemal karen
-document.addEventListener('DOMContentLoaded', startApp);
+            firebase.auth().createUserWithEmailAndPassword(email, password)
+                .then((userCredential) => {
+                    const user = userCredential.user;
+                    // Set the user's display name
+                    return user.updateProfile({
+                        displayName: companyName
+                    }).then(() => {
+                        // After setting the display name, initialize their data in the database
+                        currentUser = user; // Set current user temporarily to initialize data
+                        return initializeNewUserData();
+                    });
+                })
+                .then(() => {
+                    // Success. onAuthStateChanged will handle the rest.
+                    showAlert('Account created successfully!', 'success');
+                })
+                .catch((error) => {
+                    console.error("Sign up error:", error);
+                    showAlert(error.message, 'error');
+                });
+        }
+
+        function signOut() {
+            firebase.auth().signOut().catch((error) => {
+                console.error("Sign out error:", error);
+                showAlert(error.message, 'error');
+            });
+        }
+
+        function showSignUp() { document.getElementById('signUpForm').style.display = 'block'; }
+        function hideSignUp() { document.getElementById('signUpForm').style.display = 'none'; }
+        
+        // --- FIREBASE DATABASE FUNCTIONS ---
+
+        async function loadUserData() {
+            if (!currentUser) return;
+            const userRef = firebase.database().ref('users/' + currentUser.uid);
+            try {
+                const snapshot = await userRef.once('value');
+                if (snapshot.exists()) {
+                    const savedData = snapshot.val();
+                    // Merge saved data with default data to avoid errors if new properties were added
+                    appData = {
+                        ...appData, // a default object
+                        ...savedData,
+                        configs: {
+                            ...appData.configs,
+                            ...(savedData.configs || {})
+                        },
+                        agreements: {
+                            current: { ...appData.agreements.current, ...(savedData.agreements?.current || {}) },
+                            new: { ...appData.agreements.new, ...(savedData.agreements?.new || {}) }
+                        },
+                        // Ensure salaries and workers are not null
+                        salaries: savedData.salaries || {},
+                        workers: savedData.workers || []
+                    };
+                    console.log("User data loaded from Firebase.");
+                } else {
+                    // This is a new user, initialize their data
+                    console.log("No data found, initializing new user data in Firebase.");
+                    await initializeNewUserData();
+                }
+            } catch (error) {
+                console.error("Error loading user data:", error);
+                showAlert("Could not load your data from the server.", "error");
+            }
+        }
+        
+        async function saveUserData() {
+            if (!currentUser) return;
+            try {
+                await firebase.database().ref('users/' + currentUser.uid).set(appData);
+                console.log("User data saved to Firebase.");
+            } catch (error) {
+                console.error("Error saving user data:", error);
+                showAlert("Failed to save data. Please check your connection.", "error");
+            }
+        }
+
+        async function initializeNewUserData() {
+            // This function sets the default data for a new user and saves it to Firebase.
+            appData = { 
+                salaries: {}, 
+                workers: ['Worker 1', 'Worker 2', 'Worker 3', 'Worker 4', 'Worker 5', 'Worker 6', 'Worker 7', 'Worker 8'], 
+                configs: { 
+                    workerCount: 8, 
+                    agreementStartDate: '2023-10-10', 
+                    fiscalYearStart: '10-10', 
+                    isPenaltyEnabled: false, 
+                    penaltyAmount: 231, 
+                    isWagonRateEnabled: false 
+                }, 
+                agreements: { 
+                    current: { tonRate: 22, restRate: 1100, layoffRate: 549, wagonRate: 0, allowance: 20000, annualBenefits: 0 }, 
+                    new: { tonRate: 25, restRate: 1200, layoffRate: 600, wagonRate: 0, allowance: 26000, annualBenefits: 0 } 
+                }
+            };
+            await saveUserData();
+        }
+
+        // --- UI and OTHER FUNCTIONS (No changes to logic) ---
+        
         function toggleWagonUIElements(isEnabled) {
             const displayStyle = isEnabled ? 'block' : 'none';
             document.getElementById('wagons-input-container').style.display = displayStyle;
             document.querySelectorAll('.wagon-rate-field').forEach(el => el.style.display = displayStyle);
         }
-        function signIn() {
-            const email = document.getElementById('loginEmail').value;
-            const password = document.getElementById('loginPassword').value;
-            if (!email || !password) { showAlert('Please enter both email and password', 'error'); return; }
-            const userData = { uid: 'demo_' + email.replace(/[@.]/g, '_'), displayName: email.split('@')[0] };
-            currentUser = userData;
-            localStorage.setItem('pmSalaryUser', JSON.stringify(userData));
-            showMainApp();
-            showAlert('Successfully signed in!', 'success');
-        }
-        function signUp() {
-            const email = document.getElementById('signupEmail').value;
-            const password = document.getElementById('signupPassword').value;
-            const companyName = document.getElementById('companyName').value;
-            if (!email || !password || password.length < 6) { showAlert('Provide valid email and password (min 6 chars)', 'error'); return; }
-            const userData = { uid: 'demo_' + email.replace(/[@.]/g, '_'), displayName: companyName || email.split('@')[0] };
-            currentUser = userData;
-            localStorage.setItem('pmSalaryUser', JSON.stringify(userData));
-            initializeNewUserData();
-            showMainApp();
-            showAlert('Account created successfully!', 'success');
-        }
-        function signOut() {
-            currentUser = null;
-            localStorage.removeItem('pmSalaryUser');
-            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-            document.getElementById('login-page').classList.add('active');
-            document.getElementById('appHeader').style.display = 'none';
-        }
-        function showSignUp() { document.getElementById('signUpForm').style.display = 'block'; }
-        function hideSignUp() { document.getElementById('signUpForm').style.display = 'none'; }
-        function loadUserData() {
-            const savedData = localStorage.getItem('pmSalaryData_' + currentUser.uid);
-            if (savedData) {
-                const parsedData = JSON.parse(savedData);
-                // Ensure new config properties exist to avoid errors
-                appData = {
-                    ...appData,
-                    ...parsedData,
-                    configs: {
-                        ...appData.configs,
-                        ...parsedData.configs
-                    }
-                };
-            } else {
-                initializeNewUserData();
-            }
-        }
-        function saveUserData() { localStorage.setItem('pmSalaryData_' + currentUser.uid, JSON.stringify(appData)); }
-        function initializeNewUserData() {
-            appData = { salaries: {}, workers: ['Worker 1', 'Worker 2', 'Worker 3', 'Worker 4', 'Worker 5', 'Worker 6', 'Worker 7', 'Worker 8'], configs: { workerCount: 8, agreementStartDate: '2023-10-10', fiscalYearStart: '10-10', isPenaltyEnabled: false, penaltyAmount: 231, isWagonRateEnabled: false }, agreements: { current: { tonRate: 22, restRate: 1100, layoffRate: 549, wagonRate: 0, allowance: 20000, annualBenefits: 0 }, new: { tonRate: 25, restRate: 1200, layoffRate: 600, wagonRate: 0, allowance: 26000, annualBenefits: 0 } } };
-            saveUserData();
-        }
+
         function setupUI() { loadWorkerAttendance(); loadAgreements(); loadPayPeriods(); loadFiscalYears(); loadSettings(); }
+        
         function loadWorkerAttendance() {
             const container = document.getElementById('workerAttendance');
             container.innerHTML = '';
             if(!appData.workers || appData.workers.length === 0){
-                container.innerHTML = "<p>No workers found.</p>"; return;
+                container.innerHTML = "<p>No workers found. Add workers in Settings.</p>"; return;
             }
             appData.workers.forEach(worker => {
                 const div = document.createElement('div');
                 div.className = 'worker-checkbox';
-                div.innerHTML = `<input type="checkbox" id="worker_${worker}" checked> <label for="worker_${worker}">${worker}</label>`;
+                div.innerHTML = `<input type="checkbox" id="worker_${worker.replace(/\s/g, '_')}" checked> <label for="worker_${worker.replace(/\s/g, '_')}">${worker}</label>`;
                 container.appendChild(div);
             });
         }
-        function saveDailyEntry() {
+        
+        async function saveDailyEntry() {
             const date = document.getElementById('entryDate').value;
             const dayType = document.getElementById('dayType').value;
             const tonnage = parseFloat(document.getElementById('tonnage').value) || 0;
             const wagons = parseInt(document.getElementById('wagons').value) || 0;
             if (!date) { showAlert('Please select a date', 'error'); return; }
-            const presentWorkers = appData.workers.filter(worker => document.getElementById(`worker_${worker}`).checked);
+            const presentWorkers = appData.workers.filter(worker => document.getElementById(`worker_${worker.replace(/\s/g, '_')}`).checked);
             const earnings = calculateDayEarnings(date, dayType, tonnage, wagons, presentWorkers);
+            if (!appData.salaries) { appData.salaries = {}; } // Ensure salaries object exists
             appData.salaries[date] = { date, type: dayType, tonnage, wagons, presentWorkers, earnings };
-            saveUserData();
+            await saveUserData(); // Save to Firebase
             populateHistorySelector();
             updateHistoryDisplay();
             showAlert('Daily entry saved successfully!', 'success');
         }
 
-        // --- CORE CALCULATION LOGIC (UPDATED FOR PENALTY) ---
+        // --- CORE CALCULATION LOGIC (UNCHANGED) ---
         function calculateDayEarnings(entryDate, dayType, tonnage, wagons, presentWorkers) {
             const earnings = {};
             const rates = appData.agreements.current;
@@ -364,13 +493,11 @@ document.addEventListener('DOMContentLoaded', startApp);
             let penaltyPerPresentWorker = 0;
             const penaltyTriggeringAbsentees = [];
 
-            // Step 1: Check if penalty system is active and if any absentee triggers it
             if (appData.configs.isPenaltyEnabled && absentWorkers.length > 0) {
                 const [fiscalYearStart, fiscalYearEnd] = getCurrentFiscalYearDates();
                 absentWorkers.forEach(worker => {
-                    // Check leaves only within the current fiscal year
                     const totalLeaves = getWorkerTotalLeaves(worker, fiscalYearStart, fiscalYearEnd);
-                    if (totalLeaves > 32) { // 32 is the limit
+                    if (totalLeaves > 32) {
                         penaltyTriggeringAbsentees.push(worker);
                     }
                 });
@@ -385,7 +512,6 @@ document.addEventListener('DOMContentLoaded', startApp);
                 }
             }
 
-            // Step 2: Calculate earnings for present workers
             let grossEarningPerWorker = 0;
             if (presentWorkers.length > 0) {
                 const tonnagePay = (tonnage * rates.tonRate) / presentWorkers.length;
@@ -393,28 +519,26 @@ document.addEventListener('DOMContentLoaded', startApp);
                 grossEarningPerWorker = tonnagePay + wagonPay;
             }
 
-            // Step 3: Assign final earnings to all workers
             allWorkers.forEach(worker => {
                 if (presentWorkers.includes(worker)) {
                     let adjustedEarning = grossEarningPerWorker - penaltyPerPresentWorker;
                     let minGuarantee = rates.layoffRate;
                     if (dayType === 'special_overtime') {
-                        // For special overtime, gross pay is calculated differently and has a different guarantee
                         const tonnagePay = (tonnage * rates.tonRate) / presentWorkers.length;
                         const wagonPay = appData.configs.isWagonRateEnabled ? (wagons * rates.wagonRate) / presentWorkers.length : 0;
                         const overtimeGross = (tonnagePay * 2) + rates.layoffRate + wagonPay;
                         adjustedEarning = overtimeGross - penaltyPerPresentWorker;
                         minGuarantee = rates.layoffRate * 3;
                     } else if (dayType === 'rest') {
-                        adjustedEarning = rates.restRate; // No penalty on rest days
+                        adjustedEarning = rates.restRate;
                         minGuarantee = rates.restRate;
                     }
                     earnings[worker] = Math.max(adjustedEarning, minGuarantee);
-                } else { // Worker is absent
+                } else {
                     if (penaltyTriggeringAbsentees.includes(worker)) {
-                        earnings[worker] = 0; // Penalty applied
+                        earnings[worker] = 0;
                     } else {
-                        earnings[worker] = rates.layoffRate; // Normal layoff
+                        earnings[worker] = rates.layoffRate;
                     }
                 }
             });
@@ -428,22 +552,18 @@ document.addEventListener('DOMContentLoaded', startApp);
             const today = new Date();
             const [fiscalMonth, fiscalDay] = appData.configs.fiscalYearStart.split('-').map(Number);
             let fiscalYearStartYear = today.getFullYear();
-            
             const fiscalStartDateForCurrentYear = new Date(fiscalYearStartYear, fiscalMonth - 1, fiscalDay);
-            
             if (today < fiscalStartDateForCurrentYear) {
                 fiscalYearStartYear--;
             }
-            
             const fiscalYearStartDate = new Date(fiscalYearStartYear, fiscalMonth - 1, fiscalDay);
             const fiscalYearEndDate = new Date(fiscalYearStartYear + 1, fiscalMonth - 1, fiscalDay - 1);
-            
             return [fiscalYearStartDate, fiscalYearEndDate];
         }
 
         function getWorkerTotalLeaves(workerName, fiscalYearStartDate, fiscalYearEndDate) {
             let leaveCount = 0;
-            Object.values(appData.salaries).forEach(entry => {
+            Object.values(appData.salaries || {}).forEach(entry => {
                 const entryDate = new Date(entry.date + "T00:00:00");
                 if (entryDate >= fiscalYearStartDate && entryDate <= fiscalYearEndDate) {
                     if (entry.type === 'rest' || !entry.presentWorkers.includes(workerName)) {
@@ -458,6 +578,7 @@ document.addEventListener('DOMContentLoaded', startApp);
             const selector = document.getElementById('historyPeriodSelector');
             const currentValue = selector.value;
             selector.innerHTML = '';
+            if (!appData.configs || !appData.configs.agreementStartDate) return;
             const agreementStart = new Date(appData.configs.agreementStartDate + "T00:00:00");
             let loopDate = new Date(agreementStart.getFullYear(), agreementStart.getMonth(), 1);
             const today = new Date();
@@ -519,14 +640,14 @@ document.addEventListener('DOMContentLoaded', startApp);
                     singlePay = entry.earnings[firstWorker] || 0;
                 } else if (entry.type === 'rest') {
                     singlePay = appData.agreements.current.restRate;
-                } else {
+                } else if(appData.workers && appData.workers.length > 0) {
                     const anyWorker = appData.workers[0];
                     singlePay = entry.earnings[anyWorker] || 0;
                 }
                 tableHtml += `<tr>
                                 <td>${entry.date}</td>
                                 <td>${entry.tonnage > 0 ? entry.tonnage.toFixed(2) : '-'}</td>
-                                <td>${entry.presentWorkers.length} / ${appData.workers.length}</td>
+                                <td>${entry.presentWorkers ? entry.presentWorkers.length : 0} / ${appData.workers ? appData.workers.length : 0}</td>
                                 <td>${singlePay.toFixed(2)}</td>
                               </tr>`;
             });
@@ -534,18 +655,18 @@ document.addEventListener('DOMContentLoaded', startApp);
             return tableHtml;
         }
 
-        function loadTodayEntry() {}
-
         function loadAgreements() {
             Object.keys(appData.agreements.current).forEach(key => { if(document.getElementById(`current${key.charAt(0).toUpperCase() + key.slice(1)}`)) document.getElementById(`current${key.charAt(0).toUpperCase() + key.slice(1)}`).value = appData.agreements.current[key]; });
             Object.keys(appData.agreements.new).forEach(key => { if(document.getElementById(`new${key.charAt(0).toUpperCase() + key.slice(1)}`)) document.getElementById(`new${key.charAt(0).toUpperCase() + key.slice(1)}`).value = appData.agreements.new[key]; });
         }
-        function saveAgreements() {
+        
+        async function saveAgreements() {
             Object.keys(appData.agreements.current).forEach(key => { if(document.getElementById(`current${key.charAt(0).toUpperCase() + key.slice(1)}`)) appData.agreements.current[key] = parseFloat(document.getElementById(`current${key.charAt(0).toUpperCase() + key.slice(1)}`).value) || 0; });
             Object.keys(appData.agreements.new).forEach(key => { if(document.getElementById(`new${key.charAt(0).toUpperCase() + key.slice(1)}`)) appData.agreements.new[key] = parseFloat(document.getElementById(`new${key.charAt(0).toUpperCase() + key.slice(1)}`).value) || 0; });
-            saveUserData();
+            await saveUserData(); // Save to Firebase
             showAlert('Agreements saved successfully!', 'success');
         }
+
         function loadPayPeriods() {
             const select = document.getElementById('payPeriod');
             select.innerHTML = '<option value="">Select Period</option>';
@@ -569,7 +690,7 @@ document.addEventListener('DOMContentLoaded', startApp);
         function calculatePeriodSalary(startDate, endDate) {
             const salaries = {};
             appData.workers.forEach(w => salaries[w] = 0);
-            Object.keys(appData.salaries).filter(d => d >= startDate && d <= endDate).forEach(d => {
+            Object.keys(appData.salaries || {}).filter(d => d >= startDate && d <= endDate).forEach(d => {
                 if(appData.salaries[d].earnings) {
                     Object.keys(appData.salaries[d].earnings).forEach(w => {
                         if(salaries[w] !== undefined) salaries[w] += appData.salaries[d].earnings[w];
@@ -593,6 +714,7 @@ document.addEventListener('DOMContentLoaded', startApp);
         function loadFiscalYears() {
             const bonusSelect = document.getElementById('fiscalYear');
             const leavesSelect = document.getElementById('leavesFiscalYear');
+            if (!appData.configs) return;
             if (bonusSelect) bonusSelect.innerHTML = '<option value="">Select Year</option>';
             if (leavesSelect) leavesSelect.innerHTML = '<option value="">Select Year</option>';
             const currentYear = new Date().getFullYear();
@@ -663,19 +785,20 @@ document.addEventListener('DOMContentLoaded', startApp);
             setTimeout(() => {
                 const arrearsData = calculateAllArrears();
                 displayArrearsReport(arrearsData);
-            }, 1000);
+            }, 500);
         }
         function calculateAllArrears() {
             const agreementStartDate = new Date(appData.configs.agreementStartDate);
             const currentDate = new Date();
             const workerArrears = {};
+            const fiscalYearStart = document.getElementById('fiscalYear').value || `${new Date().getFullYear()}-10-10`;
             appData.workers.forEach(worker => {
                 let salaryArrears = 0, allowanceArrears = 0, bonusArrears = 0;
                 const annualBenefitsArrears = appData.agreements.new.annualBenefits - appData.agreements.current.annualBenefits;
                 Object.entries(appData.salaries || {}).forEach(([date, entry]) => {
                     const entryDate = new Date(date);
                     if (entryDate >= agreementStartDate && entryDate <= currentDate) {
-                        if (entry.earnings[worker] !== undefined) {
+                        if (entry.earnings && entry.earnings[worker] !== undefined) {
                             const newEarnings = calculateDayEarningsWithRates(entry.type, entry.tonnage, entry.wagons, entry.presentWorkers, appData.agreements.new);
                             const currentEarning = entry.earnings[worker];
                             const newEarning = newEarnings[worker] || 0;
@@ -683,17 +806,15 @@ document.addEventListener('DOMContentLoaded', startApp);
                         }
                     }
                 });
-                let allowanceCount = 0;
-                const startMonth = agreementStartDate.getMonth(), startYear = agreementStartDate.getFullYear();
-                const endMonth = currentDate.getMonth(), endYear = currentDate.getFullYear();
-                for (let year = startYear; year <= endYear; year++) {
-                    const monthStart = year === startYear ? startMonth : 0;
-                    const monthEnd = year === endYear ? endMonth : 11;
-                    for (let month = monthStart; month <= monthEnd; month++) { allowanceCount += 2; }
-                }
-                allowanceArrears = allowanceCount * ((appData.agreements.new.allowance / 2) - (appData.agreements.current.allowance / 2));
+                let allowanceMonths = 0;
+                const startMonth = agreementStartDate.getMonth();
+                const startYear = agreementStartDate.getFullYear();
+                const endMonth = currentDate.getMonth();
+                const endYear = currentDate.getFullYear();
+                allowanceMonths = (endYear - startYear) * 12 + (endMonth - startMonth) + 1;
+                allowanceArrears = allowanceMonths * (appData.agreements.new.allowance - appData.agreements.current.allowance);
                 const newBonus = calculateAnnualBonusWithRates(appData.agreements.new, fiscalYearStart);
-                const currentBonus = calculateAnnualBonusWithRates(appData.agreements.current);
+                const currentBonus = calculateAnnualBonusWithRates(appData.agreements.current, fiscalYearStart);
                 bonusArrears = (newBonus[worker]?.totalBonus || 0) - (currentBonus[worker]?.totalBonus || 0);
                 const totalArrears = salaryArrears + allowanceArrears + bonusArrears + annualBenefitsArrears;
                 workerArrears[worker] = { salaryArrears, allowanceArrears, bonusArrears, annualBenefitsArrears, totalArrears };
@@ -702,7 +823,8 @@ document.addEventListener('DOMContentLoaded', startApp);
         }
         function calculateDayEarningsWithRates(dayType, tonnage, wagons, presentWorkers, rates) {
             const earnings = {};
-            if (dayType === 'rest') { appData.workers.forEach(worker => { earnings[worker] = rates.restRate; }); }
+            const allWorkers = appData.workers || [];
+            if (dayType === 'rest') { allWorkers.forEach(worker => { earnings[worker] = rates.restRate; }); }
             else {
                 const presentCount = presentWorkers.length;
                 if (presentCount > 0) {
@@ -711,45 +833,38 @@ document.addEventListener('DOMContentLoaded', startApp);
                     grossPay = Math.max(grossPay, dayType === 'special_overtime' ? rates.layoffRate * 3 : rates.layoffRate);
                     presentWorkers.forEach(worker => { earnings[worker] = grossPay; });
                 }
-                appData.workers.forEach(worker => { if (!presentWorkers.includes(worker)) { earnings[worker] = rates.layoffRate; } });
+                allWorkers.forEach(worker => { if (!presentWorkers.includes(worker)) { earnings[worker] = rates.layoffRate; } });
             }
             return earnings;
         }
         function calculateAnnualBonusWithRates(rates, fiscalYearStart) {
-    const startDate = new Date(fiscalYearStart);
-    const endDate = new Date(startDate);
-    endDate.setFullYear(endDate.getFullYear() + 1);
-    
-    const workerBonuses = {};
-    appData.workers.forEach(worker => {
-        let annualEarnings = 0, totalLeaves = 0;
-        
-        // 1. ACTUAL EARNINGS (Tonnage Included)
-        Object.entries(appData.salaries || {}).forEach(([date, entry]) => {
-            const entryDate = new Date(date);
-            if (entryDate >= startDate && entryDate <= endDate) {
-                if (entry.earnings[worker] !== undefined) {
-                    annualEarnings += entry.earnings[worker];
-                    if (entry.type === 'rest' || !entry.presentWorkers.includes(worker)) {
-                        totalLeaves++;
+            const startDate = new Date(fiscalYearStart);
+            const endDate = new Date(startDate);
+            endDate.setFullYear(endDate.getFullYear() + 1);
+            const workerBonuses = {};
+            appData.workers.forEach(worker => {
+                let annualEarnings = 0, totalLeaves = 0;
+                Object.entries(appData.salaries || {}).forEach(([date, entry]) => {
+                    const entryDate = new Date(date);
+                    if (entryDate >= startDate && entryDate < endDate) {
+                        if (entry.earnings && entry.earnings[worker] !== undefined) {
+                            annualEarnings += calculateDayEarningsWithRates(entry.type, entry.tonnage, entry.wagons, entry.presentWorkers, rates)[worker];
+                             if (entry.type === 'rest' || !entry.presentWorkers.includes(worker)) {
+                                totalLeaves++;
+                            }
+                        }
                     }
-                }
-            }
-        });
-
-        // 2. ACCURATE BONUS CALCULATION
-        annualEarnings += rates.allowance * 12;
-        const avgMonthlySalary = annualEarnings / 12;
-        const unpaidLeaves = Math.min(totalLeaves, 20);
-        const paidLeaves = Math.min(Math.max(totalLeaves - 20, 0), 12);
-        const remainingPaidLeaves = 12 - paidLeaves;
-        
-        workerBonuses[worker] = {
-            totalBonus: avgMonthlySalary * 2 + (remainingPaidLeaves * rates.layoffRate)
-        };
-    });
-    return workerBonuses;
-}
+                });
+                annualEarnings += rates.allowance * 12;
+                const avgMonthlySalary = annualEarnings / 12;
+                const paidLeaves = Math.min(Math.max(totalLeaves - 20, 0), 12);
+                const remainingPaidLeaves = 12 - paidLeaves;
+                workerBonuses[worker] = {
+                    totalBonus: avgMonthlySalary * 2 + (remainingPaidLeaves * rates.layoffRate)
+                };
+            });
+            return workerBonuses;
+        }
         function displayArrearsReport(arrearsData) {
             const container = document.getElementById('arrearsResults');
             let html = `<h3>Arrears Calculation Report</h3><p>From Agreement Start Date: ${appData.configs.agreementStartDate}</p><div class="report-grid">`;
@@ -804,14 +919,13 @@ document.addEventListener('DOMContentLoaded', startApp);
             container.innerHTML = html;
         }
         function loadSettings() {
+            if (!appData.configs) return;
             document.getElementById('workerCount').value = appData.configs.workerCount;
             document.getElementById('agreementStartDate').value = appData.configs.agreementStartDate;
             document.getElementById('fiscalYearStart').value = appData.configs.fiscalYearStart;
-            // Load new settings
             document.getElementById('enableWagonRate').checked = appData.configs.isWagonRateEnabled;
             document.getElementById('enablePenalty').checked = appData.configs.isPenaltyEnabled;
             document.getElementById('penaltyAmount').value = appData.configs.penaltyAmount;
-            // Trigger UI updates based on loaded settings
             document.getElementById('penaltyAmountContainer').style.display = appData.configs.isPenaltyEnabled ? 'block' : 'none';
             toggleWagonUIElements(appData.configs.isWagonRateEnabled);
             loadWorkersList();
@@ -819,49 +933,57 @@ document.addEventListener('DOMContentLoaded', startApp);
         function loadWorkersList() {
             const container = document.getElementById('workersList');
             container.innerHTML = '';
-            appData.workers.forEach((worker, index) => {
+            (appData.workers || []).forEach((worker, index) => {
                 const div = document.createElement('div');
                 div.className = 'form-group';
                 div.innerHTML = `<label>Worker ${index + 1}:</label><div style="display: flex; gap: 10px;"><input type="text" value="${worker}" onchange="updateWorkerName(${index}, this.value)" style="flex: 1;"><button onclick="removeWorker(${index})" class="btn btn-danger" style="padding: 8px 12px;">Remove</button></div>`;
                 container.appendChild(div);
             });
         }
-        function addWorker() {
+        async function addWorker() {
+            if (!appData.workers) { appData.workers = []; }
             appData.workers.push(`Worker ${appData.workers.length + 1}`);
             loadWorkersList();
             loadWorkerAttendance();
-            saveUserData();
+            await saveUserData();
         }
-        function removeWorker(index) {
+        async function removeWorker(index) {
             if (appData.workers.length <= 1) { showAlert('At least one worker is required', 'error'); return; }
             appData.workers.splice(index, 1);
             loadWorkersList();
             loadWorkerAttendance();
-            saveUserData();
+            await saveUserData();
         }
-        function updateWorkerName(index, newName) {
-            if (newName.trim()) { appData.workers[index] = newName.trim(); saveUserData(); }
+        async function updateWorkerName(index, newName) {
+            if (newName.trim()) { 
+                appData.workers[index] = newName.trim(); 
+                await saveUserData(); 
+            }
         }
-        function saveSettings() {
+        async function saveSettings() {
             appData.configs.workerCount = parseInt(document.getElementById('workerCount').value) || 8;
             appData.configs.agreementStartDate = document.getElementById('agreementStartDate').value;
             appData.configs.fiscalYearStart = document.getElementById('fiscalYearStart').value;
-            // Save new settings
             appData.configs.isWagonRateEnabled = document.getElementById('enableWagonRate').checked;
             appData.configs.isPenaltyEnabled = document.getElementById('enablePenalty').checked;
             appData.configs.penaltyAmount = parseFloat(document.getElementById('penaltyAmount').value) || 231;
-            saveUserData();
+            await saveUserData(); // Save to Firebase
             showAlert('Settings saved successfully!', 'success');
         }
         function showAlert(message, type = 'info') {
+            // Remove existing alerts to prevent stacking
+            document.querySelectorAll('.alert').forEach(a => a.remove());
             const alertDiv = document.createElement('div');
             alertDiv.className = `alert alert-${type}`;
             alertDiv.textContent = message;
-            const currentPage = document.querySelector('.page.active');
-            if (currentPage) {
-                currentPage.insertBefore(alertDiv, currentPage.firstChild);
-                setTimeout(() => alertDiv.remove(), 5000);
-            }
+            const activePageQuery = document.querySelector('.page.active');
+            const container = activePageQuery || document.getElementById('main-content');
+            container.insertBefore(alertDiv, container.firstChild);
+            setTimeout(() => {
+                alertDiv.style.transition = 'opacity 0.5s ease';
+                alertDiv.style.opacity = '0';
+                setTimeout(() => alertDiv.remove(), 500);
+            }, 5000);
         }
     </script>
 </body>
