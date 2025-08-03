@@ -721,13 +721,26 @@
             const fiscalStart = appData.configs.fiscalYearStart.split('-');
             const fiscalMonth = parseInt(fiscalStart[0]);
             const fiscalDay = parseInt(fiscalStart[1]);
+            
+            let defaultBonusValue = ''; // Variable to hold the default value
+            
             for (let i = 0; i < 3; i++) {
                 const yearStart = currentYear - i;
                 const yearEnd = yearStart + 1;
                 const fiscalYearLabel = `${yearStart}-${yearEnd}`;
                 const fiscalYearValue = `${yearStart}-${fiscalMonth.toString().padStart(2, '0')}-${fiscalDay.toString().padStart(2, '0')}`;
+                
+                if (i === 0) { // The first iteration is the current fiscal year
+                    defaultBonusValue = fiscalYearValue;
+                }
+                
                 if (bonusSelect) bonusSelect.innerHTML += `<option value="${fiscalYearValue}">${fiscalYearLabel}</option>`;
                 if (leavesSelect) leavesSelect.innerHTML += `<option value="${fiscalYearValue}">${fiscalYearLabel}</option>`;
+            }
+            
+            // Set the default selected value for the bonus dropdown
+            if (bonusSelect) {
+                bonusSelect.value = defaultBonusValue;
             }
         }
         function calculateBonus() {
@@ -771,12 +784,11 @@
             const container = document.getElementById('bonusResults');
             const startYear = new Date(fiscalYearStart).getFullYear();
             let html = `<h3>Annual Bonus Report: ${startYear}-${startYear + 1}</h3><div class="report-grid">`;
-            let grandTotal = 0;
             Object.entries(bonusData).forEach(([worker, data]) => {
-                grandTotal += data.totalBonus;
                 html += `<div class="report-card"><strong>${worker}</strong><br>Annual Earnings: Rs. ${data.annualEarnings.toFixed(2)}<br>Avg Monthly: Rs. ${data.avgMonthlySalary.toFixed(2)}<br>Bonus: Rs. ${data.bonus.toFixed(2)}<br>Gratuity: Rs. ${data.gratuity.toFixed(2)}<br>Paid Leaves Bonus: Rs. ${data.paidLeavesBonus.toFixed(2)}<br><strong>Total Bonus: Rs. ${data.totalBonus.toFixed(2)}</strong></div>`;
             });
-            html += `</div><div class="report-card" style="background: #fff5f5; border-left-color: #e53e3e;"><strong>Grand Total Bonus: Rs. ${grandTotal.toFixed(2)}</strong></div>`;
+            // The line for "Grand Total Bonus" is removed from here.
+            html += `</div>`;
             container.innerHTML = html;
         }
         function calculateArrears() {
@@ -868,12 +880,11 @@
         function displayArrearsReport(arrearsData) {
             const container = document.getElementById('arrearsResults');
             let html = `<h3>Arrears Calculation Report</h3><p>From Agreement Start Date: ${appData.configs.agreementStartDate}</p><div class="report-grid">`;
-            let grandTotal = 0;
             Object.entries(arrearsData).forEach(([worker, data]) => {
-                grandTotal += data.totalArrears;
                 html += `<div class="report-card"><strong>${worker}</strong><br>Salary Arrears: Rs. ${data.salaryArrears.toFixed(2)}<br>Allowance Arrears: Rs. ${data.allowanceArrears.toFixed(2)}<br>Bonus Arrears: Rs. ${data.bonusArrears.toFixed(2)}<br>Annual Benefits Arrears: Rs. ${data.annualBenefitsArrears.toFixed(2)}<br><strong>Total Arrears: Rs. ${data.totalArrears.toFixed(2)}</strong></div>`;
             });
-            html += `</div><div class="report-card" style="background: #fffaf0; border-left-color: #dd6b20;"><strong>Grand Total Arrears: Rs. ${grandTotal.toFixed(2)}</strong></div>`;
+            // The line for "Grand Total Arrears" is removed from here.
+            html += `</div>`;
             container.innerHTML = html;
         }
         function generateLeavesReport() {
