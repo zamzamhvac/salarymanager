@@ -175,15 +175,7 @@
     
     <script>
         // --- MUKAMMAL JAVASCRIPT CODE ---
-		const firebaseConfig = {
-  apiKey: "__API_KEY__",
-  authDomain: "__AUTH_DOMAIN__",
-  databaseURL: "__DATABASE_URL__",
-  projectId: "__PROJECT_ID__",
-  storageBucket: "__STORAGE_BUCKET__",
-  messagingSenderId: "__MESSAGING_SENDER_ID__",
-  appId: "__APP_ID__"
-};
+		
         let currentUser = null;
         let appData = { salaries: {}, workers: [], configs: { workerCount: 8, agreementStartDate: '2023-10-10', fiscalYearStart: '10-10', isPenaltyEnabled: false, penaltyAmount: 231, isWagonRateEnabled: false }, agreements: { current: { tonRate: 22, restRate: 1100, layoffRate: 549, wagonRate: 0, allowance: 20000, annualBenefits: 0 }, new: { tonRate: 25, restRate: 1200, layoffRate: 600, wagonRate: 0, allowance: 26000, annualBenefits: 0 } } };
         
@@ -224,31 +216,58 @@
             toggleWagonUIElements(appData.configs.isWagonRateEnabled);
             showPage('daily-entry');
         }
-        document.addEventListener('DOMContentLoaded', function() {
-            initializeApp();
-            document.querySelectorAll('.nav-btn').forEach(btn => {
-                btn.addEventListener('click', () => showPage(btn.dataset.page));
-            });
-        });
-        function initializeApp() {
-            document.getElementById('entryDate').value = new Date().toISOString().split('T')[0];
-            const savedUser = localStorage.getItem('pmSalaryUser');
-            if (savedUser) {
-                currentUser = JSON.parse(savedUser);
-                showMainApp();
-            }
-            document.getElementById('dayType').addEventListener('change', function() {
-                const workDetails = document.getElementById('workDetails');
-                workDetails.style.display = this.value === 'rest' ? 'none' : 'block';
-            });
-            // Add event listeners for new settings checkboxes
-            document.getElementById('enablePenalty').addEventListener('change', (e) => {
-                document.getElementById('penaltyAmountContainer').style.display = e.target.checked ? 'block' : 'none';
-            });
-            document.getElementById('enableWagonRate').addEventListener('change', (e) => {
-                toggleWagonUIElements(e.target.checked);
-            });
+        // --- Naya Asynchronous Start Function (Isay Yahan Paste Karen) ---
+async function startApp() {
+    try {
+        // Step 1: Netlify Function se configuration fetch karen
+        console.log("Configuration fetch karne ki koshish...");
+        const response = await fetch('/.netlify/functions/get-config');
+        if (!response.ok) {
+            throw new Error('Configuration fetch karne mein masla hua.');
         }
+        const firebaseConfig = await response.json();
+        console.log("Configuration fetch ho gai.");
+
+        // Step 2: Fetch ki hui config se Firebase ko initialize karen
+        // Yeh line bohot zaroori hai
+        firebase.initializeApp(firebaseConfig);
+        console.log("Firebase initialize ho gaya.");
+
+        // Step 3: Ab baqi app ko setup karen
+        document.querySelectorAll('.nav-btn').forEach(btn => {
+            btn.addEventListener('click', () => showPage(btn.dataset.page));
+        });
+
+        document.getElementById('entryDate').value = new Date().toISOString().split('T')[0];
+        const savedUser = localStorage.getItem('pmSalaryUser');
+        if (savedUser) {
+            currentUser = JSON.parse(savedUser);
+            showMainApp();
+        }
+        document.getElementById('dayType').addEventListener('change', function() {
+            const workDetails = document.getElementById('workDetails');
+            workDetails.style.display = this.value === 'rest' ? 'none' : 'block';
+        });
+        document.getElementById('enablePenalty').addEventListener('change', (e) => {
+            document.getElementById('penaltyAmountContainer').style.display = e.target.checked ? 'block' : 'none';
+        });
+        document.getElementById('enableWagonRate').addEventListener('change', (e) => {
+            toggleWagonUIElements(e.target.checked);
+        });
+
+    } catch (error) {
+        console.error("Application start karne mein error:", error);
+        document.getElementById('main-content').innerHTML = `
+            <div class="alert alert-error">
+                <h2>Application Error</h2>
+                <p>Application configuration load nahi ho saki. Baraye meharbani baad mein try karen.</p>
+            </div>
+        `;
+    }
+}
+
+// Puranay 'DOMContentLoaded' ki jagah isay istemal karen
+document.addEventListener('DOMContentLoaded', startApp);
         function toggleWagonUIElements(isEnabled) {
             const displayStyle = isEnabled ? 'block' : 'none';
             document.getElementById('wagons-input-container').style.display = displayStyle;
