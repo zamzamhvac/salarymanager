@@ -181,7 +181,11 @@
         // Default App Data structure. This will be overwritten by data from Firebase.
         let appData = { 
             salaries: {}, 
-            workers: [], 
+            workers: [],
+            // NEW: Permissions structure
+            permissions: {
+                viewableWorkers: []
+            },
             configs: { 
                 workerCount: 8, 
                 agreementStartDate: '2023-10-10', 
@@ -388,6 +392,10 @@
                     appData = {
                         ...appData, // a default object
                         ...savedData,
+                        permissions: { // MODIFIED: Gracefully merge permissions
+                            ...(appData.permissions || {}),
+                            ...(savedData.permissions || {})
+                        },
                         configs: {
                             ...appData.configs,
                             ...(savedData.configs || {})
@@ -396,10 +404,19 @@
                             current: { ...appData.agreements.current, ...(savedData.agreements?.current || {}) },
                             new: { ...appData.agreements.new, ...(savedData.agreements?.new || {}) }
                         },
-                        // Ensure salaries and workers are not null
                         salaries: savedData.salaries || {},
                         workers: savedData.workers || []
                     };
+                    
+                    // NEW: Ensure backward compatibility for old users without permissions
+                    if (!appData.permissions.viewableWorkers || appData.permissions.viewableWorkers.length === 0) {
+                        if (appData.workers && appData.workers.length > 0) {
+                            appData.permissions.viewableWorkers = [appData.workers[0]]; // Grant access to the first worker
+                        } else {
+                            appData.permissions.viewableWorkers = [];
+                        }
+                    }
+
                     console.log("User data loaded from Firebase.");
                 } else {
                     // This is a new user, initialize their data
@@ -417,7 +434,8 @@
             try {
                 await firebase.database().ref('users/' + currentUser.uid).set(appData);
                 console.log("User data saved to Firebase.");
-            } catch (error) {
+            } catch (error)
+                {
                 console.error("Error saving user data:", error);
                 showAlert("Failed to save data. Please check your connection.", "error");
             }
@@ -428,6 +446,10 @@
             appData = { 
                 salaries: {}, 
                 workers: ['Worker 1', 'Worker 2', 'Worker 3', 'Worker 4', 'Worker 5', 'Worker 6', 'Worker 7', 'Worker 8'], 
+                // MODIFIED: Set default permission for new users
+                permissions: {
+                    viewableWorkers: ['Worker 1']
+                },
                 configs: { 
                     workerCount: 8, 
                     agreementStartDate: '2023-10-10', 
@@ -485,6 +507,7 @@
         }
 
         // --- CORE CALCULATION LOGIC (UNCHANGED) ---
+        // NO CHANGES WERE MADE TO ANY CALCULATION FUNCTIONS
         function calculateDayEarnings(entryDate, dayType, tonnage, wagons, presentWorkers) {
             const earnings = {};
             const rates = appData.agreements.current;
@@ -700,17 +723,31 @@
             appData.workers.forEach(w => { if(salaries[w] !== undefined) salaries[w] += appData.agreements.current.allowance / 2; });
             return salaries;
         }
+        
+        // MODIFIED: This function now respects user permissions
         function displaySalaryReport(salaryData, startDate, endDate) {
             const container = document.getElementById('salaryResults');
+            const viewableWorkers = appData.permissions?.viewableWorkers || [];
             let total = 0;
             let html = `<h3>Salary Report: ${startDate} to ${endDate}</h3><div class="report-grid">`;
-            Object.entries(salaryData).forEach(([worker, amount]) => {
-                total += amount;
-                html += `<div class="report-card"><strong>${worker}</strong><br>Rs. ${amount.toFixed(2)}</div>`;
+            
+            appData.workers.forEach(worker => {
+                if (viewableWorkers.includes(worker)) {
+                    const amount = salaryData[worker] || 0;
+                    total += amount;
+                    html += `<div class="report-card"><strong>${worker}</strong><br>Rs. ${amount.toFixed(2)}</div>`;
+                } else {
+                    html += `<div class="report-card" style="background: #f1f1f1; border-left-color: #a0a0a0;">
+                                <strong>${worker}</strong><br>
+                                <span style="color: #6200EE; font-weight: 500;">Contact admin to view details</span>
+                             </div>`;
+                }
             });
-            html += `</div><div class="report-card" style="background: #e6fffa; border-left-color: #38a169;"><strong>Total Salary: Rs. ${total.toFixed(2)}</strong></div>`;
+
+            html += `</div><div class="report-card" style="background: #e6fffa; border-left-color: #38a169;"><strong>Total Visible Salary: Rs. ${total.toFixed(2)}</strong></div>`;
             container.innerHTML = html;
         }
+
         function loadFiscalYears() {
             const bonusSelect = document.getElementById('fiscalYear');
             const leavesSelect = document.getElementById('leavesFiscalYear');
@@ -722,7 +759,7 @@
             const fiscalMonth = parseInt(fiscalStart[0]);
             const fiscalDay = parseInt(fiscalStart[1]);
             
-            let defaultBonusValue = ''; // Variable to hold the default value
+            let defaultBonusValue = '';
             
             for (let i = 0; i < 3; i++) {
                 const yearStart = currentYear - i;
@@ -730,7 +767,7 @@
                 const fiscalYearLabel = `${yearStart}-${yearEnd}`;
                 const fiscalYearValue = `${yearStart}-${fiscalMonth.toString().padStart(2, '0')}-${fiscalDay.toString().padStart(2, '0')}`;
                 
-                if (i === 0) { // The first iteration is the current fiscal year
+                if (i === 0) {
                     defaultBonusValue = fiscalYearValue;
                 }
                 
@@ -738,7 +775,6 @@
                 if (leavesSelect) leavesSelect.innerHTML += `<option value="${fiscalYearValue}">${fiscalYearLabel}</option>`;
             }
             
-            // Set the default selected value for the bonus dropdown
             if (bonusSelect) {
                 bonusSelect.value = defaultBonusValue;
             }
@@ -780,17 +816,30 @@
             });
             return workerBonuses;
         }
+
+        // MODIFIED: This function now respects user permissions
         function displayBonusReport(bonusData, fiscalYearStart) {
             const container = document.getElementById('bonusResults');
+            const viewableWorkers = appData.permissions?.viewableWorkers || [];
             const startYear = new Date(fiscalYearStart).getFullYear();
             let html = `<h3>Annual Bonus Report: ${startYear}-${startYear + 1}</h3><div class="report-grid">`;
-            Object.entries(bonusData).forEach(([worker, data]) => {
-                html += `<div class="report-card"><strong>${worker}</strong><br>Annual Earnings: Rs. ${data.annualEarnings.toFixed(2)}<br>Avg Monthly: Rs. ${data.avgMonthlySalary.toFixed(2)}<br>Bonus: Rs. ${data.bonus.toFixed(2)}<br>Gratuity: Rs. ${data.gratuity.toFixed(2)}<br>Paid Leaves Bonus: Rs. ${data.paidLeavesBonus.toFixed(2)}<br><strong>Total Bonus: Rs. ${data.totalBonus.toFixed(2)}</strong></div>`;
+            
+            appData.workers.forEach(worker => {
+                if (viewableWorkers.includes(worker)) {
+                    const data = bonusData[worker] || {};
+                    html += `<div class="report-card"><strong>${worker}</strong><br>Annual Earnings: Rs. ${(data.annualEarnings || 0).toFixed(2)}<br>Avg Monthly: Rs. ${(data.avgMonthlySalary || 0).toFixed(2)}<br>Bonus: Rs. ${(data.bonus || 0).toFixed(2)}<br>Gratuity: Rs. ${(data.gratuity || 0).toFixed(2)}<br>Paid Leaves Bonus: Rs. ${(data.paidLeavesBonus || 0).toFixed(2)}<br><strong>Total Bonus: Rs. ${(data.totalBonus || 0).toFixed(2)}</strong></div>`;
+                } else {
+                    html += `<div class="report-card" style="background: #f1f1f1; border-left-color: #a0a0a0;">
+                                <strong>${worker}</strong><br>
+                                <span style="color: #6200EE; font-weight: 500;">Contact admin to view details</span>
+                             </div>`;
+                }
             });
-            // The line for "Grand Total Bonus" is removed from here.
+
             html += `</div>`;
             container.innerHTML = html;
         }
+
         function calculateArrears() {
             const container = document.getElementById('arrearsResults');
             container.innerHTML = '<div class="loading"><div class="spinner"></div><p>Calculating arrears...</p></div>';
@@ -877,16 +926,29 @@
             });
             return workerBonuses;
         }
+        
+        // MODIFIED: This function now respects user permissions
         function displayArrearsReport(arrearsData) {
             const container = document.getElementById('arrearsResults');
+            const viewableWorkers = appData.permissions?.viewableWorkers || [];
             let html = `<h3>Arrears Calculation Report</h3><p>From Agreement Start Date: ${appData.configs.agreementStartDate}</p><div class="report-grid">`;
-            Object.entries(arrearsData).forEach(([worker, data]) => {
-                html += `<div class="report-card"><strong>${worker}</strong><br>Salary Arrears: Rs. ${data.salaryArrears.toFixed(2)}<br>Allowance Arrears: Rs. ${data.allowanceArrears.toFixed(2)}<br>Bonus Arrears: Rs. ${data.bonusArrears.toFixed(2)}<br>Annual Benefits Arrears: Rs. ${data.annualBenefitsArrears.toFixed(2)}<br><strong>Total Arrears: Rs. ${data.totalArrears.toFixed(2)}</strong></div>`;
+
+            appData.workers.forEach(worker => {
+                if (viewableWorkers.includes(worker)) {
+                    const data = arrearsData[worker] || {};
+                    html += `<div class="report-card"><strong>${worker}</strong><br>Salary Arrears: Rs. ${(data.salaryArrears || 0).toFixed(2)}<br>Allowance Arrears: Rs. ${(data.allowanceArrears || 0).toFixed(2)}<br>Bonus Arrears: Rs. ${(data.bonusArrears || 0).toFixed(2)}<br>Annual Benefits Arrears: Rs. ${(data.annualBenefitsArrears || 0).toFixed(2)}<br><strong>Total Arrears: Rs. ${(data.totalArrears || 0).toFixed(2)}</strong></div>`;
+                } else {
+                    html += `<div class="report-card" style="background: #f1f1f1; border-left-color: #a0a0a0;">
+                                <strong>${worker}</strong><br>
+                                <span style="color: #6200EE; font-weight: 500;">Contact admin to view details</span>
+                             </div>`;
+                }
             });
-            // The line for "Grand Total Arrears" is removed from here.
+
             html += `</div>`;
             container.innerHTML = html;
         }
+
         function generateLeavesReport() {
             const fiscalYearStart = document.getElementById('leavesFiscalYear').value;
             if (!fiscalYearStart) { showAlert('Please select a fiscal year', 'error'); return; }
@@ -919,13 +981,26 @@
             });
             return workerLeaves;
         }
+
+        // MODIFIED: This function now respects user permissions
         function displayLeavesReport(leavesData, fiscalYearStart) {
             const container = document.getElementById('leavesResults');
+            const viewableWorkers = appData.permissions?.viewableWorkers || [];
             const startYear = new Date(fiscalYearStart).getFullYear();
             let html = `<h3>Leaves Report: ${startYear}-${startYear + 1}</h3><div class="alert alert-info"><strong>Leave Structure:</strong> 20 Unpaid Leaves + 12 Paid Leaves = 32 Total Annual Leaves</div><div class="report-grid">`;
-            Object.entries(leavesData).forEach(([worker, data]) => {
-                html += `<div class="report-card"><strong>${worker}</strong><br>Work Days: ${data.workDays}<br>Total Leaves: ${data.totalLeaves}<br>Unpaid Leaves: ${data.unpaidLeaves}/20<br>Paid Leaves Used: ${data.paidLeaves}/12<br>Remaining Paid: ${data.remainingPaidLeaves}<br>${data.excessLeaves > 0 ? `<span style="color: #e53e3e;">Excess Leaves: ${data.excessLeaves}</span>` : ''}</div>`;
+            
+            appData.workers.forEach(worker => {
+                if (viewableWorkers.includes(worker)) {
+                    const data = leavesData[worker] || {};
+                    html += `<div class="report-card"><strong>${worker}</strong><br>Work Days: ${data.workDays || 0}<br>Total Leaves: ${data.totalLeaves || 0}<br>Unpaid Leaves: ${data.unpaidLeaves || 0}/20<br>Paid Leaves Used: ${data.paidLeaves || 0}/12<br>Remaining Paid: ${data.remainingPaidLeaves || 0}<br>${(data.excessLeaves || 0) > 0 ? `<span style="color: #e53e3e;">Excess Leaves: ${data.excessLeaves}</span>` : ''}</div>`;
+                } else {
+                    html += `<div class="report-card" style="background: #f1f1f1; border-left-color: #a0a0a0;">
+                                <strong>${worker}</strong><br>
+                                <span style="color: #6200EE; font-weight: 500;">Contact admin to view details</span>
+                             </div>`;
+                }
             });
+
             html += '</div>';
             container.innerHTML = html;
         }
