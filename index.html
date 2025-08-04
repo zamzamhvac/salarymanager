@@ -332,23 +332,14 @@
                 const firebaseConfig = await response.json();
                 firebase.initializeApp(firebaseConfig);
 
-                // FIXED: Corrected Authentication Flow
                 firebase.auth().onAuthStateChanged(async (user) => {
                     if (user) {
                         console.log("User signed in:", user.uid);
                         currentUser = user;
-
-                        // Step 1: Load user data. This will populate appData from Firebase
-                        // or initialize it with defaults if the user is new.
                         await loadUserData();
-
-                        // Step 2: Decide which screen to show based on the data.
                         if (appData.configs && appData.configs.isSetupComplete) {
-                            // If setup is marked as complete, show the main application.
                             await showMainApp();
                         } else {
-                            // If setup is NOT complete, start the setup wizard.
-                            // This handles both new users and existing users who didn't finish the setup.
                             startSetupWizard();
                         }
                     } else {
@@ -628,10 +619,8 @@
 
             let presentWorkers;
             if (dayType === 'rest') {
-                // On a rest day, all workers are considered present for pay purposes, not for attendance marking.
                 presentWorkers = [...appData.workers];
             } else {
-                // On other days, attendance is based on checkboxes.
                 presentWorkers = appData.workers.filter(worker => document.getElementById(`worker_${worker.replace(/\s/g, '_')}`).checked);
             }
 
@@ -895,10 +884,75 @@
             }
         }
         
-        function calculateBonus() { const f = document.getElementById('fiscalYear').value; if (!f) { showAlert('Please select a fiscal year', 'error'); return; } displayBonusReport(calculateAnnualBonus(f), f); }
+        function calculateBonus() { 
+            const f = document.getElementById('fiscalYear').value; 
+            if (!f) { 
+                showAlert('Please select a fiscal year', 'error'); 
+                return; 
+            } 
+            displayBonusReport(calculateAnnualBonus(f), f); 
+        }
         
-        function calculateAnnualBonus(f) { const s = new Date(f), e = new Date(s); e.setFullYear(e.getFullYear() + 1); e.setDate(e.getDate() - 1); const w = {}; appData.workers.forEach(b => { let a=0,d=0,r=0; Object.entries(appData.salaries||{}).forEach(([dt, en]) => { const ed = new Date(dt); if (ed >= s && ed <= e && en.earnings[b] !== undefined) { a += en.earnings[b]; if (en.type==='rest') r++; else d++; } }); a+=appData.agreements.current.allowance*12; const m=a/12, B=m, g=m, t=r, u=Math.min(t,20), p=Math.min(Math.max(t-20,0),12), R=12-p, P=R*appData.agreements.current.layoffRate, T=B+g+P; w[b] = {annualEarnings:a,avgMonthlySalary:m,bonus:B,gratuity:g,totalLeaves:t,unpaidLeaves:u,paidLeaves:p,remainingPaidLeaves:R,paidLeavesBonus:P,totalBonus:T}; }); return w; }
-        
+        // ##### CORRECTED FUNCTION #####
+        function calculateAnnualBonus(fiscalYearStartDateString) {
+            const fiscalStart = new Date(fiscalYearStartDateString),
+                fiscalEnd = new Date(fiscalStart);
+            fiscalEnd.setFullYear(fiscalEnd.getFullYear() + 1);
+            fiscalEnd.setDate(fiscalEnd.getDate() - 1);
+
+            const workerBonusData = {};
+            appData.workers.forEach(workerName => {
+                let annualEarnings = 0;
+                let totalLeaves = 0; // Actual leaves (absences on work days)
+                let workDays = 0;
+
+                Object.values(appData.salaries || {}).forEach(entry => {
+                    const entryDate = new Date(entry.date + "T00:00:00");
+
+                    if (entryDate >= fiscalStart && entryDate <= fiscalEnd) {
+                        // Accumulate earnings regardless of day type
+                        if (entry.earnings && entry.earnings[workerName] !== undefined) {
+                            annualEarnings += entry.earnings[workerName];
+                        }
+
+                        // Count leaves and workdays correctly
+                        if (entry.type === 'work' || entry.type === 'special_overtime') {
+                            if (entry.presentWorkers && entry.presentWorkers.includes(workerName)) {
+                                workDays++;
+                            } else {
+                                totalLeaves++; // Count as a leave only if absent on a work day
+                            }
+                        }
+                    }
+                });
+
+                // Add annual allowance
+                annualEarnings += (appData.agreements.current.allowance * 12);
+
+                const avgMonthlySalary = annualEarnings / 12;
+                const bonus = avgMonthlySalary;
+                const gratuity = avgMonthlySalary;
+                
+                // Use the CORRECT totalLeaves count to calculate paid leaves bonus
+                const paidLeavesUsed = Math.min(Math.max(totalLeaves - 20, 0), 12);
+                const remainingPaidLeaves = 12 - paidLeavesUsed;
+                const paidLeavesBonus = remainingPaidLeaves * appData.agreements.current.layoffRate;
+                
+                const totalBonus = bonus + gratuity + paidLeavesBonus;
+
+                workerBonusData[workerName] = {
+                    annualEarnings: annualEarnings,
+                    avgMonthlySalary: avgMonthlySalary,
+                    bonus: bonus,
+                    gratuity: gratuity,
+                    paidLeavesBonus: paidLeavesBonus,
+                    totalBonus: totalBonus
+                };
+            });
+
+            return workerBonusData;
+        }
+
         function displayBonusReport(b, f) {
             const c = document.getElementById('bonusResults'), v = appData.permissions?.viewableWorkers || [], s = new Date(f).getFullYear(); let h = `<h3>Annual Bonus Report: ${s}-${s + 1}</h3><div class="report-grid">`; appData.workers.forEach(w => { if (v.includes(w)) { const d=b[w]||{}; h += `<div class="report-card"><strong>${w}</strong><br>Annual Earnings: Rs. ${(d.annualEarnings||0).toFixed(2)}<br>Avg Monthly: Rs. ${(d.avgMonthlySalary||0).toFixed(2)}<br>Bonus: Rs. ${(d.bonus||0).toFixed(2)}<br>Gratuity: Rs. ${(d.gratuity||0).toFixed(2)}<br>Paid Leaves Bonus: Rs. ${(d.paidLeavesBonus||0).toFixed(2)}<br><strong>Total Bonus: Rs. ${(d.totalBonus||0).toFixed(2)}</strong></div>`; } else { h += `<div class="report-card" style="background:#f1f1f1;border-left-color:#a0a0a0;"><strong>${w}</strong><br><span style="color:#6200EE;font-weight:500;">Contact admin to view details</span></div>`; } }); h += `</div>`; c.innerHTML = h;
         }
@@ -981,7 +1035,7 @@
 
         function calculateDayEarningsWithRates(t,o,n,a,e){const r={};return"rest"===t?appData.workers.forEach(t=>{r[t]=e.restRate}):(a.length>0&&(grossPay=o*e.tonRate/a.length+n*e.wagonRate/a.length,"special_overtime"===t&&(grossPay=2*(o*e.tonRate)/a.length+e.layoffRate+n*e.wagonRate/a.length),grossPay=Math.max(grossPay,"special_overtime"===t?3*e.layoffRate:e.layoffRate),a.forEach(t=>{r[t]=grossPay})),appData.workers.forEach(t=>{a.includes(t)||Object.prototype.hasOwnProperty.call(r,t)||r[t]===undefined&&(r[t]=e.layoffRate)})),r}
         
-        function calculateAnnualBonusWithRates(r, f) { const s=new Date(f),e=new Date(s); e.setFullYear(e.getFullYear()+1);const w={}; appData.workers.forEach(b=>{let a=0,t=0;Object.entries(appData.salaries||{}).forEach(([dt,en])=>{const ed=new Date(dt);if(ed>=s&&ed<e&&en.earnings&&en.earnings[b]!==undefined){a+=calculateDayEarningsWithRates(en.type,en.tonnage,en.wagons,en.presentWorkers,r)[b];if(en.type==='rest'||!en.presentWorkers.includes(b))t++}});a+=r.allowance*12;const m=a/12,p=Math.min(Math.max(t-20,0),12);w[b]={totalBonus:m*2+(12-p)*r.layoffRate}});return w;}
+        function calculateAnnualBonusWithRates(r, f) { const s=new Date(f),e=new Date(s); e.setFullYear(e.getFullYear()+1);const w={}; appData.workers.forEach(b=>{let a=0,t=0;Object.entries(appData.salaries||{}).forEach(([dt,en])=>{const ed=new Date(dt);if(ed>=s&&ed<e&&en.earnings&&en.earnings[b]!==undefined){a+=calculateDayEarningsWithRates(en.type,en.tonnage,en.wagons,en.presentWorkers,r)[b];if(en.type!=='rest'&&!en.presentWorkers.includes(b))t++}});a+=r.allowance*12;const m=a/12,p=Math.min(Math.max(t-20,0),12);w[b]={totalBonus:m*2+(12-p)*r.layoffRate}});return w;}
         
         function displayArrearsReport(a) {
             const c = document.getElementById('arrearsResults'), v = appData.permissions?.viewableWorkers || []; let h = `<h3>Arrears Calculation Report</h3><p>From Agreement Start Date: ${appData.configs.agreementStartDate}</p><div class="report-grid">`; appData.workers.forEach(w => { if (v.includes(w)) { const d=a[w]||{}; h+=`<div class="report-card"><strong>${w}</strong><br>Salary Arrears: Rs. ${(d.salaryArrears||0).toFixed(2)}<br>Allowance Arrears: Rs. ${(d.allowanceArrears||0).toFixed(2)}<br>Bonus Arrears: Rs. ${(d.bonusArrears||0).toFixed(2)}<br>Annual Benefits Arrears: Rs. ${(d.annualBenefitsArrears||0).toFixed(2)}<br><strong>Total Arrears: Rs. ${(d.totalArrears||0).toFixed(2)}</strong></div>`;} else {h+=`<div class="report-card" style="background:#f1f1f1;border-left-color:#a0a0a0;"><strong>${w}</strong><br><span style="color:#6200EE;font-weight:500;">Contact admin to view details</span></div>`;}}); h+=`</div>`; c.innerHTML = h;
@@ -989,34 +1043,29 @@
         
         function generateLeavesReport() { const f = document.getElementById('leavesFiscalYear').value; if(!f){showAlert('Please select a fiscal year','error'); return;} displayLeavesReport(calculateLeavesReport(f), f); }
         
-        // ##### CORRECTED FUNCTION #####
         function calculateLeavesReport(f) {
-            const s = new Date(f), // fiscal year start date
-                e = new Date(s); // fiscal year end date
+            const s = new Date(f), e = new Date(s);
             e.setFullYear(e.getFullYear() + 1);
             e.setDate(e.getDate() - 1);
-            const w = {}; // worker data object
-            appData.workers.forEach(b => { // for each worker 'b'
-                let t = 0, // totalLeaves
-                    d = 0; // workDays
-                Object.entries(appData.salaries || {}).forEach(([dt, en]) => { // for each salary entry
-                    const ed = new Date(dt + "T00:00:00"); // entry date
-                    if (ed >= s && ed <= e) { // if entry is within fiscal year
-                        // Corrected Logic: Only count absences on work days as leaves
+            const w = {};
+            appData.workers.forEach(b => {
+                let t = 0, d = 0;
+                Object.entries(appData.salaries || {}).forEach(([dt, en]) => {
+                    const ed = new Date(dt + "T00:00:00");
+                    if (ed >= s && ed <= e) {
                         if (en.type === 'work' || en.type === 'special_overtime') {
                             if (en.presentWorkers.includes(b)) {
-                                d++; // It's a work day and the worker was present
+                                d++;
                             } else {
-                                t++; // It's a work day and the worker was absent (a leave)
+                                t++;
                             }
                         }
-                        // 'rest' days are now correctly ignored for both workDays and totalLeaves counts.
                     }
                 });
-                const u = Math.min(t, 20), // unpaid leaves
-                    p = Math.min(Math.max(t - 20, 0), 12), // paid leaves used
-                    x = Math.max(t - 32, 0), // excess leaves beyond total allowed
-                    R = 12 - p; // remaining paid leaves
+                const u = Math.min(t, 20),
+                    p = Math.min(Math.max(t - 20, 0), 12),
+                    x = Math.max(t - 32, 0),
+                    R = 12 - p;
                 w[b] = {
                     totalLeaves: t,
                     unpaidLeaves: u,
@@ -1095,7 +1144,7 @@
             showAlert('Settings saved successfully!', 'success');
             isWorkerSettingsLocked = true;
             loadSettings();
-            loadFiscalYears(); // Reload fiscal years to update the default
+            loadFiscalYears(); 
         }
 
         function showAlert(message, type = 'info') {
