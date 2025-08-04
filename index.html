@@ -14,7 +14,7 @@
             bottom: 0;
             background-color: rgba(0,0,0,0.7);
             z-index: 2000;
-            display: flex;
+            display: none;
             justify-content: center;
             align-items: center;
             padding: 20px;
@@ -155,13 +155,26 @@
                 padding: 8px 12px;
             }
         }
+        
+        /* Worker Input Styles */
+        .worker-input-container {
+            margin-bottom: 15px;
+        }
+        
+        .worker-input-container input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
     </style>
 </head>
 <body>
     <!-- Existing header, nav, overlay remain unchanged -->
     
-    <!-- Add this right after the opening body tag -->
-    <div id="setupWizard" class="wizard-overlay" style="display: none;">
+    <!-- Setup Wizard -->
+    <div id="setupWizard" class="wizard-overlay">
         <div class="wizard-container">
             <div class="wizard-header">
                 <h2 class="wizard-title"><i class="material-icons">settings</i> Initial Setup</h2>
@@ -259,12 +272,36 @@
 
     <!-- Existing main content remains unchanged -->
     
-    <!-- Add this to settings page (inside settings section) -->
+    <!-- Modified Settings Section -->
     <div id="settings" class="page">
-        <!-- Existing settings content -->
+        <h2>⚙️ Settings</h2>
+        <p>Configure your application settings</p>
         
+        <h3>General Settings</h3>
+        <div class="form-group"><label>Number of Workers:</label><input type="number" id="workerCount" placeholder="8" disabled></div>
+        <div class="form-group"><label>Agreement Start Date:</label><input type="date" id="agreementStartDate" disabled></div>
+        <div class="form-group"><label>Fiscal Year Start (MM-DD):</label><input type="text" id="fiscalYearStart" placeholder="10-10" pattern="[0-9]{2}-[0-9]{2}" disabled></div>
+        
+        <div class="settings-section">
+            <h3>Feature Controls</h3>
+            <div class="checkbox-group">
+                <input type="checkbox" id="enableWagonRate">
+                <label for="enableWagonRate">Enable Wagon Rate Calculation</label>
+            </div>
+            <div class="checkbox-group">
+                <input type="checkbox" id="enablePenalty">
+                <label for="enablePenalty">Enable Excess Leave Penalty</label>
+            </div>
+            <div class="sub-setting" id="penaltyAmountContainer" style="display: none;">
+                <div class="form-group">
+                    <label for="penaltyAmount">Penalty Amount (Normal Day)</label>
+                    <input type="number" id="penaltyAmount">
+                </div>
+            </div>
+        </div>
+
         <div class="settings-section" id="workerSettingsSection">
-            <div class="settings-lock" id="workerSettingsLock" style="display: none;">
+            <div class="settings-lock" id="workerSettingsLock">
                 <h3><i class="material-icons">lock</i> Worker Settings Locked</h3>
                 <p>Changing worker names may affect your historical data. Unlock carefully.</p>
                 <button onclick="unlockWorkerSettings()" class="btn btn-danger settings-lock-btn">
@@ -276,59 +313,129 @@
             <div id="workersList"></div>
             <button onclick="addWorker()" class="btn btn-success" id="addWorkerBtn" style="display: none;">Add Worker</button>
         </div>
-        
-        <!-- Rest of existing settings content -->
+        <button onclick="saveSettings()" class="btn">Save Settings</button>
     </div>
 
     <script>
-        // Add these new variables with existing ones
+        // Global Variables
+        let currentUser = null;
         let currentWizardStep = 1;
         let workerSettingsUnlocked = false;
+        let isNewUser = false;
         
-        // Modified initializeNewUserData function
-        async function initializeNewUserData() {
-            // Show wizard for new users
-            showSetupWizard();
-            return; // Don't initialize data yet, wizard will handle it
+        let appData = { 
+            salaries: {}, 
+            workers: [],
+            permissions: {
+                viewableWorkers: []
+            },
+            configs: { 
+                workerCount: 8, 
+                agreementStartDate: '2023-10-10', 
+                fiscalYearStart: '10-10', 
+                isPenaltyEnabled: false, 
+                penaltyAmount: 231, 
+                isWagonRateEnabled: false 
+            }, 
+            agreements: { 
+                current: { tonRate: 22, restRate: 1100, layoffRate: 549, wagonRate: 0, allowance: 20000, annualBenefits: 0 }, 
+                new: { tonRate: 25, restRate: 1200, layoffRate: 600, wagonRate: 0, allowance: 26000, annualBenefits: 0 } 
+            } 
+        };
+
+        // Initialize App
+        async function startApp() {
+            try {
+                const response = await fetch('/.netlify/functions/get-config');
+                if (!response.ok) throw new Error('Configuration fetch failed');
+                
+                const firebaseConfig = await response.json();
+                firebase.initializeApp(firebaseConfig);
+                
+                // Set up auth state listener
+                firebase.auth().onAuthStateChanged(async (user) => {
+                    if (user) {
+                        currentUser = user;
+                        await showMainApp();
+                    } else {
+                        currentUser = null;
+                        showLoginPage();
+                    }
+                });
+                
+                // Setup event listeners
+                setupEventListeners();
+                
+            } catch (error) {
+                console.error("App initialization error:", error);
+                showErrorScreen();
+            }
         }
-        
-        // Add these new functions with other functions
+
+        // Setup Event Listeners
+        function setupEventListeners() {
+            // Wizard navigation
+            document.getElementById('wizardNextBtn').addEventListener('click', goToNextStep);
+            document.getElementById('wizardBackBtn').addEventListener('click', goToPrevStep);
+            
+            // Existing listeners
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.addEventListener('click', () => showPage(btn.dataset.page));
+            });
+            
+            document.getElementById('entryDate').value = new Date().toISOString().split('T')[0];
+            document.getElementById('dayType').addEventListener('change', function() {
+                document.getElementById('workDetails').style.display = this.value === 'rest' ? 'none' : 'block';
+            });
+            
+            document.getElementById('enablePenalty').addEventListener('change', (e) => {
+                document.getElementById('penaltyAmountContainer').style.display = e.target.checked ? 'block' : 'none';
+            });
+            
+            document.getElementById('enableWagonRate').addEventListener('change', (e) => {
+                toggleWagonUIElements(e.target.checked);
+            });
+        }
+
+        // Show Main App
+        async function showMainApp() {
+            document.getElementById('login-page').classList.remove('active');
+            document.getElementById('appHeader').style.display = 'flex';
+            document.getElementById('userInfo').style.display = 'flex';
+            document.getElementById('sideNav').style.display = 'flex';
+            document.getElementById('userName').textContent = currentUser.displayName || currentUser.email;
+            
+            await loadUserData();
+            
+            if (isNewUser && (!appData.workers || appData.workers.length === 0)) {
+                showSetupWizard();
+            } else {
+                setupUI();
+                showPage('daily-entry');
+            }
+        }
+
+        // Show Setup Wizard
         function showSetupWizard() {
             document.getElementById('setupWizard').style.display = 'flex';
             document.getElementById('wizardAgreementDate').value = new Date().toISOString().split('T')[0];
             updateWizardProgress();
         }
-        
+
+        // Hide Setup Wizard
         function hideSetupWizard() {
             document.getElementById('setupWizard').style.display = 'none';
         }
-        
-        function updateWizardProgress() {
-            const progress = (currentWizardStep / 4) * 100;
-            document.getElementById('wizardProgress').style.width = `${progress}%`;
-            
-            // Update buttons
-            document.getElementById('wizardBackBtn').disabled = currentWizardStep === 1;
-            
-            if (currentWizardStep === 4) {
-                document.getElementById('wizardNextBtn').innerHTML = 'Finish Setup <i class="material-icons">check</i>';
-            } else {
-                document.getElementById('wizardNextBtn').innerHTML = 'Next <i class="material-icons">chevron_right</i>';
-            }
-        }
-        
+
+        // Wizard Navigation Functions
         function goToNextStep() {
             if (currentWizardStep === 4) {
                 completeSetup();
                 return;
             }
             
-            // Validate current step
-            if (!validateCurrentStep()) {
-                return;
-            }
+            if (!validateCurrentStep()) return;
             
-            // Prepare next step if needed
             if (currentWizardStep === 1) {
                 generateWorkerNameInputs();
             }
@@ -338,14 +445,25 @@
             document.getElementById(`step${currentWizardStep}`).classList.add('active');
             updateWizardProgress();
         }
-        
+
         function goToPrevStep() {
             document.getElementById(`step${currentWizardStep}`).classList.remove('active');
             currentWizardStep--;
             document.getElementById(`step${currentWizardStep}`).classList.add('active');
             updateWizardProgress();
         }
-        
+
+        function updateWizardProgress() {
+            const progress = (currentWizardStep / 4) * 100;
+            document.getElementById('wizardProgress').style.width = `${progress}%`;
+            
+            document.getElementById('wizardBackBtn').disabled = currentWizardStep === 1;
+            document.getElementById('wizardNextBtn').innerHTML = currentWizardStep === 4 ? 
+                'Finish Setup <i class="material-icons">check</i>' : 
+                'Next <i class="material-icons">chevron_right</i>';
+        }
+
+        // Step Validation
         function validateCurrentStep() {
             if (currentWizardStep === 1) {
                 const teamSize = parseInt(document.getElementById('teamSize').value);
@@ -379,7 +497,8 @@
             }
             return true;
         }
-        
+
+        // Generate Worker Name Inputs
         function generateWorkerNameInputs() {
             const container = document.getElementById('workerNameInputs');
             const teamSize = parseInt(document.getElementById('teamSize').value);
@@ -387,7 +506,7 @@
             
             for (let i = 0; i < teamSize; i++) {
                 const div = document.createElement('div');
-                div.className = 'form-group';
+                div.className = 'worker-input-container';
                 div.innerHTML = `
                     <label>Worker ${i+1} Name:</label>
                     <input type="text" value="Worker ${i+1}" class="worker-name-input">
@@ -395,13 +514,11 @@
                 container.appendChild(div);
             }
         }
-        
+
+        // Complete Setup
         async function completeSetup() {
-            if (!validateCurrentStep()) {
-                return;
-            }
+            if (!validateCurrentStep()) return;
             
-            // Collect all data from wizard
             const teamSize = parseInt(document.getElementById('teamSize').value);
             const workerNames = [];
             const inputs = document.querySelectorAll('#workerNameInputs input');
@@ -424,7 +541,7 @@
                 salaries: {}, 
                 workers: workerNames,
                 permissions: {
-                    viewableWorkers: workerNames.length > 0 ? [workerNames[0]] : [] // First worker visible by default
+                    viewableWorkers: workerNames.length > 0 ? [workerNames[0]] : []
                 },
                 configs: { 
                     workerCount: teamSize, 
@@ -436,32 +553,30 @@
                 }, 
                 agreements: { 
                     current: agreementData, 
-                    new: JSON.parse(JSON.stringify(agreementData)) // Deep copy
+                    new: JSON.parse(JSON.stringify(agreementData))
                 } 
             };
             
-            // Save to Firebase
             await saveUserData();
-            
-            // Hide wizard and show main app
             hideSetupWizard();
             setupUI();
             showPage('daily-entry');
             showAlert('Initial setup completed successfully!', 'success');
         }
-        
+
+        // Worker Settings Lock
         function unlockWorkerSettings() {
             const confirmed = confirm('Warning: Changing worker names may affect your historical data. Are you sure you want to unlock worker settings?');
             if (confirmed) {
                 workerSettingsUnlocked = true;
                 document.getElementById('workerSettingsLock').style.display = 'none';
                 document.getElementById('addWorkerBtn').style.display = 'inline-block';
-                loadWorkersList(true); // Pass true to make editable
+                loadWorkersList(true);
                 showAlert('Worker settings unlocked. Changes will be saved when you click Save Settings.', 'info');
             }
         }
-        
-        // Modified loadWorkersList function
+
+        // Load Workers List
         function loadWorkersList(editable = false) {
             const container = document.getElementById('workersList');
             container.innerHTML = '';
@@ -471,7 +586,6 @@
                 return;
             }
             
-            // Show lock message if not unlocked
             if (!workerSettingsUnlocked) {
                 document.getElementById('workerSettingsLock').style.display = 'block';
                 document.getElementById('addWorkerBtn').style.display = 'none';
@@ -502,72 +616,18 @@
                 container.appendChild(div);
             });
         }
-        
-        // Modified addWorker function
-        async function addWorker() {
-            if (!workerSettingsUnlocked) {
-                showAlert('Please unlock worker settings first', 'error');
-                return;
-            }
-            
-            if (!appData.workers) {
-                appData.workers = [];
-            }
-            appData.workers.push(`Worker ${appData.workers.length + 1}`);
-            loadWorkersList(true);
-            loadWorkerAttendance();
-            await saveUserData();
+
+        // Initialize New User Data
+        async function initializeNewUserData() {
+            isNewUser = true;
+            showSetupWizard();
         }
-        
-        // Modified removeWorker function
-        async function removeWorker(index) {
-            if (!workerSettingsUnlocked) {
-                showAlert('Please unlock worker settings first', 'error');
-                return;
-            }
-            
-            if (appData.workers.length <= 1) {
-                showAlert('At least one worker is required', 'error');
-                return;
-            }
-            
-            appData.workers.splice(index, 1);
-            loadWorkersList(true);
-            loadWorkerAttendance();
-            await saveUserData();
-        }
-        
-        // Modified updateWorkerName function
-        async function updateWorkerName(index, newName) {
-            if (!workerSettingsUnlocked) {
-                showAlert('Please unlock worker settings first', 'error');
-                return;
-            }
-            
-            if (newName.trim()) { 
-                appData.workers[index] = newName.trim(); 
-                await saveUserData(); 
-            }
-        }
-        
-        // Add these event listeners in the startApp() function
-        async function startApp() {
-            try {
-                // Existing initialization code...
-                
-                // Add these lines at the end of startApp()
-                document.getElementById('wizardNextBtn').addEventListener('click', goToNextStep);
-                document.getElementById('wizardBackBtn').addEventListener('click', goToPrevStep);
-                
-            } catch (error) {
-                console.error("Application start karne mein error:", error);
-                document.getElementById('main-content').innerHTML = `
-                    <div class="alert alert-error">
-                        <h2>Application Error</h2>
-                        <p>Application configuration load nahi ho saki. Baraye meharbani baad mein try karen.</p>
-                    </div>`;
-            }
-        }
+
+        // Rest of the existing functions remain unchanged
+        // ... [all other existing functions] ...
+
+        // Start the app when DOM is loaded
+        document.addEventListener('DOMContentLoaded', startApp);
     </script>
 </body>
 </html>
