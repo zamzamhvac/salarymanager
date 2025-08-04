@@ -698,19 +698,137 @@
         
         async function saveAgreements() { Object.keys(appData.agreements.current).forEach(k => { const e = document.getElementById(`current${k.charAt(0).toUpperCase() + k.slice(1)}`); if(e) appData.agreements.current[k] = parseFloat(e.value) || 0; }); Object.keys(appData.agreements.new).forEach(k => { const e = document.getElementById(`new${k.charAt(0).toUpperCase() + k.slice(1)}`); if(e) appData.agreements.new[k] = parseFloat(e.value) || 0; }); await saveUserData(); showAlert('Agreements saved successfully!', 'success'); }
         
+        // MODIFIED FUNCTION
         function loadPayPeriods() {
-            const s = document.getElementById('payPeriod'); s.innerHTML = '<option value="">Select Period</option>'; const t = new Date(); for (let i = 0; i < 12; i++) { const d = new Date(t.getFullYear(), t.getMonth() - i, 1), y = d.getFullYear(), m = (d.getMonth() + 1).toString().padStart(2,'0'), l = new Date(y, d.getMonth() + 1, 0).getDate(); s.innerHTML += `<option value="${y}-${m}-01,${y}-${m}-15">${d.toLocaleString('default',{month:'long'})} ${y} (1-15)</option><option value="${y}-${m}-16,${y}-${m}-${l}">${d.toLocaleString('default',{month:'long'})} ${y} (16-End)</option>`; }
+            const selector = document.getElementById('payPeriod');
+            selector.innerHTML = '<option value="">Select Period</option>';
+            const today = new Date();
+            
+            // Populate dropdown with last 12 periods
+            for (let i = 0; i < 12; i++) {
+                const date = new Date(today.getFullYear(), today.getMonth() - i, 1);
+                const year = date.getFullYear();
+                const month = (date.getMonth() + 1).toString().padStart(2, '0');
+                const lastDay = new Date(year, date.getMonth() + 1, 0).getDate();
+                const monthName = date.toLocaleString('default', { month: 'long' });
+                
+                // Add in reverse chronological order
+                const option1 = `<option value="${year}-${month}-16,${year}-${month}-${lastDay}">${monthName} ${year} (16-End)</option>`;
+                const option2 = `<option value="${year}-${month}-01,${year}-${month}-15">${monthName} ${year} (1-15)</option>`;
+                selector.innerHTML += option1 + option2;
+            }
+            
+            // Set default value to current pay period
+            const currentDay = today.getDate();
+            const currentYear = today.getFullYear();
+            const currentMonth = (today.getMonth() + 1).toString().padStart(2, '0');
+            const lastDayOfMonth = new Date(currentYear, today.getMonth() + 1, 0).getDate();
+            let defaultValue;
+            
+            if (currentDay <= 15) {
+                defaultValue = `${currentYear}-${currentMonth}-01,${currentYear}-${currentMonth}-15`;
+            } else {
+                defaultValue = `${currentYear}-${currentMonth}-16,${currentYear}-${currentMonth}-${lastDayOfMonth}`;
+            }
+            
+            selector.value = defaultValue;
         }
-        
-        function generateSalaryReport() { const p = document.getElementById('payPeriod').value; if (!p) { showAlert('Please select a pay period', 'error'); return; } const [s, e] = p.split(','); displaySalaryReport(calculatePeriodSalary(s, e), s, e); }
+
+        // MODIFIED FUNCTION
+        function generateSalaryReport() {
+            const period = document.getElementById('payPeriod').value;
+            if (!period) {
+                showAlert('Please select a pay period', 'error');
+                return;
+            }
+            const [startDate, endDate] = period.split(',');
+            const salaryData = calculatePeriodSalary(startDate, endDate);
+            
+            // Display main summary report
+            displaySalaryReport(salaryData, startDate, endDate);
+            
+            // Display detailed daily entry table
+            displayDetailedSalaryTable(startDate, endDate);
+        }
         
         function calculatePeriodSalary(startDate, endDate) { const s = {}; appData.workers.forEach(w => s[w] = 0); Object.keys(appData.salaries || {}).filter(d => d >= startDate && d <= endDate).forEach(d => { if (appData.salaries[d].earnings) Object.keys(appData.salaries[d].earnings).forEach(w => { if(s[w] !== undefined) s[w] += appData.salaries[d].earnings[w]; }); }); appData.workers.forEach(w => { if(s[w] !== undefined) s[w] += appData.agreements.current.allowance / 2; }); return s; }
         
-        function displaySalaryReport(d, s, e) {
-            const c = document.getElementById('salaryResults'), v = appData.permissions?.viewableWorkers || []; let t = 0, h = `<h3>Salary Report: ${s} to ${e}</h3><div class="report-grid">`; appData.workers.forEach(w => { if (v.includes(w)) { const a = d[w] || 0; t += a; h += `<div class="report-card"><strong>${w}</strong><br>Rs. ${a.toFixed(2)}</div>`; } else { h += `<div class="report-card" style="background:#f1f1f1;border-left-color:#a0a0a0;"><strong>${w}</strong><br><span style="color:#6200EE;font-weight:500;">Contact admin to view details</span></div>`; } }); h += `</div><div class="report-card" style="background:#e6fffa;border-left-color:#38a169;"><strong>Total Visible Salary: Rs. ${t.toFixed(2)}</strong></div>`; c.innerHTML = h;
-        }
-        
         // MODIFIED FUNCTION
+        function displaySalaryReport(data, startDate, endDate) {
+            const container = document.getElementById('salaryResults');
+            const viewableWorkers = appData.permissions?.viewableWorkers || [];
+            let html = `<h3>Salary Report: ${startDate} to ${endDate}</h3><div class="report-grid">`;
+            
+            appData.workers.forEach(worker => {
+                if (viewableWorkers.includes(worker)) {
+                    const amount = data[worker] || 0;
+                    html += `<div class="report-card"><strong>${worker}</strong><br>Rs. ${amount.toFixed(2)}</div>`;
+                } else {
+                    html += `<div class="report-card" style="background:#f1f1f1;border-left-color:#a0a0a0;"><strong>${worker}</strong><br><span style="color:#6200EE;font-weight:500;">Contact admin to view details</span></div>`;
+                }
+            });
+            
+            html += `</div>`; // Removed the "Total Visible Salary" part
+            container.innerHTML = html;
+        }
+
+        // NEW FUNCTION
+        function displayDetailedSalaryTable(startDate, endDate) {
+            const container = document.getElementById('salaryResults');
+            const periodEntries = Object.values(appData.salaries || {})
+                .filter(e => {
+                    const entryDate = new Date(e.date + "T00:00:00");
+                    return entryDate >= new Date(startDate + "T00:00:00") && entryDate <= new Date(endDate + "T00:00:00");
+                })
+                .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+            let tableHtml = `<div class="history-table-container" style="margin-top: 24px;"><h3>Detailed Entries</h3>`;
+            if (periodEntries.length === 0) {
+                tableHtml += `<p class="no-history">No entries found for this period.</p></div>`;
+                container.innerHTML += tableHtml;
+                return;
+            }
+
+            tableHtml += `<div class="history-table-wrapper"><table class="history-table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Tonnage</th>
+                        ${appData.configs.isWagonRateEnabled ? '<th>Wagons</th>' : ''}
+                        <th>Absent Workers</th>
+                        <th>Pay per Worker (Rs)</th>
+                    </tr>
+                </thead>
+                <tbody>`;
+            
+            periodEntries.forEach(entry => {
+                const allWorkers = appData.workers;
+                const absentWorkers = allWorkers.filter(w => !entry.presentWorkers.includes(w));
+                const absentWorkersStr = absentWorkers.length > 0 ? absentWorkers.join(', ') : 'None';
+                
+                let singlePay = 0;
+                if (entry.presentWorkers?.length > 0) {
+                    singlePay = entry.earnings[entry.presentWorkers[0]] || 0;
+                } else if (entry.type === 'rest') {
+                    singlePay = appData.agreements.current.restRate;
+                } else if (allWorkers?.length > 0) {
+                    singlePay = entry.earnings[allWorkers[0]] || 0;
+                }
+
+                tableHtml += `
+                    <tr>
+                        <td>${entry.date}</td>
+                        <td>${entry.type === 'rest' ? 'Rest Day' : (entry.tonnage > 0 ? entry.tonnage.toFixed(2) : '-')}</td>
+                        ${appData.configs.isWagonRateEnabled ? `<td>${entry.wagons > 0 ? entry.wagons : '-'}</td>` : ''}
+                        <td>${absentWorkersStr}</td>
+                        <td>${singlePay.toFixed(2)}</td>
+                    </tr>`;
+            });
+            
+            tableHtml += `</tbody></table></div></div>`;
+            container.innerHTML += tableHtml;
+        }
+
         function loadFiscalYears() {
             const b = document.getElementById('fiscalYear'), l = document.getElementById('leavesFiscalYear');
             if (!appData.configs || !appData.configs.agreementStartDate) return;
@@ -771,14 +889,12 @@
             const c = document.getElementById('bonusResults'), v = appData.permissions?.viewableWorkers || [], s = new Date(f).getFullYear(); let h = `<h3>Annual Bonus Report: ${s}-${s + 1}</h3><div class="report-grid">`; appData.workers.forEach(w => { if (v.includes(w)) { const d=b[w]||{}; h += `<div class="report-card"><strong>${w}</strong><br>Annual Earnings: Rs. ${(d.annualEarnings||0).toFixed(2)}<br>Avg Monthly: Rs. ${(d.avgMonthlySalary||0).toFixed(2)}<br>Bonus: Rs. ${(d.bonus||0).toFixed(2)}<br>Gratuity: Rs. ${(d.gratuity||0).toFixed(2)}<br>Paid Leaves Bonus: Rs. ${(d.paidLeavesBonus||0).toFixed(2)}<br><strong>Total Bonus: Rs. ${(d.totalBonus||0).toFixed(2)}</strong></div>`; } else { h += `<div class="report-card" style="background:#f1f1f1;border-left-color:#a0a0a0;"><strong>${w}</strong><br><span style="color:#6200EE;font-weight:500;">Contact admin to view details</span></div>`; } }); h += `</div>`; c.innerHTML = h;
         }
 
-        // REPLACED FUNCTION
         function calculateArrears() { 
             const c = document.getElementById('arrearsResults'); 
             c.innerHTML = '<div class="loading"><div class="spinner"></div><p>Calculating arrears...</p></div>'; 
             setTimeout(() => displayArrearsReport(calculateAllArrears()), 500); 
         }
 
-        // REPLACED FUNCTION
         function calculateAllArrears() {
             const agreementStartDate = new Date(appData.configs.agreementStartDate + "T00:00:00");
             const today = new Date();
@@ -901,7 +1017,6 @@
         
         async function updateWorkerName(index, newName) { if (newName.trim()) appData.workers[index] = newName.trim(); }
         
-        // MODIFIED FUNCTION
         async function saveSettings() {
             if (!isWorkerSettingsLocked) {
                 const workerInputs = document.querySelectorAll('#workersList input[type="text"]'), newWorkerNames = [];
