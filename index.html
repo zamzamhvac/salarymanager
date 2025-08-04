@@ -615,21 +615,38 @@
             });
         }
         
+        // MODIFIED FUNCTION (Corrected Logic for Rest Day)
         async function saveDailyEntry() {
             const date = document.getElementById('entryDate').value;
             const dayType = document.getElementById('dayType').value;
             const tonnage = parseFloat(document.getElementById('tonnage').value) || 0;
             const wagons = parseInt(document.getElementById('wagons').value) || 0;
-            if (!date) { showAlert('Please select a date', 'error'); return; }
-            const presentWorkers = appData.workers.filter(worker => document.getElementById(`worker_${worker.replace(/\s/g, '_')}`).checked);
+
+            if (!date) {
+                showAlert('Please select a date', 'error');
+                return;
+            }
+
+            let presentWorkers;
+            if (dayType === 'rest') {
+                // On a rest day, all workers are considered present.
+                presentWorkers = [...appData.workers];
+            } else {
+                // On other days, attendance is based on checkboxes.
+                presentWorkers = appData.workers.filter(worker => document.getElementById(`worker_${worker.replace(/\s/g, '_')}`).checked);
+            }
+
             const earnings = calculateDayEarnings(date, dayType, tonnage, wagons, presentWorkers);
             if (!appData.salaries) appData.salaries = {};
+            
             appData.salaries[date] = { date, type: dayType, tonnage, wagons, presentWorkers, earnings };
+            
             await saveUserData();
             populateHistorySelector();
             updateHistoryDisplay();
             showAlert('Daily entry saved successfully!', 'success');
         }
+
 
         function calculateDayEarnings(entryDate, dayType, tonnage, wagons, presentWorkers) {
             const earnings = {}; const rates = appData.agreements.current; const allWorkers = appData.workers; const absentWorkers = allWorkers.filter(w => !presentWorkers.includes(w)); let penaltyPerPresentWorker = 0; const penaltyTriggeringAbsentees = [];
@@ -698,13 +715,13 @@
         
         async function saveAgreements() { Object.keys(appData.agreements.current).forEach(k => { const e = document.getElementById(`current${k.charAt(0).toUpperCase() + k.slice(1)}`); if(e) appData.agreements.current[k] = parseFloat(e.value) || 0; }); Object.keys(appData.agreements.new).forEach(k => { const e = document.getElementById(`new${k.charAt(0).toUpperCase() + k.slice(1)}`); if(e) appData.agreements.new[k] = parseFloat(e.value) || 0; }); await saveUserData(); showAlert('Agreements saved successfully!', 'success'); }
         
-        // MODIFIED FUNCTION
         function loadPayPeriods() {
             const selector = document.getElementById('payPeriod');
             selector.innerHTML = '<option value="">Select Period</option>';
             const today = new Date();
             
-            // Populate dropdown with last 12 periods
+            // Populate dropdown with last 12 periods in reverse chronological order
+            let optionsHtml = '';
             for (let i = 0; i < 12; i++) {
                 const date = new Date(today.getFullYear(), today.getMonth() - i, 1);
                 const year = date.getFullYear();
@@ -712,11 +729,10 @@
                 const lastDay = new Date(year, date.getMonth() + 1, 0).getDate();
                 const monthName = date.toLocaleString('default', { month: 'long' });
                 
-                // Add in reverse chronological order
-                const option1 = `<option value="${year}-${month}-16,${year}-${month}-${lastDay}">${monthName} ${year} (16-End)</option>`;
-                const option2 = `<option value="${year}-${month}-01,${year}-${month}-15">${monthName} ${year} (1-15)</option>`;
-                selector.innerHTML += option1 + option2;
+                optionsHtml += `<option value="${year}-${month}-16,${year}-${month}-${lastDay}">${monthName} ${year} (16-End)</option>`;
+                optionsHtml += `<option value="${year}-${month}-01,${year}-${month}-15">${monthName} ${year} (1-15)</option>`;
             }
+            selector.innerHTML += optionsHtml;
             
             // Set default value to current pay period
             const currentDay = today.getDate();
@@ -734,7 +750,6 @@
             selector.value = defaultValue;
         }
 
-        // MODIFIED FUNCTION
         function generateSalaryReport() {
             const period = document.getElementById('payPeriod').value;
             if (!period) {
@@ -744,16 +759,12 @@
             const [startDate, endDate] = period.split(',');
             const salaryData = calculatePeriodSalary(startDate, endDate);
             
-            // Display main summary report
             displaySalaryReport(salaryData, startDate, endDate);
-            
-            // Display detailed daily entry table
             displayDetailedSalaryTable(startDate, endDate);
         }
         
         function calculatePeriodSalary(startDate, endDate) { const s = {}; appData.workers.forEach(w => s[w] = 0); Object.keys(appData.salaries || {}).filter(d => d >= startDate && d <= endDate).forEach(d => { if (appData.salaries[d].earnings) Object.keys(appData.salaries[d].earnings).forEach(w => { if(s[w] !== undefined) s[w] += appData.salaries[d].earnings[w]; }); }); appData.workers.forEach(w => { if(s[w] !== undefined) s[w] += appData.agreements.current.allowance / 2; }); return s; }
         
-        // MODIFIED FUNCTION
         function displaySalaryReport(data, startDate, endDate) {
             const container = document.getElementById('salaryResults');
             const viewableWorkers = appData.permissions?.viewableWorkers || [];
@@ -768,11 +779,10 @@
                 }
             });
             
-            html += `</div>`; // Removed the "Total Visible Salary" part
+            html += `</div>`;
             container.innerHTML = html;
         }
 
-        // NEW FUNCTION
         function displayDetailedSalaryTable(startDate, endDate) {
             const container = document.getElementById('salaryResults');
             const periodEntries = Object.values(appData.salaries || {})
@@ -838,7 +848,6 @@
 
             const [fm, fd] = appData.configs.fiscalYearStart.split('-').map(Number);
             
-            // Create a list of the last 5 years plus future years for flexibility
             const currentYear = new Date().getFullYear();
             let optionsHtml = '';
             for (let i = 0; i < 5; i++) {
@@ -851,7 +860,6 @@
             if(b) b.innerHTML += optionsHtml;
             if(l) l.innerHTML += optionsHtml;
 
-            // --- Set Default Value based on Agreement Start Date ---
             const agreementDate = new Date(appData.configs.agreementStartDate + "T00:00:00");
             let agreementFiscalYearStart = agreementDate.getFullYear();
             
