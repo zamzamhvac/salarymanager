@@ -61,24 +61,17 @@
         .worker-checkbox input { width: auto; margin-right: 8px; }
         
         .toast-notification {
-            position: fixed;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            padding: 12px 20px;
-            border-radius: 6px;
-            color: #fff;
-            font-size: 14px;
-            z-index: 2000;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-            opacity: 0;
-            visibility: hidden;
+            position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); padding: 12px 20px;
+            border-radius: 6px; color: #fff; font-size: 14px; z-index: 2000;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2); opacity: 0; visibility: hidden;
             transition: opacity 0.5s, visibility 0.5s, bottom 0.5s;
         }
         .toast-notification.show { opacity: 1; visibility: visible; bottom: 30px; }
         .toast-success { background-color: #22543d; }
         .toast-error { background-color: #742a2a; }
         .toast-info { background-color: #2a4365; }
+        /* NEW: Warning toast style */
+        .toast-warning { background-color: #c25e00; }
 
         .loading { text-align: center; padding: 20px; }
         .spinner { border: 4px solid #f3f3f3; border-top: 4px solid var(--primary-color); border-radius: 50%; width: 40px; height: 40px; animation: spin 2s linear infinite; margin: 0 auto; }
@@ -126,8 +119,15 @@
         .wizard-header .material-icons { color: var(--primary-color); margin-right: 12px; font-size: 28px; }
         .wizard-header h2 { font-size: 22px; font-weight: 500; color: var(--on-surface-color); }
         .wizard-content { flex-grow: 1; overflow-y: auto; padding-right: 10px; }
-        .wizard-step { display: none; }
-        .wizard-step.active { display: block; }
+        
+        /* MODIFIED: Added properties to make step container a flexbox for scrolling */
+        .wizard-step {
+            display: none;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+        .wizard-step.active { display: flex; }
         .wizard-warning, .settings-warning {
             padding: 10px; background: #fffbe6; border: 1px solid #ffe58f;
             border-radius: 4px; font-size: 13px; margin-bottom: 16px; color: #d46b08;
@@ -188,7 +188,6 @@
         <div id="arrears" class="page"><h2>📊 Arrears Calculation</h2><p>Calculate pending arrears based on agreement differences</p><button onclick="calculateArrears()" class="btn">Calculate Automatic Arrears</button><div id="arrearsResults"></div></div>
         <div id="leaves" class="page"><h2>🏖️ Leaves Report</h2><p>Track annual leaves for all workers</p><div class="form-group"><label>Select Fiscal Year:</label><select id="leavesFiscalYear"><option value="">Select Year</option></select></div><button onclick="generateLeavesReport()" class="btn">Generate Leaves Report</button><div id="leavesResults"></div></div>
         
-        <!-- MODIFIED: Settings Page with Unlock/Lock functionality -->
         <div id="settings" class="page">
             <h2>⚙️ Settings</h2><p>Configure your application settings</p>
             
@@ -226,7 +225,7 @@
         </div>
     </main>
 
-    <!-- Setup Wizard HTML (Unchanged) -->
+    <!-- Setup Wizard HTML -->
     <div id="setup-wizard" class="wizard-overlay">
         <div class="wizard-container">
             <!-- Step 1: Worker Count -->
@@ -551,24 +550,23 @@
             showPage('daily-entry');
         }
         
-        // NEW/MODIFIED: Functions to unlock and lock worker settings
+        // MODIFIED: Functions to unlock/lock worker settings with improved notification
         function unlockWorkerManagement() {
             const confirmed = confirm("Tanbeeh (Warning)!\n\nWorkers ki tadaad ya naam tabdeel karne se aapke pichle hisaab kitaab par asar par sakta hai.\n\nKya aap waqai worker settings unlock karna chahte hain?");
             if (confirmed) {
                 document.getElementById('workerCount').disabled = false;
                 document.querySelectorAll('#workersList input').forEach(input => input.disabled = false);
-                document.querySelectorAll('#workersList button').forEach(button => button.style.display = 'inline-flex');
+                document.querySelectorAll('#workersList .btn-remove-worker').forEach(button => button.style.display = 'inline-flex');
                 document.getElementById('worker-management-buttons').style.display = 'block';
                 
                 document.getElementById('unlock-workers-btn').style.display = 'none';
                 document.getElementById('lock-workers-btn').style.display = 'inline-flex';
                 
-                showAlert('Worker settings are now unlocked. Please lock them again after making changes.', 'info');
+                showAlert('Worker settings unlocked! Tabdeeli ke baad inhen dobara lock kar dain.', 'warning');
             }
         }
 
         function lockWorkerManagement() {
-            // Simply re-run loadSettings to apply the default locked state
             loadSettings();
             showAlert('Worker settings have been locked.', 'success');
         }
@@ -917,11 +915,8 @@
             container.innerHTML = html + '</div>';
         }
         
-        // MODIFIED: Settings functions now handle the lock/unlock state
         function loadSettings() {
             if (!appData.configs) return;
-
-            // Load general config values
             document.getElementById('agreementStartDate').value = appData.configs.agreementStartDate;
             document.getElementById('fiscalYearStart').value = appData.configs.fiscalYearStart;
             document.getElementById('enableWagonRate').checked = appData.configs.isWagonRateEnabled;
@@ -929,19 +924,12 @@
             document.getElementById('penaltyAmount').value = appData.configs.penaltyAmount;
             document.getElementById('penaltyAmountContainer').style.display = appData.configs.isPenaltyEnabled ? 'block' : 'none';
             toggleWagonUIElements(appData.configs.isWagonRateEnabled);
-
-            // Load worker config values and set locked state
             document.getElementById('workerCount').value = appData.configs.workerCount;
             document.getElementById('workerCount').disabled = true;
-
             loadWorkersList();
-            
-            // Set all worker management controls to locked state by default
             document.querySelectorAll('#workersList input').forEach(input => input.disabled = true);
-            document.querySelectorAll('#workersList button').forEach(button => button.style.display = 'none');
+            document.querySelectorAll('#workersList .btn-remove-worker').forEach(button => button.style.display = 'none');
             document.getElementById('worker-management-buttons').style.display = 'none';
-
-            // Show/hide lock/unlock buttons
             document.getElementById('unlock-workers-btn').style.display = 'inline-flex';
             document.getElementById('lock-workers-btn').style.display = 'none';
         }
@@ -960,39 +948,35 @@
             if (!appData.workers) appData.workers = [];
             appData.workers.push(`Worker ${appData.workers.length + 1}`);
             appData.configs.workerCount = appData.workers.length;
-            document.getElementById('workerCount').value = appData.configs.workerCount; // update UI
-            loadWorkersList(); // Renders the new worker
-            unlockWorkerManagement(); // Re-apply unlocked state to the newly added worker
+            document.getElementById('workerCount').value = appData.configs.workerCount;
+            loadWorkersList(); 
+            document.querySelectorAll('#workersList input:not([disabled])').forEach(input => input.disabled = false);
+            document.querySelectorAll('#workersList .btn-remove-worker').forEach(button => button.style.display = 'inline-flex');
             await saveUserData();
         }
         async function removeWorker(index) {
             if (appData.workers.length <= 1) { showAlert('At least one worker is required', 'error'); return; }
             appData.workers.splice(index, 1);
             appData.configs.workerCount = appData.workers.length;
-            document.getElementById('workerCount').value = appData.configs.workerCount; // update UI
-            loadWorkersList(); // Re-render the list
-            unlockWorkerManagement(); // Re-apply unlocked state
+            document.getElementById('workerCount').value = appData.configs.workerCount;
+            loadWorkersList(); 
+            document.querySelectorAll('#workersList input:not([disabled])').forEach(input => input.disabled = false);
+            document.querySelectorAll('#workersList .btn-remove-worker').forEach(button => button.style.display = 'inline-flex');
             await saveUserData();
         }
         async function updateWorkerName(index, newName) {
             if (newName.trim()) { appData.workers[index] = newName.trim(); await saveUserData(); }
         }
         async function saveSettings() {
-            // Worker settings are saved via their own functions (add, remove, update)
-            // This function only saves the general and feature settings
             appData.configs.fiscalYearStart = document.getElementById('fiscalYearStart').value;
             appData.configs.isWagonRateEnabled = document.getElementById('enableWagonRate').checked;
             appData.configs.isPenaltyEnabled = document.getElementById('enablePenalty').checked;
             appData.configs.penaltyAmount = parseFloat(document.getElementById('penaltyAmount').value) || 231;
-            
-            // We also update worker count in case it was changed while unlocked
             appData.configs.workerCount = parseInt(document.getElementById('workerCount').value) || appData.workers.length;
-            
             await saveUserData();
             showAlert('Settings saved successfully!', 'success');
         }
         
-        // MODIFIED: showAlert function for bottom snackbar
         function showAlert(message, type = 'info') {
             const existingAlert = document.getElementById('toast-alert');
             if(existingAlert) existingAlert.remove();
