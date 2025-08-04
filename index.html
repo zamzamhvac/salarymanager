@@ -60,7 +60,6 @@
         .worker-checkbox { display: flex; align-items: center; margin: 0; padding: 8px; background: #f7fafc; border-radius: 4px; border: 1px solid #eee;}
         .worker-checkbox input { width: auto; margin-right: 8px; }
         
-        /* MODIFIED: Notification style for bottom snackbar */
         .toast-notification {
             position: fixed;
             bottom: 20px;
@@ -76,11 +75,7 @@
             visibility: hidden;
             transition: opacity 0.5s, visibility 0.5s, bottom 0.5s;
         }
-        .toast-notification.show {
-            opacity: 1;
-            visibility: visible;
-            bottom: 30px;
-        }
+        .toast-notification.show { opacity: 1; visibility: visible; bottom: 30px; }
         .toast-success { background-color: #22543d; }
         .toast-error { background-color: #742a2a; }
         .toast-info { background-color: #2a4365; }
@@ -114,84 +109,36 @@
         .checkbox-group input { width: auto; margin-right: 10px; }
         .sub-setting { padding-left: 30px; }
 
-        /* NEW: Setup Wizard Styles */
         .wizard-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.6);
-            z-index: 1200;
-            display: none;
-            align-items: center;
-            justify-content: center;
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.6); z-index: 1200;
+            display: none; align-items: center; justify-content: center;
         }
         .wizard-overlay.show { display: flex; }
         .wizard-container {
-            background-color: var(--surface-color);
-            padding: 24px;
-            border-radius: 8px;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-            width: 90%;
-            max-width: 550px;
-            max-height: 90vh;
-            display: flex;
-            flex-direction: column;
+            background-color: var(--surface-color); padding: 24px; border-radius: 8px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1); width: 90%; max-width: 550px;
+            max-height: 90vh; display: flex; flex-direction: column;
         }
         .wizard-header {
-            display: flex;
-            align-items: center;
-            padding-bottom: 12px;
-            border-bottom: 1px solid #eee;
-            margin-bottom: 16px;
+            display: flex; align-items: center; padding-bottom: 12px;
+            border-bottom: 1px solid #eee; margin-bottom: 16px;
         }
-        .wizard-header .material-icons {
-            color: var(--primary-color);
-            margin-right: 12px;
-            font-size: 28px;
-        }
-        .wizard-header h2 {
-            font-size: 22px;
-            font-weight: 500;
-            color: var(--on-surface-color);
-        }
-        .wizard-content {
-            flex-grow: 1;
-            overflow-y: auto;
-            padding-right: 10px;
-        }
+        .wizard-header .material-icons { color: var(--primary-color); margin-right: 12px; font-size: 28px; }
+        .wizard-header h2 { font-size: 22px; font-weight: 500; color: var(--on-surface-color); }
+        .wizard-content { flex-grow: 1; overflow-y: auto; padding-right: 10px; }
         .wizard-step { display: none; }
         .wizard-step.active { display: block; }
-        .wizard-warning {
-            padding: 10px;
-            background: #fffbe6;
-            border: 1px solid #ffe58f;
-            border-radius: 4px;
-            font-size: 13px;
-            margin-bottom: 16px;
-            color: #d46b08;
+        .wizard-warning, .settings-warning {
+            padding: 10px; background: #fffbe6; border: 1px solid #ffe58f;
+            border-radius: 4px; font-size: 13px; margin-bottom: 16px; color: #d46b08;
         }
         .wizard-footer {
-            padding-top: 16px;
-            margin-top: 16px;
-            border-top: 1px solid #eee;
-            display: flex;
-            justify-content: space-between;
+            padding-top: 16px; margin-top: 16px; border-top: 1px solid #eee;
+            display: flex; justify-content: space-between;
         }
-        .worker-name-inputs {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 12px;
-        }
-        @media (min-width: 600px) {
-            .worker-name-inputs { grid-template-columns: 1fr 1fr; }
-        }
-        .wizard-rate-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-            gap: 15px;
-        }
+        .worker-name-inputs { display: grid; grid-template-columns: 1fr; gap: 12px; }
+        @media (min-width: 600px) { .worker-name-inputs { grid-template-columns: 1fr 1fr; } }
+        .wizard-rate-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; }
     </style>
 </head>
 <body>
@@ -240,101 +187,71 @@
         <div id="bonus" class="page"><h2>🎁 Annual Bonus & Gratuity</h2><p>Calculate annual bonus, gratuity and paid leaves bonus</p><div class="form-group"><label>Select Fiscal Year:</label><select id="fiscalYear"><option value="">Select Year</option></select></div><button onclick="calculateBonus()" class="btn">Calculate Bonus</button><div id="bonusResults"></div></div>
         <div id="arrears" class="page"><h2>📊 Arrears Calculation</h2><p>Calculate pending arrears based on agreement differences</p><button onclick="calculateArrears()" class="btn">Calculate Automatic Arrears</button><div id="arrearsResults"></div></div>
         <div id="leaves" class="page"><h2>🏖️ Leaves Report</h2><p>Track annual leaves for all workers</p><div class="form-group"><label>Select Fiscal Year:</label><select id="leavesFiscalYear"><option value="">Select Year</option></select></div><button onclick="generateLeavesReport()" class="btn">Generate Leaves Report</button><div id="leavesResults"></div></div>
+        
+        <!-- MODIFIED: Settings Page with Unlock/Lock functionality -->
         <div id="settings" class="page">
             <h2>⚙️ Settings</h2><p>Configure your application settings</p>
+            
             <div class="settings-section">
                 <h3>General Settings</h3>
-                <div class="form-group"><label>Number of Workers:</label><input type="number" id="workerCount" placeholder="8" disabled></div>
                 <div class="form-group"><label>Agreement Start Date:</label><input type="date" id="agreementStartDate" disabled></div>
                 <div class="form-group"><label>Fiscal Year Start (MM-DD):</label><input type="text" id="fiscalYearStart" placeholder="10-10" pattern="[0-9]{2}-[0-9]{2}"></div>
             </div>
             
             <div class="settings-section">
                 <h3>Feature Controls</h3>
-                <div class="checkbox-group">
-                    <input type="checkbox" id="enableWagonRate">
-                    <label for="enableWagonRate">Enable Wagon Rate Calculation</label>
-                </div>
-                <div class="checkbox-group">
-                    <input type="checkbox" id="enablePenalty">
-                    <label for="enablePenalty">Enable Excess Leave Penalty</label>
-                </div>
+                <div class="checkbox-group"><input type="checkbox" id="enableWagonRate"><label for="enableWagonRate">Enable Wagon Rate Calculation</label></div>
+                <div class="checkbox-group"><input type="checkbox" id="enablePenalty"><label for="enablePenalty">Enable Excess Leave Penalty</label></div>
                 <div class="sub-setting" id="penaltyAmountContainer" style="display: none;">
-                    <div class="form-group">
-                        <label for="penaltyAmount">Penalty Amount (Normal Day)</label>
-                        <input type="number" id="penaltyAmount">
-                    </div>
+                    <div class="form-group"><label for="penaltyAmount">Penalty Amount (Normal Day)</label><input type="number" id="penaltyAmount"></div>
                 </div>
             </div>
 
             <div class="settings-section">
                 <h3>Manage Workers</h3>
+                <div class="settings-warning" id="worker-settings-warning">
+                    <strong>Tanbeeh (Warning):</strong> Workers ki tadaad ya unke naam tabdeel karne se aap ke purane hisaab kitaab (historical reports) par asar par sakta hai. Yeh option sirf sakht zaroorat ke waqt istemal karain.
+                </div>
+                <div class="form-group"><label>Number of Workers:</label><input type="number" id="workerCount" placeholder="8" disabled></div>
                 <div id="workersList"></div>
                 <div id="worker-management-buttons">
                     <button onclick="addWorker()" class="btn btn-success">Add Worker</button>
                 </div>
-            </div>
-
-             <!-- NEW: Reset button section -->
-            <div class="settings-section">
-                <h3>Reset Application Setup</h3>
-                <div class="wizard-warning">
-                    <strong>Tanbeeh (Warning):</strong> Setup ko reset karne se aap workers ki tadaad aur unke naam tabdeel kar sakenge. Lekin, is se aap ke pichle hisaab kitaab par asar par sakta hai. Yeh option sirf zaroorat ke waqt istemal karain.
+                <div id="worker-lock-controls">
+                    <button id="unlock-workers-btn" onclick="unlockWorkerManagement()" class="btn btn-danger">Unlock Worker Settings</button>
+                    <button id="lock-workers-btn" onclick="lockWorkerManagement()" class="btn btn-success" style="display: none;">Lock Worker Settings</button>
                 </div>
-                <button onclick="resetSetup()" class="btn btn-danger">Reset Setup</button>
             </div>
             <button onclick="saveSettings()" class="btn">Save Settings</button>
         </div>
     </main>
 
-    <!-- NEW: Setup Wizard HTML -->
+    <!-- Setup Wizard HTML (Unchanged) -->
     <div id="setup-wizard" class="wizard-overlay">
         <div class="wizard-container">
             <!-- Step 1: Worker Count -->
             <div id="wizard-step-1" class="wizard-step">
-                <div class="wizard-header">
-                    <i class="material-icons">group</i>
-                    <h2>Welcome! Let's Get Started</h2>
-                </div>
+                <div class="wizard-header"><i class="material-icons">group</i><h2>Welcome! Let's Get Started</h2></div>
                 <div class="wizard-content">
                     <p>Sab se pehle, batayen ke aap ki team mai kitne workers shamil hain.</p>
-                    <div class="wizard-warning"><strong>Note:</strong> Yeh tadaad aap baad mai sirf 'Reset Setup' ke zariye hi tabdeel kar payenge.</div>
-                    <div class="form-group">
-                        <label for="wizardWorkerCount">Total Workers</label>
-                        <input type="number" id="wizardWorkerCount" value="8" placeholder="e.g., 8">
-                    </div>
+                    <div class="wizard-warning"><strong>Note:</strong> Yeh tadaad aap baad mai sirf 'Settings' ke zariye hi tabdeel kar payenge.</div>
+                    <div class="form-group"><label for="wizardWorkerCount">Total Workers</label><input type="number" id="wizardWorkerCount" value="8" placeholder="e.g., 8"></div>
                 </div>
-                <div class="wizard-footer">
-                    <span></span> <!-- for spacing -->
-                    <button class="btn" onclick="wizardNext(1)">Next <i class="material-icons" style="font-size: 16px; margin-left: 4px;">arrow_forward</i></button>
-                </div>
+                <div class="wizard-footer"><span></span><button class="btn" onclick="wizardNext(1)">Next <i class="material-icons" style="font-size: 16px; margin-left: 4px;">arrow_forward</i></button></div>
             </div>
-
             <!-- Step 2: Worker Names -->
             <div id="wizard-step-2" class="wizard-step">
-                <div class="wizard-header">
-                    <i class="material-icons">badge</i>
-                    <h2>Set Worker Names</h2>
-                </div>
+                <div class="wizard-header"><i class="material-icons">badge</i><h2>Set Worker Names</h2></div>
                 <div class="wizard-content">
                     <p>Ab, har worker ka naam darj karain. Yeh naam reports mai istemal honge.</p>
                     <div class="wizard-warning"><strong>Tanbeeh:</strong> In naamon ko baad mai tabdeel karne se hisaab kitaab mai ghalatiyan ho sakti hain.</div>
-                    <div id="wizardWorkerNames" class="worker-name-inputs">
-                        <!-- JS will populate this -->
-                    </div>
+                    <div id="wizardWorkerNames" class="worker-name-inputs"></div>
                 </div>
-                <div class="wizard-footer">
-                    <button class="btn btn-danger" onclick="wizardBack(2)">Back</button>
-                    <button class="btn" onclick="wizardNext(2)">Next <i class="material-icons" style="font-size: 16px; margin-left: 4px;">arrow_forward</i></button>
-                </div>
+                <div class="wizard-footer"><button class="btn btn-danger" onclick="wizardBack(2)">Back</button><button class="btn" onclick="wizardNext(2)">Next <i class="material-icons" style="font-size: 16px; margin-left: 4px;">arrow_forward</i></button></div>
             </div>
-
             <!-- Step 3: Agreement Details -->
             <div id="wizard-step-3" class="wizard-step">
-                <div class="wizard-header">
-                    <i class="material-icons">gavel</i>
-                    <h2>Set Agreement Rates</h2>
-                </div>
+                <div class="wizard-header"><i class="material-icons">gavel</i><h2>Set Agreement Rates</h2></div>
                 <div class="wizard-content">
                     <p>Apne mojooda (current) agreement ke mutabiq rates darj karain.</p>
                     <div class="wizard-rate-grid">
@@ -344,30 +261,17 @@
                         <div class="form-group"><label>Monthly Allowance (Rs):</label><input type="number" id="wizardAllowance" value="20000"></div>
                     </div>
                 </div>
-                <div class="wizard-footer">
-                    <button class="btn btn-danger" onclick="wizardBack(3)">Back</button>
-                    <button class="btn" onclick="wizardNext(3)">Next <i class="material-icons" style="font-size: 16px; margin-left: 4px;">arrow_forward</i></button>
-                </div>
+                <div class="wizard-footer"><button class="btn btn-danger" onclick="wizardBack(3)">Back</button><button class="btn" onclick="wizardNext(3)">Next <i class="material-icons" style="font-size: 16px; margin-left: 4px;">arrow_forward</i></button></div>
             </div>
-            
             <!-- Step 4: Agreement Start Date -->
             <div id="wizard-step-4" class="wizard-step">
-                <div class="wizard-header">
-                    <i class="material-icons">event</i>
-                    <h2>Agreement Start Date</h2>
-                </div>
+                <div class="wizard-header"><i class="material-icons">event</i><h2>Agreement Start Date</h2></div>
                 <div class="wizard-content">
-                    <p>Aakhri qadam! Woh tareekh batayen jab se yeh mojooda agreement nafiz ( लागू) hua hai.</p>
+                    <p>Aakhri qadam! Woh tareekh batayen jab se yeh mojooda agreement nafiz hua hai.</p>
                     <div class="wizard-warning"><strong>Important:</strong> Arrears ka hisaab isi tareekh se shuru hoga.</div>
-                    <div class="form-group">
-                        <label for="wizardAgreementStartDate">Agreement Start Date</label>
-                        <input type="date" id="wizardAgreementStartDate">
-                    </div>
+                    <div class="form-group"><label for="wizardAgreementStartDate">Agreement Start Date</label><input type="date" id="wizardAgreementStartDate"></div>
                 </div>
-                <div class="wizard-footer">
-                    <button class="btn btn-danger" onclick="wizardBack(4)">Back</button>
-                    <button class="btn btn-success" onclick="finishSetup()">Finish Setup <i class="material-icons" style="font-size: 16px; margin-left: 4px;">done</i></button>
-                </div>
+                <div class="wizard-footer"><button class="btn btn-danger" onclick="wizardBack(4)">Back</button><button class="btn btn-success" onclick="finishSetup()">Finish Setup <i class="material-icons" style="font-size: 16px; margin-left: 4px;">done</i></button></div>
             </div>
         </div>
     </div>
@@ -376,13 +280,10 @@
         // --- MUKAMMAL JAVASCRIPT CODE ---
 		
         let currentUser = null;
-        // Default App Data structure. This will be overwritten by data from Firebase.
         let appData = { 
             salaries: {}, 
             workers: [],
-            permissions: {
-                viewableWorkers: []
-            },
+            permissions: { viewableWorkers: [] },
             configs: { 
                 workerCount: 8, 
                 agreementStartDate: '2023-10-10', 
@@ -390,7 +291,7 @@
                 isPenaltyEnabled: false, 
                 penaltyAmount: 231, 
                 isWagonRateEnabled: false,
-                isSetupComplete: false // NEW: Setup Wizard Flag
+                isSetupComplete: false
             }, 
             agreements: { 
                 current: { tonRate: 22, restRate: 1100, layoffRate: 549, wagonRate: 0, allowance: 20000, annualBenefits: 0 }, 
@@ -412,13 +313,8 @@
             if (window.innerWidth < 960 && document.getElementById('sideNav').classList.contains('open')) {
                 toggleNav();
             }
-            // Trigger page-specific load functions
             switch(pageId) {
-                case 'daily-entry': 
-                    loadWorkerAttendance(); 
-                    populateHistorySelector();
-                    updateHistoryDisplay();
-                    break;
+                case 'daily-entry': loadWorkerAttendance(); populateHistorySelector(); updateHistoryDisplay(); break;
                 case 'agreements': loadAgreements(); break;
                 case 'salaries': loadPayPeriods(); break;
                 case 'bonus': case 'leaves': loadFiscalYears(); break;
@@ -430,41 +326,26 @@
 
         async function startApp() {
             try {
-                // Step 1: Fetch configuration from Netlify Function
-                console.log("Configuration fetch karne ki koshish...");
                 const response = await fetch('/.netlify/functions/get-config');
-                if (!response.ok) {
-                    throw new Error('Configuration fetch karne mein masla hua.');
-                }
+                if (!response.ok) throw new Error('Configuration fetch failed.');
                 const firebaseConfig = await response.json();
-                console.log("Configuration fetch ho gai.");
-
-                // Step 2: Initialize Firebase with the fetched config
                 firebase.initializeApp(firebaseConfig);
-                console.log("Firebase initialize ho gaya.");
 
-                // Step 3: Set up the Authentication State Listener
                 firebase.auth().onAuthStateChanged(async (user) => {
                     if (user) {
-                        console.log("User signed in:", user.uid);
                         currentUser = user;
                         await showMainApp();
                     } else {
-                        console.log("User is signed out.");
                         currentUser = null;
                         showLoginPage();
                     }
                 });
                 
-                // --- Initial UI Setup (Listeners) ---
-                document.querySelectorAll('.nav-btn').forEach(btn => {
-                    btn.addEventListener('click', () => showPage(btn.dataset.page));
-                });
+                document.querySelectorAll('.nav-btn').forEach(btn => btn.addEventListener('click', () => showPage(btn.dataset.page)));
                 document.getElementById('entryDate').value = new Date().toISOString().split('T')[0];
-                document.getElementById('wizardAgreementStartDate').value = new Date().toISOString().split('T')[0]; // NEW: Set default date for wizard
+                document.getElementById('wizardAgreementStartDate').value = new Date().toISOString().split('T')[0];
                 document.getElementById('dayType').addEventListener('change', function() {
-                    const workDetails = document.getElementById('workDetails');
-                    workDetails.style.display = this.value === 'rest' ? 'none' : 'block';
+                    document.getElementById('workDetails').style.display = this.value === 'rest' ? 'none' : 'block';
                 });
                 document.getElementById('enablePenalty').addEventListener('change', (e) => {
                     document.getElementById('penaltyAmountContainer').style.display = e.target.checked ? 'block' : 'none';
@@ -474,12 +355,8 @@
                 });
 
             } catch (error) {
-                console.error("Application start karne mein error:", error);
-                document.getElementById('main-content').innerHTML = `
-                    <div class="alert alert-error">
-                        <h2>Application Error</h2>
-                        <p>Application configuration load nahi ho saki. Baraye meharbani baad mein try karen.</p>
-                    </div>`;
+                console.error("Application start error:", error);
+                document.getElementById('main-content').innerHTML = `<div class="settings-warning"><h2>Application Error</h2><p>Application configuration could not be loaded. Please try again later.</p></div>`;
             }
         }
         
@@ -494,7 +371,6 @@
             
             await loadUserData(); 
             
-            // NEW: Check if setup is complete. If not, launch wizard.
             if (!appData.configs.isSetupComplete) {
                 launchSetupWizard();
             } else {
@@ -517,57 +393,34 @@
         function signIn() {
             const email = document.getElementById('loginEmail').value;
             const password = document.getElementById('loginPassword').value;
-            if (!email || !password) {
-                showAlert('Please enter both email and password', 'error');
-                return;
-            }
+            if (!email || !password) { showAlert('Please enter both email and password', 'error'); return; }
             firebase.auth().signInWithEmailAndPassword(email, password)
-                .then((userCredential) => {
-                    showAlert('Successfully signed in!', 'success');
-                })
-                .catch((error) => {
-                    console.error("Sign in error:", error);
-                    showAlert(error.message, 'error');
-                });
+                .then(() => showAlert('Successfully signed in!', 'success'))
+                .catch((error) => showAlert(error.message, 'error'));
         }
 
         function signUp() {
             const email = document.getElementById('signupEmail').value;
             const password = document.getElementById('signupPassword').value;
             const companyName = document.getElementById('companyName').value.trim();
-            if (!email || password.length < 6) {
-                showAlert('Provide a valid email and a password of at least 6 characters.', 'error');
-                return;
-            }
-            if (!companyName) {
-                showAlert('Please enter your Company or Business Name.', 'error');
-                return;
-            }
+            if (!email || password.length < 6) { showAlert('Provide a valid email and a password of at least 6 characters.', 'error'); return; }
+            if (!companyName) { showAlert('Please enter your Company or Business Name.', 'error'); return; }
 
             firebase.auth().createUserWithEmailAndPassword(email, password)
                 .then((userCredential) => {
                     const user = userCredential.user;
-                    return user.updateProfile({
-                        displayName: companyName
-                    }).then(() => {
-                        currentUser = user; 
-                        return initializeNewUserData();
-                    });
+                    return user.updateProfile({ displayName: companyName })
+                        .then(() => {
+                            currentUser = user; 
+                            return initializeNewUserData();
+                        });
                 })
-                .then(() => {
-                    showAlert('Account created successfully! Please complete the initial setup.', 'success');
-                })
-                .catch((error) => {
-                    console.error("Sign up error:", error);
-                    showAlert(error.message, 'error');
-                });
+                .then(() => showAlert('Account created successfully! Please complete the initial setup.', 'success'))
+                .catch((error) => showAlert(error.message, 'error'));
         }
 
         function signOut() {
-            firebase.auth().signOut().catch((error) => {
-                console.error("Sign out error:", error);
-                showAlert(error.message, 'error');
-            });
+            firebase.auth().signOut().catch((error) => showAlert(error.message, 'error'));
         }
 
         function showSignUp() { document.getElementById('signUpForm').style.display = 'block'; }
@@ -583,16 +436,9 @@
                 if (snapshot.exists()) {
                     const savedData = snapshot.val();
                     appData = {
-                        ...appData,
-                        ...savedData,
-                        permissions: { 
-                            ...(appData.permissions || {}),
-                            ...(savedData.permissions || {})
-                        },
-                        configs: {
-                            ...appData.configs,
-                            ...(savedData.configs || {})
-                        },
+                        ...appData, ...savedData,
+                        permissions: { ...(appData.permissions || {}), ...(savedData.permissions || {}) },
+                        configs: { ...appData.configs, ...(savedData.configs || {}) },
                         agreements: {
                             current: { ...appData.agreements.current, ...(savedData.agreements?.current || {}) },
                             new: { ...appData.agreements.new, ...(savedData.agreements?.new || {}) }
@@ -608,10 +454,7 @@
                             appData.permissions.viewableWorkers = [];
                         }
                     }
-
-                    console.log("User data loaded from Firebase.");
                 } else {
-                    console.log("No data found, initializing new user data in Firebase.");
                     await initializeNewUserData();
                 }
             } catch (error) {
@@ -625,29 +468,19 @@
             try {
                 await firebase.database().ref('users/' + currentUser.uid).set(appData);
                 console.log("User data saved to Firebase.");
-            } catch (error)
-                {
+            } catch (error) {
                 console.error("Error saving user data:", error);
                 showAlert("Failed to save data. Please check your connection.", "error");
             }
         }
 
         async function initializeNewUserData() {
-            // This function sets the default data for a new user. The wizard will overwrite some of this.
             appData = { 
-                salaries: {}, 
-                workers: [], // Will be set by wizard
-                permissions: {
-                    viewableWorkers: [] // Will be set after wizard
-                },
+                salaries: {}, workers: [], permissions: { viewableWorkers: [] },
                 configs: { 
-                    workerCount: 8, // Default, will be set by wizard
-                    agreementStartDate: new Date().toISOString().split('T')[0], // Default, will be set by wizard
-                    fiscalYearStart: '10-10', 
-                    isPenaltyEnabled: false, 
-                    penaltyAmount: 231, 
-                    isWagonRateEnabled: false,
-                    isSetupComplete: false // IMPORTANT: New user has not completed setup
+                    workerCount: 8, agreementStartDate: new Date().toISOString().split('T')[0], 
+                    fiscalYearStart: '10-10', isPenaltyEnabled: false, penaltyAmount: 231, 
+                    isWagonRateEnabled: false, isSetupComplete: false
                 }, 
                 agreements: { 
                     current: { tonRate: 22, restRate: 1100, layoffRate: 549, wagonRate: 0, allowance: 20000, annualBenefits: 0 }, 
@@ -657,7 +490,7 @@
             await saveUserData();
         }
 
-        // --- NEW: SETUP WIZARD FUNCTIONS ---
+        // --- SETUP WIZARD & LOCKING FUNCTIONS ---
 
         function launchSetupWizard() {
             document.getElementById('setup-wizard').classList.add('show');
@@ -672,98 +505,74 @@
         function wizardNext(currentStep) {
             if (currentStep === 1) {
                 const count = parseInt(document.getElementById('wizardWorkerCount').value);
-                if (isNaN(count) || count < 1) {
-                    showAlert('Please enter a valid number of workers.', 'error');
-                    return;
-                }
-                // Generate worker name inputs for step 2
+                if (isNaN(count) || count < 1) { showAlert('Please enter a valid number of workers.', 'error'); return; }
                 const container = document.getElementById('wizardWorkerNames');
                 container.innerHTML = '';
                 for (let i = 0; i < count; i++) {
-                    container.innerHTML += `
-                        <div class="form-group">
-                            <label>Worker ${i + 1} Name</label>
-                            <input type="text" class="wizard-worker-name" value="Worker ${i + 1}">
-                        </div>`;
+                    container.innerHTML += `<div class="form-group"><label>Worker ${i + 1} Name</label><input type="text" class="wizard-worker-name" value="Worker ${i + 1}"></div>`;
                 }
                 showWizardStep(2);
             } else if (currentStep === 2) {
-                // Validate worker names are not empty
                 const names = Array.from(document.querySelectorAll('.wizard-worker-name')).map(input => input.value.trim());
-                if (names.some(name => name === '')) {
-                    showAlert('Please provide a name for every worker.', 'error');
-                    return;
-                }
+                if (names.some(name => name === '')) { showAlert('Please provide a name for every worker.', 'error'); return; }
                 showWizardStep(3);
             } else if (currentStep === 3) {
                 showWizardStep(4);
             }
         }
         
-        function wizardBack(currentStep) {
-            showWizardStep(currentStep - 1);
-        }
+        function wizardBack(currentStep) { showWizardStep(currentStep - 1); }
 
         async function finishSetup() {
-            // 1. Gather all data from wizard
             const workerCount = parseInt(document.getElementById('wizardWorkerCount').value);
             const workerNames = Array.from(document.querySelectorAll('.wizard-worker-name')).map(input => input.value.trim());
             const agreementStartDate = document.getElementById('wizardAgreementStartDate').value;
+            if (!agreementStartDate) { showAlert('Please select the agreement start date.', 'error'); return; }
 
-            const tonRate = parseFloat(document.getElementById('wizardTonRate').value);
-            const restRate = parseFloat(document.getElementById('wizardRestRate').value);
-            const layoffRate = parseFloat(document.getElementById('wizardLayoffRate').value);
-            const allowance = parseFloat(document.getElementById('wizardAllowance').value);
-
-            // 2. Validate final data
-            if (!agreementStartDate) {
-                showAlert('Please select the agreement start date.', 'error');
-                return;
-            }
-
-            // 3. Update appData object
             appData.configs.workerCount = workerCount;
             appData.workers = workerNames;
             appData.configs.agreementStartDate = agreementStartDate;
             appData.agreements.current = {
-                tonRate: tonRate,
-                restRate: restRate,
-                layoffRate: layoffRate,
-                allowance: allowance,
-                wagonRate: 0, // Not in wizard, default to 0
-                annualBenefits: 0 // Not in wizard, default to 0
+                tonRate: parseFloat(document.getElementById('wizardTonRate').value),
+                restRate: parseFloat(document.getElementById('wizardRestRate').value),
+                layoffRate: parseFloat(document.getElementById('wizardLayoffRate').value),
+                allowance: parseFloat(document.getElementById('wizardAllowance').value),
+                wagonRate: 0, annualBenefits: 0
             };
+            if (workerNames.length > 0) { appData.permissions.viewableWorkers = [workerNames[0]]; }
+            appData.configs.isSetupComplete = true;
 
-            // Set default permission to view the first worker
-            if (workerNames.length > 0) {
-                appData.permissions.viewableWorkers = [workerNames[0]];
-            }
-
-            appData.configs.isSetupComplete = true; // Mark setup as complete
-
-            // 4. Save to Firebase
             await saveUserData();
-
-            // 5. Hide wizard and initialize main app UI
             document.getElementById('setup-wizard').classList.remove('show');
             showAlert('Setup complete! Welcome to the application.', 'success');
             
-            // Reload UI with new data
             setupUI();
             toggleWagonUIElements(appData.configs.isWagonRateEnabled);
             showPage('daily-entry');
         }
-
-        async function resetSetup() {
-            const confirmed = confirm("Tanbeeh!\n\nSetup ko reset karne se aap workers ki tadaad aur naam tabdeel kar sakenge, lekin yeh aapke pichle hisaab kitaab par asar daal sakta hai.\n\nKya aap waqai setup reset karna chahte hain?");
+        
+        // NEW/MODIFIED: Functions to unlock and lock worker settings
+        function unlockWorkerManagement() {
+            const confirmed = confirm("Tanbeeh (Warning)!\n\nWorkers ki tadaad ya naam tabdeel karne se aapke pichle hisaab kitaab par asar par sakta hai.\n\nKya aap waqai worker settings unlock karna chahte hain?");
             if (confirmed) {
-                appData.configs.isSetupComplete = false;
-                await saveUserData();
-                showAlert("Setup has been reset. Please re-configure your settings.", "info");
-                launchSetupWizard(); // Relaunch the wizard
+                document.getElementById('workerCount').disabled = false;
+                document.querySelectorAll('#workersList input').forEach(input => input.disabled = false);
+                document.querySelectorAll('#workersList button').forEach(button => button.style.display = 'inline-flex');
+                document.getElementById('worker-management-buttons').style.display = 'block';
+                
+                document.getElementById('unlock-workers-btn').style.display = 'none';
+                document.getElementById('lock-workers-btn').style.display = 'inline-flex';
+                
+                showAlert('Worker settings are now unlocked. Please lock them again after making changes.', 'info');
             }
         }
-        
+
+        function lockWorkerManagement() {
+            // Simply re-run loadSettings to apply the default locked state
+            loadSettings();
+            showAlert('Worker settings have been locked.', 'success');
+        }
+
         // --- UI and OTHER FUNCTIONS ---
         
         function toggleWagonUIElements(isEnabled) {
@@ -778,7 +587,7 @@
             const container = document.getElementById('workerAttendance');
             container.innerHTML = '';
             if(!appData.workers || appData.workers.length === 0){
-                container.innerHTML = "<p>No workers found. Add workers in Settings or complete the initial setup.</p>"; return;
+                container.innerHTML = "<p>No workers found. Please complete the initial setup.</p>"; return;
             }
             appData.workers.forEach(worker => {
                 const div = document.createElement('div');
@@ -790,10 +599,10 @@
         
         async function saveDailyEntry() {
             const date = document.getElementById('entryDate').value;
+            if (!date) { showAlert('Please select a date', 'error'); return; }
             const dayType = document.getElementById('dayType').value;
             const tonnage = parseFloat(document.getElementById('tonnage').value) || 0;
             const wagons = parseInt(document.getElementById('wagons').value) || 0;
-            if (!date) { showAlert('Please select a date', 'error'); return; }
             const presentWorkers = appData.workers.filter(worker => document.getElementById(`worker_${worker.replace(/\s/g, '_')}`).checked);
             const earnings = calculateDayEarnings(date, dayType, tonnage, wagons, presentWorkers);
             if (!appData.salaries) { appData.salaries = {}; } 
@@ -806,607 +615,395 @@
 
         // --- CORE CALCULATION LOGIC (UNCHANGED) ---
         function calculateDayEarnings(entryDate, dayType, tonnage, wagons, presentWorkers) {
-            const earnings = {};
-            const rates = appData.agreements.current;
-            const allWorkers = appData.workers;
-            const absentWorkers = allWorkers.filter(w => !presentWorkers.includes(w));
-            let penaltyPerPresentWorker = 0;
-            const penaltyTriggeringAbsentees = [];
-
+            const earnings = {}; const rates = appData.agreements.current;
+            const allWorkers = appData.workers; const absentWorkers = allWorkers.filter(w => !presentWorkers.includes(w));
+            let penaltyPerPresentWorker = 0; const penaltyTriggeringAbsentees = [];
             if (appData.configs.isPenaltyEnabled && absentWorkers.length > 0) {
                 const [fiscalYearStart, fiscalYearEnd] = getCurrentFiscalYearDates();
                 absentWorkers.forEach(worker => {
-                    const totalLeaves = getWorkerTotalLeaves(worker, fiscalYearStart, fiscalYearEnd);
-                    if (totalLeaves > 32) {
-                        penaltyTriggeringAbsentees.push(worker);
-                    }
+                    if (getWorkerTotalLeaves(worker, fiscalYearStart, fiscalYearEnd) > 32) penaltyTriggeringAbsentees.push(worker);
                 });
-
                 if (penaltyTriggeringAbsentees.length > 0) {
-                    const basePenalty = appData.configs.penaltyAmount;
-                    const multiplier = (dayType === 'special_overtime') ? 2 : 1;
-                    const totalPenalty = penaltyTriggeringAbsentees.length * basePenalty * multiplier;
-                    if (presentWorkers.length > 0) {
-                        penaltyPerPresentWorker = totalPenalty / presentWorkers.length;
-                    }
+                    const totalPenalty = penaltyTriggeringAbsentees.length * appData.configs.penaltyAmount * ((dayType === 'special_overtime') ? 2 : 1);
+                    if (presentWorkers.length > 0) penaltyPerPresentWorker = totalPenalty / presentWorkers.length;
                 }
             }
-
             let grossEarningPerWorker = 0;
             if (presentWorkers.length > 0) {
-                const tonnagePay = (tonnage * rates.tonRate) / presentWorkers.length;
-                const wagonPay = appData.configs.isWagonRateEnabled ? (wagons * rates.wagonRate) / presentWorkers.length : 0;
-                grossEarningPerWorker = tonnagePay + wagonPay;
+                grossEarningPerWorker = (tonnage * rates.tonRate) / presentWorkers.length + (appData.configs.isWagonRateEnabled ? (wagons * rates.wagonRate) / presentWorkers.length : 0);
             }
-
             allWorkers.forEach(worker => {
                 if (presentWorkers.includes(worker)) {
-                    let adjustedEarning = grossEarningPerWorker - penaltyPerPresentWorker;
-                    let minGuarantee = rates.layoffRate;
+                    let adjustedEarning = grossEarningPerWorker - penaltyPerPresentWorker; let minGuarantee = rates.layoffRate;
                     if (dayType === 'special_overtime') {
-                        const tonnagePay = (tonnage * rates.tonRate) / presentWorkers.length;
-                        const wagonPay = appData.configs.isWagonRateEnabled ? (wagons * rates.wagonRate) / presentWorkers.length : 0;
-                        const overtimeGross = (tonnagePay * 2) + rates.layoffRate + wagonPay;
-                        adjustedEarning = overtimeGross - penaltyPerPresentWorker;
-                        minGuarantee = rates.layoffRate * 3;
-                    } else if (dayType === 'rest') {
-                        adjustedEarning = rates.restRate;
-                        minGuarantee = rates.restRate;
-                    }
+                        const overtimeGross = ((tonnage * rates.tonRate) / presentWorkers.length * 2) + rates.layoffRate + (appData.configs.isWagonRateEnabled ? (wagons * rates.wagonRate) / presentWorkers.length : 0);
+                        adjustedEarning = overtimeGross - penaltyPerPresentWorker; minGuarantee = rates.layoffRate * 3;
+                    } else if (dayType === 'rest') { adjustedEarning = rates.restRate; minGuarantee = rates.restRate; }
                     earnings[worker] = Math.max(adjustedEarning, minGuarantee);
-                } else {
-                    if (penaltyTriggeringAbsentees.includes(worker)) {
-                        earnings[worker] = 0;
-                    } else {
-                        earnings[worker] = rates.layoffRate;
-                    }
-                }
+                } else { earnings[worker] = penaltyTriggeringAbsentees.includes(worker) ? 0 : rates.layoffRate; }
             });
-             if (dayType === 'rest') {
-                allWorkers.forEach(w => earnings[w] = rates.restRate);
-            }
+            if (dayType === 'rest') allWorkers.forEach(w => earnings[w] = rates.restRate);
             return earnings;
         }
-
         function getCurrentFiscalYearDates() {
-            const today = new Date();
-            const [fiscalMonth, fiscalDay] = appData.configs.fiscalYearStart.split('-').map(Number);
+            const today = new Date(); const [fiscalMonth, fiscalDay] = appData.configs.fiscalYearStart.split('-').map(Number);
             let fiscalYearStartYear = today.getFullYear();
-            const fiscalStartDateForCurrentYear = new Date(fiscalYearStartYear, fiscalMonth - 1, fiscalDay);
-            if (today < fiscalStartDateForCurrentYear) {
-                fiscalYearStartYear--;
-            }
+            if (today < new Date(fiscalYearStartYear, fiscalMonth - 1, fiscalDay)) fiscalYearStartYear--;
             const fiscalYearStartDate = new Date(fiscalYearStartYear, fiscalMonth - 1, fiscalDay);
             const fiscalYearEndDate = new Date(fiscalYearStartYear + 1, fiscalMonth - 1, fiscalDay - 1);
             return [fiscalYearStartDate, fiscalYearEndDate];
         }
-
         function getWorkerTotalLeaves(workerName, fiscalYearStartDate, fiscalYearEndDate) {
             let leaveCount = 0;
             Object.values(appData.salaries || {}).forEach(entry => {
                 const entryDate = new Date(entry.date + "T00:00:00");
                 if (entryDate >= fiscalYearStartDate && entryDate <= fiscalYearEndDate) {
-                    if (entry.type === 'rest' || !entry.presentWorkers.includes(workerName)) {
-                        leaveCount++;
-                    }
+                    if (entry.type === 'rest' || !entry.presentWorkers.includes(workerName)) leaveCount++;
                 }
             });
             return leaveCount;
         }
-
         function populateHistorySelector() {
-            const selector = document.getElementById('historyPeriodSelector');
-            const currentValue = selector.value;
-            selector.innerHTML = '';
-            if (!appData.configs || !appData.configs.agreementStartDate) return;
+            const selector = document.getElementById('historyPeriodSelector'); const currentValue = selector.value;
+            selector.innerHTML = ''; if (!appData.configs || !appData.configs.agreementStartDate) return;
             const agreementStart = new Date(appData.configs.agreementStartDate + "T00:00:00");
-            let loopDate = new Date(agreementStart.getFullYear(), agreementStart.getMonth(), 1);
-            const today = new Date();
+            let loopDate = new Date(agreementStart.getFullYear(), agreementStart.getMonth(), 1); const today = new Date();
             let defaultValue = currentValue;
             if (!defaultValue) {
-                const currentDay = today.getDate();
-                const currentYear = today.getFullYear();
-                const currentMonth = (today.getMonth() + 1).toString().padStart(2,'0');
-                const currentLastDay = new Date(currentYear, today.getMonth() + 1, 0).getDate();
-                defaultValue = currentDay <= 15 ? `${currentYear}-${currentMonth}-01,${currentYear}-${currentMonth}-15` : `${currentYear}-${currentMonth}-16,${currentYear}-${currentMonth}-${currentLastDay}`;
+                const d = new Date(); const m = (d.getMonth() + 1).toString().padStart(2,'0'); const y = d.getFullYear();
+                const lastDay = new Date(y, d.getMonth() + 1, 0).getDate();
+                defaultValue = d.getDate() <= 15 ? `${y}-${m}-01,${y}-${m}-15` : `${y}-${m}-16,${y}-${m}-${lastDay}`;
             }
             let optionsHtml = '';
             while (loopDate <= today) {
-                const year = loopDate.getFullYear();
-                const month = (loopDate.getMonth() + 1).toString().padStart(2, '0');
+                const year = loopDate.getFullYear(); const month = (loopDate.getMonth() + 1).toString().padStart(2, '0');
                 const monthName = loopDate.toLocaleString('default', { month: 'long' });
                 const lastDay = new Date(year, loopDate.getMonth() + 1, 0).getDate();
-                const value2 = `${year}-${month}-16,${year}-${month}-${lastDay}`;
-                const text2 = `${monthName} ${year} (16 - ${lastDay})`;
-                optionsHtml = `<option value="${value2}">${text2}</option>` + optionsHtml;
-                const value1 = `${year}-${month}-01,${year}-${month}-15`;
-                const text1 = `${monthName} ${year} (1 - 15)`;
-                optionsHtml = `<option value="${value1}">${text1}</option>` + optionsHtml;
+                optionsHtml = `<option value="${year}-${month}-16,${year}-${month}-${lastDay}">${monthName} ${year} (16 - ${lastDay})</option>` + optionsHtml;
+                optionsHtml = `<option value="${year}-${month}-01,${year}-${month}-15">${monthName} ${year} (1 - 15)</option>` + optionsHtml;
                 loopDate.setMonth(loopDate.getMonth() + 1);
             }
-            selector.innerHTML = optionsHtml;
-            selector.value = defaultValue;
+            selector.innerHTML = optionsHtml; selector.value = defaultValue;
         }
-
         function updateHistoryDisplay() {
             const selector = document.getElementById('historyPeriodSelector');
-            if (!selector.value) {
-                document.getElementById('entryResults').innerHTML = '';
-                return;
-            }
+            if (!selector.value) { document.getElementById('entryResults').innerHTML = ''; return; }
             const [startDateStr, endDateStr] = selector.value.split(',');
-            const startDate = new Date(startDateStr + "T00:00:00");
-            const endDate = new Date(endDateStr + "T00:00:00");
+            const startDate = new Date(startDateStr + "T00:00:00"); const endDate = new Date(endDateStr + "T00:00:00");
             const title = selector.options[selector.selectedIndex].text;
-            const allEntries = Object.values(appData.salaries || {});
-            const periodEntries = allEntries.filter(entry => {
+            const periodEntries = Object.values(appData.salaries || {}).filter(entry => {
                 const entryDate = new Date(entry.date + "T00:00:00");
                 return entryDate >= startDate && entryDate <= endDate;
             }).sort((a,b) => new Date(b.date) - new Date(a.date));
             document.getElementById('entryResults').innerHTML = generateHistoryTable(periodEntries, `History for: ${title}`);
         }
-
         function generateHistoryTable(entries, title) {
             let tableHtml = `<div class="history-table-container"><h3>${title}</h3>`;
-            if (entries.length === 0) {
-                tableHtml += `<p class="no-history">No entries for this period.</p></div>`;
-                return tableHtml;
-            }
+            if (entries.length === 0) return tableHtml + `<p class="no-history">No entries for this period.</p></div>`;
             tableHtml += `<div class="history-table-wrapper"><table class="history-table"><thead><tr><th>Date</th><th>Tonnage</th><th>Workers</th><th>Pay/Worker</th></tr></thead><tbody>`;
             entries.forEach(entry => {
                 let singlePay = 0;
-                if (entry.presentWorkers && entry.presentWorkers.length > 0) {
-                    const firstWorker = entry.presentWorkers[0];
-                    singlePay = entry.earnings[firstWorker] || 0;
-                } else if (entry.type === 'rest') {
-                    singlePay = appData.agreements.current.restRate;
-                } else if(appData.workers && appData.workers.length > 0) {
-                    const anyWorker = appData.workers[0];
-                    singlePay = entry.earnings[anyWorker] || 0;
-                }
-                tableHtml += `<tr>
-                                <td>${entry.date}</td>
-                                <td>${entry.tonnage > 0 ? entry.tonnage.toFixed(2) : '-'}</td>
-                                <td>${entry.presentWorkers ? entry.presentWorkers.length : 0} / ${appData.workers ? appData.workers.length : 0}</td>
-                                <td>${singlePay.toFixed(2)}</td>
-                              </tr>`;
+                if (entry.presentWorkers && entry.presentWorkers.length > 0) singlePay = entry.earnings[entry.presentWorkers[0]] || 0;
+                else if (entry.type === 'rest') singlePay = appData.agreements.current.restRate;
+                else if(appData.workers && appData.workers.length > 0) singlePay = entry.earnings[appData.workers[0]] || 0;
+                tableHtml += `<tr><td>${entry.date}</td><td>${entry.tonnage > 0 ? entry.tonnage.toFixed(2) : '-'}</td><td>${entry.presentWorkers ? entry.presentWorkers.length : 0} / ${appData.workers ? appData.workers.length : 0}</td><td>${singlePay.toFixed(2)}</td></tr>`;
             });
-            tableHtml += `</tbody></table></div></div>`;
-            return tableHtml;
+            return tableHtml + `</tbody></table></div></div>`;
         }
-
         function loadAgreements() {
             Object.keys(appData.agreements.current).forEach(key => { if(document.getElementById(`current${key.charAt(0).toUpperCase() + key.slice(1)}`)) document.getElementById(`current${key.charAt(0).toUpperCase() + key.slice(1)}`).value = appData.agreements.current[key]; });
             Object.keys(appData.agreements.new).forEach(key => { if(document.getElementById(`new${key.charAt(0).toUpperCase() + key.slice(1)}`)) document.getElementById(`new${key.charAt(0).toUpperCase() + key.slice(1)}`).value = appData.agreements.new[key]; });
         }
-        
         async function saveAgreements() {
             Object.keys(appData.agreements.current).forEach(key => { if(document.getElementById(`current${key.charAt(0).toUpperCase() + key.slice(1)}`)) appData.agreements.current[key] = parseFloat(document.getElementById(`current${key.charAt(0).toUpperCase() + key.slice(1)}`).value) || 0; });
             Object.keys(appData.agreements.new).forEach(key => { if(document.getElementById(`new${key.charAt(0).toUpperCase() + key.slice(1)}`)) appData.agreements.new[key] = parseFloat(document.getElementById(`new${key.charAt(0).toUpperCase() + key.slice(1)}`).value) || 0; });
-            await saveUserData(); // Save to Firebase
-            showAlert('Agreements saved successfully!', 'success');
+            await saveUserData(); showAlert('Agreements saved successfully!', 'success');
         }
-
         function loadPayPeriods() {
-            const select = document.getElementById('payPeriod');
-            select.innerHTML = '<option value="">Select Period</option>';
+            const select = document.getElementById('payPeriod'); select.innerHTML = '<option value="">Select Period</option>';
             const today = new Date();
             for (let i = 0; i < 12; i++) {
                 const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
-                const year = d.getFullYear();
-                const month = (d.getMonth() + 1).toString().padStart(2,'0');
+                const year = d.getFullYear(); const month = (d.getMonth() + 1).toString().padStart(2,'0');
                 const lastDay = new Date(year, d.getMonth() + 1, 0).getDate();
                 select.innerHTML += `<option value="${year}-${month}-01,${year}-${month}-15">${d.toLocaleString('default',{month:'long'})} ${year} (1-15)</option>`;
                 select.innerHTML += `<option value="${year}-${month}-16,${year}-${month}-${lastDay}">${d.toLocaleString('default',{month:'long'})} ${year} (16-End)</option>`;
             }
         }
         function generateSalaryReport() {
-            const period = document.getElementById('payPeriod').value;
-            if (!period) { showAlert('Please select a pay period', 'error'); return; }
-            const [start, end] = period.split(',');
-            const salaryData = calculatePeriodSalary(start, end);
-            displaySalaryReport(salaryData, start, end);
+            const period = document.getElementById('payPeriod').value; if (!period) { showAlert('Please select a pay period', 'error'); return; }
+            const [start, end] = period.split(','); displaySalaryReport(calculatePeriodSalary(start, end), start, end);
         }
         function calculatePeriodSalary(startDate, endDate) {
-            const salaries = {};
-            appData.workers.forEach(w => salaries[w] = 0);
+            const salaries = {}; appData.workers.forEach(w => salaries[w] = 0);
             Object.keys(appData.salaries || {}).filter(d => d >= startDate && d <= endDate).forEach(d => {
-                if(appData.salaries[d].earnings) {
-                    Object.keys(appData.salaries[d].earnings).forEach(w => {
-                        if(salaries[w] !== undefined) salaries[w] += appData.salaries[d].earnings[w];
-                    });
-                }
+                if(appData.salaries[d].earnings) Object.keys(appData.salaries[d].earnings).forEach(w => { if(salaries[w] !== undefined) salaries[w] += appData.salaries[d].earnings[w]; });
             });
             appData.workers.forEach(w => { if(salaries[w] !== undefined) salaries[w] += appData.agreements.current.allowance / 2; });
             return salaries;
         }
-        
         function displaySalaryReport(salaryData, startDate, endDate) {
             const container = document.getElementById('salaryResults');
-            const viewableWorkers = appData.permissions?.viewableWorkers || [];
-            let total = 0;
+            const viewableWorkers = appData.permissions?.viewableWorkers || []; let total = 0;
             let html = `<h3>Salary Report: ${startDate} to ${endDate}</h3><div class="report-grid">`;
-            
             appData.workers.forEach(worker => {
                 if (viewableWorkers.includes(worker)) {
-                    const amount = salaryData[worker] || 0;
-                    total += amount;
+                    const amount = salaryData[worker] || 0; total += amount;
                     html += `<div class="report-card"><strong>${worker}</strong><br>Rs. ${amount.toFixed(2)}</div>`;
                 } else {
-                    html += `<div class="report-card" style="background: #f1f1f1; border-left-color: #a0a0a0;">
-                                <strong>${worker}</strong><br>
-                                <span style="color: #6200EE; font-weight: 500;">Contact admin to view details</span>
-                             </div>`;
+                    html += `<div class="report-card" style="background: #f1f1f1; border-left-color: #a0a0a0;"><strong>${worker}</strong><br><span style="color: #6200EE; font-weight: 500;">Contact admin to view details</span></div>`;
                 }
             });
-
             html += `</div><div class="report-card" style="background: #e6fffa; border-left-color: #38a169;"><strong>Total Visible Salary: Rs. ${total.toFixed(2)}</strong></div>`;
             container.innerHTML = html;
         }
-
         function loadFiscalYears() {
-            const bonusSelect = document.getElementById('fiscalYear');
-            const leavesSelect = document.getElementById('leavesFiscalYear');
+            const bonusSelect = document.getElementById('fiscalYear'); const leavesSelect = document.getElementById('leavesFiscalYear');
             if (!appData.configs) return;
-            if (bonusSelect) bonusSelect.innerHTML = '<option value="">Select Year</option>';
-            if (leavesSelect) leavesSelect.innerHTML = '<option value="">Select Year</option>';
-            const currentYear = new Date().getFullYear();
-            const fiscalStart = appData.configs.fiscalYearStart.split('-');
-            const fiscalMonth = parseInt(fiscalStart[0]);
-            const fiscalDay = parseInt(fiscalStart[1]);
-            
+            if (bonusSelect) bonusSelect.innerHTML = '<option value="">Select Year</option>'; if (leavesSelect) leavesSelect.innerHTML = '<option value="">Select Year</option>';
+            const currentYear = new Date().getFullYear(); const [fiscalMonth, fiscalDay] = appData.configs.fiscalYearStart.split('-').map(Number);
             let defaultBonusValue = '';
-            
             for (let i = 0; i < 3; i++) {
-                const yearStart = currentYear - i;
-                const yearEnd = yearStart + 1;
-                const fiscalYearLabel = `${yearStart}-${yearEnd}`;
+                const yearStart = currentYear - i; const fiscalYearLabel = `${yearStart}-${yearStart + 1}`;
                 const fiscalYearValue = `${yearStart}-${fiscalMonth.toString().padStart(2, '0')}-${fiscalDay.toString().padStart(2, '0')}`;
-                
-                if (i === 0) {
-                    defaultBonusValue = fiscalYearValue;
-                }
-                
+                if (i === 0) defaultBonusValue = fiscalYearValue;
                 if (bonusSelect) bonusSelect.innerHTML += `<option value="${fiscalYearValue}">${fiscalYearLabel}</option>`;
                 if (leavesSelect) leavesSelect.innerHTML += `<option value="${fiscalYearValue}">${fiscalYearLabel}</option>`;
             }
-            
-            if (bonusSelect) {
-                bonusSelect.value = defaultBonusValue;
-            }
+            if (bonusSelect) bonusSelect.value = defaultBonusValue;
         }
         function calculateBonus() {
-            const fiscalYearStart = document.getElementById('fiscalYear').value;
-            if (!fiscalYearStart) { showAlert('Please select a fiscal year', 'error'); return; }
-            const bonusData = calculateAnnualBonus(fiscalYearStart);
-            displayBonusReport(bonusData, fiscalYearStart);
+            const fiscalYearStart = document.getElementById('fiscalYear').value; if (!fiscalYearStart) { showAlert('Please select a fiscal year', 'error'); return; }
+            displayBonusReport(calculateAnnualBonus(fiscalYearStart), fiscalYearStart);
         }
         function calculateAnnualBonus(fiscalYearStart) {
-            const startDate = new Date(fiscalYearStart);
-            const endDate = new Date(startDate);
-            endDate.setFullYear(endDate.getFullYear() + 1);
-            endDate.setDate(endDate.getDate() - 1);
+            const startDate = new Date(fiscalYearStart); const endDate = new Date(startDate);
+            endDate.setFullYear(endDate.getFullYear() + 1); endDate.setDate(endDate.getDate() - 1);
             const workerBonuses = {};
             appData.workers.forEach(worker => {
                 let annualEarnings = 0, workDays = 0, restDays = 0;
                 Object.entries(appData.salaries || {}).forEach(([date, entry]) => {
                     const entryDate = new Date(date);
-                    if (entryDate >= startDate && entryDate <= endDate) {
-                        if (entry.earnings[worker] !== undefined) {
-                            annualEarnings += entry.earnings[worker];
-                            if (entry.type === 'rest') { restDays++; } else { workDays++; }
-                        }
+                    if (entryDate >= startDate && entryDate <= endDate && entry.earnings[worker] !== undefined) {
+                        annualEarnings += entry.earnings[worker];
+                        if (entry.type === 'rest') restDays++; else workDays++;
                     }
                 });
-                annualEarnings += appData.agreements.current.allowance * 12;
-                const avgMonthlySalary = annualEarnings / 12;
-                const bonus = avgMonthlySalary;
-                const gratuity = avgMonthlySalary;
-                const totalLeaves = restDays;
-                const unpaidLeaves = Math.min(totalLeaves, 20);
-                const paidLeaves = Math.min(Math.max(totalLeaves - 20, 0), 12);
-                const remainingPaidLeaves = 12 - paidLeaves;
+                annualEarnings += appData.agreements.current.allowance * 12; const avgMonthlySalary = annualEarnings / 12;
+                const paidLeaves = Math.min(Math.max(restDays - 20, 0), 12); const remainingPaidLeaves = 12 - paidLeaves;
                 const paidLeavesBonus = remainingPaidLeaves * appData.agreements.current.layoffRate;
-                const totalBonus = bonus + gratuity + paidLeavesBonus;
-                workerBonuses[worker] = { annualEarnings, avgMonthlySalary, bonus, gratuity, totalLeaves, unpaidLeaves, paidLeaves, remainingPaidLeaves, paidLeavesBonus, totalBonus };
+                workerBonuses[worker] = { annualEarnings, avgMonthlySalary, bonus: avgMonthlySalary, gratuity: avgMonthlySalary, totalLeaves: restDays, unpaidLeaves: Math.min(restDays, 20), paidLeaves, remainingPaidLeaves, paidLeavesBonus, totalBonus: avgMonthlySalary * 2 + paidLeavesBonus };
             });
             return workerBonuses;
         }
-
         function displayBonusReport(bonusData, fiscalYearStart) {
             const container = document.getElementById('bonusResults');
-            const viewableWorkers = appData.permissions?.viewableWorkers || [];
-            const startYear = new Date(fiscalYearStart).getFullYear();
+            const viewableWorkers = appData.permissions?.viewableWorkers || []; const startYear = new Date(fiscalYearStart).getFullYear();
             let html = `<h3>Annual Bonus Report: ${startYear}-${startYear + 1}</h3><div class="report-grid">`;
-            
             appData.workers.forEach(worker => {
                 if (viewableWorkers.includes(worker)) {
                     const data = bonusData[worker] || {};
                     html += `<div class="report-card"><strong>${worker}</strong><br>Annual Earnings: Rs. ${(data.annualEarnings || 0).toFixed(2)}<br>Avg Monthly: Rs. ${(data.avgMonthlySalary || 0).toFixed(2)}<br>Bonus: Rs. ${(data.bonus || 0).toFixed(2)}<br>Gratuity: Rs. ${(data.gratuity || 0).toFixed(2)}<br>Paid Leaves Bonus: Rs. ${(data.paidLeavesBonus || 0).toFixed(2)}<br><strong>Total Bonus: Rs. ${(data.totalBonus || 0).toFixed(2)}</strong></div>`;
                 } else {
-                    html += `<div class="report-card" style="background: #f1f1f1; border-left-color: #a0a0a0;">
-                                <strong>${worker}</strong><br>
-                                <span style="color: #6200EE; font-weight: 500;">Contact admin to view details</span>
-                             </div>`;
+                    html += `<div class="report-card" style="background: #f1f1f1; border-left-color: #a0a0a0;"><strong>${worker}</strong><br><span style="color: #6200EE; font-weight: 500;">Contact admin to view details</span></div>`;
                 }
             });
-
-            html += `</div>`;
-            container.innerHTML = html;
+            container.innerHTML = html + `</div>`;
         }
-
         function calculateArrears() {
             const container = document.getElementById('arrearsResults');
             container.innerHTML = '<div class="loading"><div class="spinner"></div><p>Calculating arrears...</p></div>';
-            setTimeout(() => {
-                const arrearsData = calculateAllArrears();
-                displayArrearsReport(arrearsData);
-            }, 500);
+            setTimeout(() => displayArrearsReport(calculateAllArrears()), 500);
         }
         function calculateAllArrears() {
-            const agreementStartDate = new Date(appData.configs.agreementStartDate);
-            const currentDate = new Date();
-            const workerArrears = {};
-            const fiscalYearStart = document.getElementById('fiscalYear').value || `${new Date().getFullYear()}-10-10`;
+            const agreementStartDate = new Date(appData.configs.agreementStartDate); const currentDate = new Date();
+            const workerArrears = {}; const fiscalYearStart = document.getElementById('fiscalYear').value || `${new Date().getFullYear()}-10-10`;
             appData.workers.forEach(worker => {
                 let salaryArrears = 0, allowanceArrears = 0, bonusArrears = 0;
                 const annualBenefitsArrears = appData.agreements.new.annualBenefits - appData.agreements.current.annualBenefits;
                 Object.entries(appData.salaries || {}).forEach(([date, entry]) => {
-                    const entryDate = new Date(date);
-                    if (entryDate >= agreementStartDate && entryDate <= currentDate) {
-                        if (entry.earnings && entry.earnings[worker] !== undefined) {
-                            const newEarnings = calculateDayEarningsWithRates(entry.type, entry.tonnage, entry.wagons, entry.presentWorkers, appData.agreements.new);
-                            const currentEarning = entry.earnings[worker];
-                            const newEarning = newEarnings[worker] || 0;
-                            salaryArrears += (newEarning - currentEarning);
-                        }
+                    if (new Date(date) >= agreementStartDate && new Date(date) <= currentDate && entry.earnings?.[worker] !== undefined) {
+                        const newEarnings = calculateDayEarningsWithRates(entry.type, entry.tonnage, entry.wagons, entry.presentWorkers, appData.agreements.new);
+                        salaryArrears += (newEarnings[worker] || 0) - entry.earnings[worker];
                     }
                 });
-                let allowanceMonths = 0;
-                const startMonth = agreementStartDate.getMonth();
-                const startYear = agreementStartDate.getFullYear();
-                const endMonth = currentDate.getMonth();
-                const endYear = currentDate.getFullYear();
-                allowanceMonths = (endYear - startYear) * 12 + (endMonth - startMonth) + 1;
+                const allowanceMonths = (currentDate.getFullYear() - agreementStartDate.getFullYear()) * 12 + (currentDate.getMonth() - agreementStartDate.getMonth()) + 1;
                 allowanceArrears = allowanceMonths * (appData.agreements.new.allowance - appData.agreements.current.allowance);
                 const newBonus = calculateAnnualBonusWithRates(appData.agreements.new, fiscalYearStart);
                 const currentBonus = calculateAnnualBonusWithRates(appData.agreements.current, fiscalYearStart);
                 bonusArrears = (newBonus[worker]?.totalBonus || 0) - (currentBonus[worker]?.totalBonus || 0);
-                const totalArrears = salaryArrears + allowanceArrears + bonusArrears + annualBenefitsArrears;
-                workerArrears[worker] = { salaryArrears, allowanceArrears, bonusArrears, annualBenefitsArrears, totalArrears };
+                workerArrears[worker] = { salaryArrears, allowanceArrears, bonusArrears, annualBenefitsArrears, totalArrears: salaryArrears + allowanceArrears + bonusArrears + annualBenefitsArrears };
             });
             return workerArrears;
         }
         function calculateDayEarningsWithRates(dayType, tonnage, wagons, presentWorkers, rates) {
-            const earnings = {};
-            const allWorkers = appData.workers || [];
-            if (dayType === 'rest') { allWorkers.forEach(worker => { earnings[worker] = rates.restRate; }); }
+            const earnings = {}; const allWorkers = appData.workers || [];
+            if (dayType === 'rest') { allWorkers.forEach(worker => earnings[worker] = rates.restRate); }
             else {
-                const presentCount = presentWorkers.length;
-                if (presentCount > 0) {
-                    let grossPay = (tonnage * rates.tonRate) / presentCount + (wagons * rates.wagonRate) / presentCount;
-                    if (dayType === 'special_overtime') { grossPay = ((tonnage * rates.tonRate) / presentCount * 2) + rates.layoffRate + (wagons * rates.wagonRate) / presentCount; }
+                if (presentWorkers.length > 0) {
+                    let grossPay = (tonnage * rates.tonRate + wagons * rates.wagonRate) / presentWorkers.length;
+                    if (dayType === 'special_overtime') grossPay = (tonnage * rates.tonRate * 2) / presentWorkers.length + rates.layoffRate + (wagons * rates.wagonRate) / presentWorkers.length;
                     grossPay = Math.max(grossPay, dayType === 'special_overtime' ? rates.layoffRate * 3 : rates.layoffRate);
-                    presentWorkers.forEach(worker => { earnings[worker] = grossPay; });
+                    presentWorkers.forEach(worker => earnings[worker] = grossPay);
                 }
-                allWorkers.forEach(worker => { if (!presentWorkers.includes(worker)) { earnings[worker] = rates.layoffRate; } });
+                allWorkers.forEach(worker => { if (!presentWorkers.includes(worker)) earnings[worker] = rates.layoffRate; });
             }
             return earnings;
         }
         function calculateAnnualBonusWithRates(rates, fiscalYearStart) {
-            const startDate = new Date(fiscalYearStart);
-            const endDate = new Date(startDate);
-            endDate.setFullYear(endDate.getFullYear() + 1);
-            const workerBonuses = {};
+            const startDate = new Date(fiscalYearStart); const endDate = new Date(startDate);
+            endDate.setFullYear(endDate.getFullYear() + 1); const workerBonuses = {};
             appData.workers.forEach(worker => {
                 let annualEarnings = 0, totalLeaves = 0;
                 Object.entries(appData.salaries || {}).forEach(([date, entry]) => {
                     const entryDate = new Date(date);
-                    if (entryDate >= startDate && entryDate < endDate) {
-                        if (entry.earnings && entry.earnings[worker] !== undefined) {
-                            annualEarnings += calculateDayEarningsWithRates(entry.type, entry.tonnage, entry.wagons, entry.presentWorkers, rates)[worker];
-                             if (entry.type === 'rest' || !entry.presentWorkers.includes(worker)) {
-                                totalLeaves++;
-                            }
-                        }
+                    if (entryDate >= startDate && entryDate < endDate && entry.earnings?.[worker] !== undefined) {
+                        annualEarnings += calculateDayEarningsWithRates(entry.type, entry.tonnage, entry.wagons, entry.presentWorkers, rates)[worker];
+                        if (entry.type === 'rest' || !entry.presentWorkers.includes(worker)) totalLeaves++;
                     }
                 });
-                annualEarnings += rates.allowance * 12;
-                const avgMonthlySalary = annualEarnings / 12;
-                const paidLeaves = Math.min(Math.max(totalLeaves - 20, 0), 12);
-                const remainingPaidLeaves = 12 - paidLeaves;
-                workerBonuses[worker] = {
-                    totalBonus: avgMonthlySalary * 2 + (remainingPaidLeaves * rates.layoffRate)
-                };
+                annualEarnings += rates.allowance * 12; const avgMonthlySalary = annualEarnings / 12;
+                const remainingPaidLeaves = 12 - Math.min(Math.max(totalLeaves - 20, 0), 12);
+                workerBonuses[worker] = { totalBonus: avgMonthlySalary * 2 + (remainingPaidLeaves * rates.layoffRate) };
             });
             return workerBonuses;
         }
-        
         function displayArrearsReport(arrearsData) {
             const container = document.getElementById('arrearsResults');
             const viewableWorkers = appData.permissions?.viewableWorkers || [];
             let html = `<h3>Arrears Calculation Report</h3><p>From Agreement Start Date: ${appData.configs.agreementStartDate}</p><div class="report-grid">`;
-
             appData.workers.forEach(worker => {
                 if (viewableWorkers.includes(worker)) {
                     const data = arrearsData[worker] || {};
                     html += `<div class="report-card"><strong>${worker}</strong><br>Salary Arrears: Rs. ${(data.salaryArrears || 0).toFixed(2)}<br>Allowance Arrears: Rs. ${(data.allowanceArrears || 0).toFixed(2)}<br>Bonus Arrears: Rs. ${(data.bonusArrears || 0).toFixed(2)}<br>Annual Benefits Arrears: Rs. ${(data.annualBenefitsArrears || 0).toFixed(2)}<br><strong>Total Arrears: Rs. ${(data.totalArrears || 0).toFixed(2)}</strong></div>`;
                 } else {
-                    html += `<div class="report-card" style="background: #f1f1f1; border-left-color: #a0a0a0;">
-                                <strong>${worker}</strong><br>
-                                <span style="color: #6200EE; font-weight: 500;">Contact admin to view details</span>
-                             </div>`;
+                    html += `<div class="report-card" style="background: #f1f1f1; border-left-color: #a0a0a0;"><strong>${worker}</strong><br><span style="color: #6200EE; font-weight: 500;">Contact admin to view details</span></div>`;
                 }
             });
-
-            html += `</div>`;
-            container.innerHTML = html;
+            container.innerHTML = html + `</div>`;
         }
-
         function generateLeavesReport() {
-            const fiscalYearStart = document.getElementById('leavesFiscalYear').value;
-            if (!fiscalYearStart) { showAlert('Please select a fiscal year', 'error'); return; }
-            const leavesData = calculateLeavesReport(fiscalYearStart);
-            displayLeavesReport(leavesData, fiscalYearStart);
+            const fiscalYearStart = document.getElementById('leavesFiscalYear').value; if (!fiscalYearStart) { showAlert('Please select a fiscal year', 'error'); return; }
+            displayLeavesReport(calculateLeavesReport(fiscalYearStart), fiscalYearStart);
         }
         function calculateLeavesReport(fiscalYearStart) {
-            const startDate = new Date(fiscalYearStart);
-            const endDate = new Date(startDate);
-            endDate.setFullYear(endDate.getFullYear() + 1);
-            endDate.setDate(endDate.getDate() - 1);
+            const startDate = new Date(fiscalYearStart); const endDate = new Date(startDate);
+            endDate.setFullYear(endDate.getFullYear() + 1); endDate.setDate(endDate.getDate() - 1);
             const workerLeaves = {};
             appData.workers.forEach(worker => {
                 let totalLeaves = 0, workDays = 0;
                 Object.entries(appData.salaries || {}).forEach(([date, entry]) => {
-                    const entryDate = new Date(date);
-                    if (entryDate >= startDate && entryDate <= endDate) {
-                        if (entry.type === 'rest' || !entry.presentWorkers.includes(worker)) {
-                            totalLeaves++;
-                        } else {
-                            workDays++;
-                        }
+                    if (new Date(date) >= startDate && new Date(date) <= endDate) {
+                        if (entry.type === 'rest' || !entry.presentWorkers.includes(worker)) totalLeaves++; else workDays++;
                     }
                 });
-                const unpaidLeaves = Math.min(totalLeaves, 20);
                 const paidLeaves = Math.min(Math.max(totalLeaves - 20, 0), 12);
-                const excessLeaves = Math.max(totalLeaves - 32, 0);
-                const remainingPaidLeaves = 12 - paidLeaves;
-                workerLeaves[worker] = { totalLeaves, unpaidLeaves, paidLeaves, excessLeaves, remainingPaidLeaves, workDays };
+                workerLeaves[worker] = { totalLeaves, workDays, unpaidLeaves: Math.min(totalLeaves, 20), paidLeaves, excessLeaves: Math.max(totalLeaves - 32, 0), remainingPaidLeaves: 12 - paidLeaves };
             });
             return workerLeaves;
         }
-
         function displayLeavesReport(leavesData, fiscalYearStart) {
             const container = document.getElementById('leavesResults');
-            const viewableWorkers = appData.permissions?.viewableWorkers || [];
-            const startYear = new Date(fiscalYearStart).getFullYear();
-            let html = `<h3>Leaves Report: ${startYear}-${startYear + 1}</h3><div class="alert alert-info" style="background: #bee3f8; color: #2a4365; border-color: #90cdf4; padding: 15px; border-radius: 6px; margin: 15px 0; border: 1px solid transparent;"><strong>Leave Structure:</strong> 20 Unpaid Leaves + 12 Paid Leaves = 32 Total Annual Leaves</div><div class="report-grid">`;
-            
+            const viewableWorkers = appData.permissions?.viewableWorkers || []; const startYear = new Date(fiscalYearStart).getFullYear();
+            let html = `<h3>Leaves Report: ${startYear}-${startYear + 1}</h3><div class="settings-warning" style="background: #bee3f8; color: #2a4365; border-color: #90cdf4;"><strong>Leave Structure:</strong> 20 Unpaid Leaves + 12 Paid Leaves = 32 Total Annual Leaves</div><div class="report-grid">`;
             appData.workers.forEach(worker => {
                 if (viewableWorkers.includes(worker)) {
                     const data = leavesData[worker] || {};
                     html += `<div class="report-card"><strong>${worker}</strong><br>Work Days: ${data.workDays || 0}<br>Total Leaves: ${data.totalLeaves || 0}<br>Unpaid Leaves: ${data.unpaidLeaves || 0}/20<br>Paid Leaves Used: ${data.paidLeaves || 0}/12<br>Remaining Paid: ${data.remainingPaidLeaves || 0}<br>${(data.excessLeaves || 0) > 0 ? `<span style="color: #e53e3e;">Excess Leaves: ${data.excessLeaves}</span>` : ''}</div>`;
                 } else {
-                    html += `<div class="report-card" style="background: #f1f1f1; border-left-color: #a0a0a0;">
-                                <strong>${worker}</strong><br>
-                                <span style="color: #6200EE; font-weight: 500;">Contact admin to view details</span>
-                             </div>`;
+                    html += `<div class="report-card" style="background: #f1f1f1; border-left-color: #a0a0a0;"><strong>${worker}</strong><br><span style="color: #6200EE; font-weight: 500;">Contact admin to view details</span></div>`;
                 }
             });
-
-            html += '</div>';
-            container.innerHTML = html;
+            container.innerHTML = html + '</div>';
         }
         
-        // MODIFIED: loadSettings now handles UI locking based on setup status
+        // MODIFIED: Settings functions now handle the lock/unlock state
         function loadSettings() {
             if (!appData.configs) return;
 
-            const isSetupDone = appData.configs.isSetupComplete;
-
-            // Basic settings
-            document.getElementById('workerCount').value = appData.configs.workerCount;
+            // Load general config values
             document.getElementById('agreementStartDate').value = appData.configs.agreementStartDate;
             document.getElementById('fiscalYearStart').value = appData.configs.fiscalYearStart;
-            
-            // Feature controls
             document.getElementById('enableWagonRate').checked = appData.configs.isWagonRateEnabled;
             document.getElementById('enablePenalty').checked = appData.configs.isPenaltyEnabled;
             document.getElementById('penaltyAmount').value = appData.configs.penaltyAmount;
             document.getElementById('penaltyAmountContainer').style.display = appData.configs.isPenaltyEnabled ? 'block' : 'none';
             toggleWagonUIElements(appData.configs.isWagonRateEnabled);
 
-            // Lock/Unlock worker management
-            document.getElementById('workerCount').disabled = isSetupDone;
-            document.getElementById('agreementStartDate').disabled = isSetupDone;
-            document.getElementById('worker-management-buttons').style.display = isSetupDone ? 'none' : 'block';
+            // Load worker config values and set locked state
+            document.getElementById('workerCount').value = appData.configs.workerCount;
+            document.getElementById('workerCount').disabled = true;
 
             loadWorkersList();
+            
+            // Set all worker management controls to locked state by default
+            document.querySelectorAll('#workersList input').forEach(input => input.disabled = true);
+            document.querySelectorAll('#workersList button').forEach(button => button.style.display = 'none');
+            document.getElementById('worker-management-buttons').style.display = 'none';
+
+            // Show/hide lock/unlock buttons
+            document.getElementById('unlock-workers-btn').style.display = 'inline-flex';
+            document.getElementById('lock-workers-btn').style.display = 'none';
         }
 
-        // MODIFIED: loadWorkersList now disables inputs if setup is complete
         function loadWorkersList() {
             const container = document.getElementById('workersList');
-            const isSetupDone = appData.configs.isSetupComplete;
             container.innerHTML = '';
-
-            if (isSetupDone) {
-                 container.innerHTML = `<div class="wizard-warning">Worker names and count cannot be changed after setup. Use the 'Reset Setup' button to make changes.</div>`;
-            }
-
             (appData.workers || []).forEach((worker, index) => {
                 const div = document.createElement('div');
                 div.className = 'form-group';
-                div.innerHTML = `
-                    <label>Worker ${index + 1}:</label>
-                    <div style="display: flex; gap: 10px;">
-                        <input type="text" value="${worker}" onchange="updateWorkerName(${index}, this.value)" style="flex: 1;" ${isSetupDone ? 'disabled' : ''}>
-                        <button onclick="removeWorker(${index})" class="btn btn-danger" style="padding: 8px 12px; ${isSetupDone ? 'display:none;' : ''}">Remove</button>
-                    </div>`;
+                div.innerHTML = `<label>Worker ${index + 1}:</label><div style="display: flex; gap: 10px;"><input type="text" value="${worker}" onchange="updateWorkerName(${index}, this.value)" style="flex: 1;" disabled><button onclick="removeWorker(${index})" class="btn btn-danger btn-remove-worker" style="padding: 8px 12px; display: none;">Remove</button></div>`;
                 container.appendChild(div);
             });
         }
-        
         async function addWorker() {
-            if (appData.configs.isSetupComplete) {
-                showAlert("Cannot add workers after setup is complete. Please reset setup.", "error");
-                return;
-            }
-            if (!appData.workers) { appData.workers = []; }
+            if (!appData.workers) appData.workers = [];
             appData.workers.push(`Worker ${appData.workers.length + 1}`);
             appData.configs.workerCount = appData.workers.length;
-            document.getElementById('workerCount').value = appData.configs.workerCount;
-            loadWorkersList();
-            loadWorkerAttendance();
+            document.getElementById('workerCount').value = appData.configs.workerCount; // update UI
+            loadWorkersList(); // Renders the new worker
+            unlockWorkerManagement(); // Re-apply unlocked state to the newly added worker
             await saveUserData();
         }
         async function removeWorker(index) {
-            if (appData.configs.isSetupComplete) {
-                showAlert("Cannot remove workers after setup is complete. Please reset setup.", "error");
-                return;
-            }
             if (appData.workers.length <= 1) { showAlert('At least one worker is required', 'error'); return; }
             appData.workers.splice(index, 1);
             appData.configs.workerCount = appData.workers.length;
-            document.getElementById('workerCount').value = appData.configs.workerCount;
-            loadWorkersList();
-            loadWorkerAttendance();
+            document.getElementById('workerCount').value = appData.configs.workerCount; // update UI
+            loadWorkersList(); // Re-render the list
+            unlockWorkerManagement(); // Re-apply unlocked state
             await saveUserData();
         }
         async function updateWorkerName(index, newName) {
-            if (newName.trim()) { 
-                appData.workers[index] = newName.trim(); 
-                await saveUserData(); 
-            }
+            if (newName.trim()) { appData.workers[index] = newName.trim(); await saveUserData(); }
         }
         async function saveSettings() {
-            // Worker count and agreement start date are now locked, so we only save other settings
+            // Worker settings are saved via their own functions (add, remove, update)
+            // This function only saves the general and feature settings
             appData.configs.fiscalYearStart = document.getElementById('fiscalYearStart').value;
             appData.configs.isWagonRateEnabled = document.getElementById('enableWagonRate').checked;
             appData.configs.isPenaltyEnabled = document.getElementById('enablePenalty').checked;
             appData.configs.penaltyAmount = parseFloat(document.getElementById('penaltyAmount').value) || 231;
+            
+            // We also update worker count in case it was changed while unlocked
+            appData.configs.workerCount = parseInt(document.getElementById('workerCount').value) || appData.workers.length;
+            
             await saveUserData();
             showAlert('Settings saved successfully!', 'success');
         }
-
+        
         // MODIFIED: showAlert function for bottom snackbar
         function showAlert(message, type = 'info') {
             const existingAlert = document.getElementById('toast-alert');
-            if(existingAlert) { existingAlert.remove(); }
+            if(existingAlert) existingAlert.remove();
 
             const alertDiv = document.createElement('div');
             alertDiv.id = 'toast-alert';
             alertDiv.className = `toast-notification toast-${type}`;
             alertDiv.textContent = message;
-            
             document.body.appendChild(alertDiv);
 
-            // Trigger the animation
-            setTimeout(() => {
-                alertDiv.classList.add('show');
-            }, 100);
-
-            // Hide and remove after 5 seconds
+            setTimeout(() => alertDiv.classList.add('show'), 100);
             setTimeout(() => {
                 alertDiv.classList.remove('show');
                 setTimeout(() => alertDiv.remove(), 500);
