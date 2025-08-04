@@ -285,7 +285,7 @@
         let currentWizardStep = 1;
         let workerSettingsUnlocked = false;
         
-        // Add this function with other initialization functions
+        // Modified initializeNewUserData function
         async function initializeNewUserData() {
             // Show wizard for new users
             showSetupWizard();
@@ -365,7 +365,7 @@
             }
             else if (currentWizardStep === 3) {
                 const tonRate = parseFloat(document.getElementById('wizardTonRate').value);
-                if (isNaN(tonRate) {
+                if (isNaN(tonRate)) {
                     showAlert('Please enter valid agreement rates', 'error');
                     return false;
                 }
@@ -550,11 +550,24 @@
             }
         }
         
-        // Add these event listeners at the end of startApp() function
-        document.getElementById('wizardNextBtn').addEventListener('click', goToNextStep);
-        document.getElementById('wizardBackBtn').addEventListener('click', goToPrevStep);
-        
-        // Existing code continues unchanged...
+        // Add these event listeners in the startApp() function
+        async function startApp() {
+            try {
+                // Existing initialization code...
+                
+                // Add these lines at the end of startApp()
+                document.getElementById('wizardNextBtn').addEventListener('click', goToNextStep);
+                document.getElementById('wizardBackBtn').addEventListener('click', goToPrevStep);
+                
+            } catch (error) {
+                console.error("Application start karne mein error:", error);
+                document.getElementById('main-content').innerHTML = `
+                    <div class="alert alert-error">
+                        <h2>Application Error</h2>
+                        <p>Application configuration load nahi ho saki. Baraye meharbani baad mein try karen.</p>
+                    </div>`;
+            }
+        }
     </script>
 </body>
 </html>
