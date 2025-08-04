@@ -180,7 +180,9 @@
             <h3>General Settings</h3>
             <div class="form-group"><label>Number of Workers:</label><input type="number" id="workerCount" placeholder="8" disabled></div>
             <div class="form-group"><label>Agreement Start Date:</label><input type="date" id="agreementStartDate"></div>
-            <div class="form-group"><label>Fiscal Year Start (MM-DD):</label><input type="text" id="fiscalYearStart" placeholder="10-10" pattern="[0-9]{2}-[0-9]{2}"></div>
+            <!-- ** MODIFICATION START **: Added 'readonly' attribute so user cannot edit it manually -->
+            <div class="form-group"><label>Fiscal Year Start (MM-DD):</label><input type="text" id="fiscalYearStart" placeholder="10-10" pattern="[0-9]{2}-[0-9]{2}" readonly></div>
+            <!-- ** MODIFICATION END ** -->
             
             <div class="settings-section">
                 <h3>Feature Controls</h3>
@@ -498,7 +500,6 @@
             }
         }
         
-        // MODIFIED: This function ONLY prepares the default data object in memory.
         async function initializeNewUserData() {
             appData = { 
                 salaries: {}, 
@@ -583,6 +584,12 @@
             appData.agreements.current.layoffRate = parseFloat(document.getElementById('wizardLayoffRate').value) || 0;
             appData.agreements.current.allowance = parseFloat(document.getElementById('wizardAllowance').value) || 0;
             appData.configs.agreementStartDate = agreementStartDate;
+            
+            const aDate = new Date(agreementStartDate);
+            const fMonth = (aDate.getMonth() + 1).toString().padStart(2, '0');
+            const fDay = aDate.getDate().toString().padStart(2, '0');
+            appData.configs.fiscalYearStart = `${fMonth}-${fDay}`;
+
             appData.configs.isSetupComplete = true;
 
             await saveUserData();
@@ -625,9 +632,6 @@
             updateHistoryDisplay();
             showAlert('Daily entry saved successfully!', 'success');
         }
-
-        // --- All calculation, report, and other functions remain the same ---
-        // (The following code is identical to your original and has no changes)
 
         function calculateDayEarnings(entryDate, dayType, tonnage, wagons, presentWorkers) {
             const earnings = {}; const rates = appData.agreements.current; const allWorkers = appData.workers; const absentWorkers = allWorkers.filter(w => !presentWorkers.includes(w)); let penaltyPerPresentWorker = 0; const penaltyTriggeringAbsentees = [];
@@ -704,8 +708,111 @@
         function displayBonusReport(b, f) {
             const c = document.getElementById('bonusResults'), v = appData.permissions?.viewableWorkers || [], s = new Date(f).getFullYear(); let h = `<h3>Annual Bonus Report: ${s}-${s + 1}</h3><div class="report-grid">`; appData.workers.forEach(w => { if (v.includes(w)) { const d=b[w]||{}; h += `<div class="report-card"><strong>${w}</strong><br>Annual Earnings: Rs. ${(d.annualEarnings||0).toFixed(2)}<br>Avg Monthly: Rs. ${(d.avgMonthlySalary||0).toFixed(2)}<br>Bonus: Rs. ${(d.bonus||0).toFixed(2)}<br>Gratuity: Rs. ${(d.gratuity||0).toFixed(2)}<br>Paid Leaves Bonus: Rs. ${(d.paidLeavesBonus||0).toFixed(2)}<br><strong>Total Bonus: Rs. ${(d.totalBonus||0).toFixed(2)}</strong></div>`; } else { h += `<div class="report-card" style="background:#f1f1f1;border-left-color:#a0a0a0;"><strong>${w}</strong><br><span style="color:#6200EE;font-weight:500;">Contact admin to view details</span></div>`; } }); h += `</div>`; c.innerHTML = h;
         }
-        function calculateArrears() { const c = document.getElementById('arrearsResults'); c.innerHTML = '<div class="loading"><div class="spinner"></div><p>Calculating arrears...</p></div>'; setTimeout(() => displayArrearsReport(calculateAllArrears()), 500); }
-        function calculateAllArrears() { const a = new Date(appData.configs.agreementStartDate), c = new Date(), w = {}, f = document.getElementById('fiscalYear').value || `${new Date().getFullYear()}-10-10`; appData.workers.forEach(b => { let s=0, l=0, o=0; const n = appData.agreements.new.annualBenefits-appData.agreements.current.annualBenefits; Object.entries(appData.salaries||{}).forEach(([dt, en]) => { const ed=new Date(dt); if(ed>=a&&ed<=c&&en.earnings&&en.earnings[b]!==undefined){ const E = calculateDayEarningsWithRates(en.type,en.tonnage,en.wagons,en.presentWorkers,appData.agreements.new); s += ((E[b]||0) - en.earnings[b]); } }); l = ((c.getFullYear()-a.getFullYear())*12 + c.getMonth() - a.getMonth() + 1) * (appData.agreements.new.allowance-appData.agreements.current.allowance); const N = calculateAnnualBonusWithRates(appData.agreements.new, f), C=calculateAnnualBonusWithRates(appData.agreements.current, f); o = (N[b]?.totalBonus || 0) - (C[b]?.totalBonus || 0); w[b]={salaryArrears:s,allowanceArrears:l,bonusArrears:o,annualBenefitsArrears:n,totalArrears:s+l+o+n}; }); return w; }
+
+        // ** MODIFICATION START: The 'calculateArrears' function now just calls the new 'calculateAllArrears' logic. **
+        function calculateArrears() { 
+            const c = document.getElementById('arrearsResults'); 
+            c.innerHTML = '<div class="loading"><div class="spinner"></div><p>Calculating arrears...</p></div>'; 
+            setTimeout(() => displayArrearsReport(calculateAllArrears()), 500); 
+        }
+
+        // ** MODIFICATION START: This function is completely replaced with new, automatic logic. **
+        function calculateAllArrears() {
+            if (!appData.configs.agreementStartDate || !appData.workers || appData.workers.length === 0) {
+                showAlert('Agreement start date or workers not set in Settings.', 'error');
+                return {};
+            }
+
+            const agreementStartDate = new Date(appData.configs.agreementStartDate + "T00:00:00");
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            const arrearsByWorker = {};
+            appData.workers.forEach(worker => {
+                arrearsByWorker[worker] = {
+                    salaryArrears: 0,
+                    allowanceArrears: 0,
+                    bonusArrears: 0,
+                    annualBenefitsArrears: 0,
+                    totalArrears: 0
+                };
+            });
+
+            // 1. Calculate SALARY Arrears from every daily entry
+            Object.values(appData.salaries || {}).forEach(entry => {
+                const entryDate = new Date(entry.date + "T00:00:00");
+                if (entryDate >= agreementStartDate && entryDate <= today) {
+                    const earningsNew = calculateDayEarningsWithRates(entry.type, entry.tonnage, entry.wagons, entry.presentWorkers, appData.agreements.new);
+                    const earningsCurrent = entry.earnings || {};
+
+                    appData.workers.forEach(worker => {
+                        const newEarning = earningsNew[worker] || 0;
+                        const currentEarning = earningsCurrent[worker] || 0;
+                        arrearsByWorker[worker].salaryArrears += (newEarning - currentEarning);
+                    });
+                }
+            });
+
+            // 2. Calculate ALLOWANCE Arrears for each month passed
+            const months = (today.getFullYear() - agreementStartDate.getFullYear()) * 12 + today.getMonth() - agreementStartDate.getMonth();
+            const allowanceDifference = appData.agreements.new.allowance - appData.agreements.current.allowance;
+            appData.workers.forEach(worker => {
+                arrearsByWorker[worker].allowanceArrears = (months + 1) * allowanceDifference;
+            });
+            
+            // 3. Calculate BONUS Arrears for all COMPLETED fiscal years since agreement start
+            const [fiscalMonth, fiscalDay] = appData.configs.fiscalYearStart.split('-').map(Number);
+            let loopFiscalYearStart = new Date(agreementStartDate.getFullYear(), fiscalMonth - 1, fiscalDay);
+
+            // If agreement starts after this year's fiscal date, the first possible fiscal year is the next one
+            if (agreementStartDate >= loopFiscalYearStart) {
+                // It's in the same fiscal year cycle
+            } else {
+                 // It means the fiscal year for the agreement date has already passed, so we look at the previous calendar year's cycle.
+                loopFiscalYearStart.setFullYear(loopFiscalYearStart.getFullYear() - 1);
+            }
+            
+            while (true) {
+                let fiscalYearEnd = new Date(loopFiscalYearStart);
+                fiscalYearEnd.setFullYear(fiscalYearEnd.getFullYear() + 1);
+                fiscalYearEnd.setDate(fiscalYearEnd.getDate() - 1);
+
+                if (fiscalYearEnd > today) {
+                    // If the end of this fiscal year is in the future, it's not completed yet. Stop.
+                    break;
+                }
+
+                // This is a completed fiscal year. Calculate bonus arrears for it.
+                const fiscalYearString = `${loopFiscalYearStart.getFullYear()}-${(loopFiscalYearStart.getMonth() + 1).toString().padStart(2, '0')}-${loopFiscalYearStart.getDate().toString().padStart(2, '0')}`;
+                const bonusNew = calculateAnnualBonusWithRates(appData.agreements.new, fiscalYearString);
+                const bonusCurrent = calculateAnnualBonusWithRates(appData.agreements.current, fiscalYearString);
+                
+                appData.workers.forEach(worker => {
+                    const newBonus = bonusNew[worker]?.totalBonus || 0;
+                    const currentBonus = bonusCurrent[worker]?.totalBonus || 0;
+                    arrearsByWorker[worker].bonusArrears += (newBonus - currentBonus);
+                });
+
+                // Move to check the next fiscal year
+                loopFiscalYearStart.setFullYear(loopFiscalYearStart.getFullYear() + 1);
+            }
+
+            // 4. Calculate Annual Benefits Arrears
+            const annualBenefitsDifference = appData.agreements.new.annualBenefits - appData.agreements.current.annualBenefits;
+             appData.workers.forEach(worker => {
+                arrearsByWorker[worker].annualBenefitsArrears = annualBenefitsDifference;
+            });
+
+            // 5. Calculate Total Arrears
+            appData.workers.forEach(worker => {
+                const w = arrearsByWorker[worker];
+                w.totalArrears = w.salaryArrears + w.allowanceArrears + w.bonusArrears + w.annualBenefitsArrears;
+            });
+
+            return arrearsByWorker;
+        }
+        // ** MODIFICATION END **
+
         function calculateDayEarningsWithRates(t,o,n,a,e){const r={};return"rest"===t?appData.workers.forEach(t=>{r[t]=e.restRate}):(a.length>0&&(grossPay=o*e.tonRate/a.length+n*e.wagonRate/a.length,"special_overtime"===t&&(grossPay=2*(o*e.tonRate)/a.length+e.layoffRate+n*e.wagonRate/a.length),grossPay=Math.max(grossPay,"special_overtime"===t?3*e.layoffRate:e.layoffRate),a.forEach(t=>{r[t]=grossPay})),appData.workers.forEach(t=>{a.includes(t)||Object.prototype.hasOwnProperty.call(r,t)||r[t]===undefined&&(r[t]=e.layoffRate)})),r}
         function calculateAnnualBonusWithRates(r, f) { const s=new Date(f),e=new Date(s); e.setFullYear(e.getFullYear()+1);const w={}; appData.workers.forEach(b=>{let a=0,t=0;Object.entries(appData.salaries||{}).forEach(([dt,en])=>{const ed=new Date(dt);if(ed>=s&&ed<e&&en.earnings&&en.earnings[b]!==undefined){a+=calculateDayEarningsWithRates(en.type,en.tonnage,en.wagons,en.presentWorkers,r)[b];if(en.type==='rest'||!en.presentWorkers.includes(b))t++}});a+=r.allowance*12;const m=a/12,p=Math.min(Math.max(t-20,0),12);w[b]={totalBonus:m*2+(12-p)*r.layoffRate}});return w;}
         function displayArrearsReport(a) {
@@ -746,22 +853,46 @@
         async function addWorker() { if (!appData.workers) appData.workers = []; appData.workers.push(`Worker ${appData.workers.length + 1}`); loadWorkersList(); loadWorkerAttendance(); }
         async function removeWorker(index) { if (appData.workers.length <= 1) { showAlert('Kam se kam ek worker zaroori hai.', 'error'); return; } appData.workers.splice(index, 1); loadWorkersList(); loadWorkerAttendance(); }
         async function updateWorkerName(index, newName) { if (newName.trim()) appData.workers[index] = newName.trim(); }
+        
+        // ** MODIFICATION START: This function is modified to link Fiscal Year with Agreement Date. **
         async function saveSettings() {
             if (!isWorkerSettingsLocked) {
                 const workerInputs = document.querySelectorAll('#workersList input[type="text"]'), newWorkerNames = [];
                 workerInputs.forEach(input => newWorkerNames.push(input.value));
                 appData.workers = newWorkerNames; appData.configs.workerCount = newWorkerNames.length;
             }
-            appData.configs.agreementStartDate = document.getElementById('agreementStartDate').value;
-            appData.configs.fiscalYearStart = document.getElementById('fiscalYearStart').value;
+            
+            const agreementDateValue = document.getElementById('agreementStartDate').value;
+            appData.configs.agreementStartDate = agreementDateValue;
+
+            // Automatically derive and set Fiscal Year Start from Agreement Start Date
+            if (agreementDateValue) {
+                const agreementDate = new Date(agreementDateValue);
+                // JS months are 0-indexed, so add 1
+                const fiscalMonth = (agreementDate.getMonth() + 1).toString().padStart(2, '0');
+                const fiscalDay = agreementDate.getDate().toString().padStart(2, '0');
+                const fiscalYearValue = `${fiscalMonth}-${fiscalDay}`;
+                
+                // Update both the form field and the appData object
+                document.getElementById('fiscalYearStart').value = fiscalYearValue;
+                appData.configs.fiscalYearStart = fiscalYearValue;
+            } else {
+                // If agreement date is cleared, clear fiscal year start too
+                document.getElementById('fiscalYearStart').value = '';
+                appData.configs.fiscalYearStart = '';
+            }
+
             appData.configs.isWagonRateEnabled = document.getElementById('enableWagonRate').checked;
             appData.configs.isPenaltyEnabled = document.getElementById('enablePenalty').checked;
             appData.configs.penaltyAmount = parseFloat(document.getElementById('penaltyAmount').value) || 231;
+            
             await saveUserData();
             showAlert('Settings saved successfully!', 'success');
             isWorkerSettingsLocked = true;
-            loadSettings();
+            loadSettings(); // Reload settings to reflect changes
         }
+        // ** MODIFICATION END **
+
         function showAlert(message, type = 'info') {
             document.querySelectorAll('.alert').forEach(a => a.remove());
             const alertDiv = document.createElement('div');
