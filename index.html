@@ -325,11 +325,16 @@
 
         async function startApp() {
             try {
-                const response = await fetch('/.netlify/functions/get-config');
-                if (!response.ok) {
-                    throw new Error('Configuration fetch karne mein masla hua.');
-                }
-                const firebaseConfig = await response.json();
+                // This is a placeholder for Firebase config loading
+                const firebaseConfig = {
+                    apiKey: "YOUR_API_KEY",
+                    authDomain: "YOUR_AUTH_DOMAIN",
+                    databaseURL: "YOUR_DATABASE_URL",
+                    projectId: "YOUR_PROJECT_ID",
+                    storageBucket: "YOUR_STORAGE_BUCKET",
+                    messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+                    appId: "YOUR_APP_ID"
+                };
                 firebase.initializeApp(firebaseConfig);
 
                 firebase.auth().onAuthStateChanged(async (user) => {
@@ -573,7 +578,7 @@
             appData.agreements.current.layoffRate = parseFloat(document.getElementById('wizardLayoffRate').value) || 0;
             appData.agreements.current.allowance = parseFloat(document.getElementById('wizardAllowance').value) || 0;
             
-            const agreementDate = new Date(agreementStartDate + "T00:00:00");
+            const agreementDate = new Date(agreementDateValue + "T00:00:00");
             const fiscalMonth = (agreementDate.getMonth() + 1).toString().padStart(2, '0');
             const fiscalDay = agreementDate.getDate().toString().padStart(2, '0');
             
@@ -635,44 +640,90 @@
             showAlert('Daily entry saved successfully!', 'success');
         }
 
-
+        // ##### CORRECTED FUNCTION 1 #####
         function calculateDayEarnings(entryDate, dayType, tonnage, wagons, presentWorkers) {
-            const earnings = {}; const rates = appData.agreements.current; const allWorkers = appData.workers; const absentWorkers = allWorkers.filter(w => !presentWorkers.includes(w)); let penaltyPerPresentWorker = 0; const penaltyTriggeringAbsentees = [];
+            const earnings = {};
+            const rates = appData.agreements.current;
+            const allWorkers = appData.workers;
+            const absentWorkers = allWorkers.filter(w => !presentWorkers.includes(w));
+            let penaltyPerPresentWorker = 0;
+            const penaltyTriggeringAbsentees = [];
+
             if (appData.configs.isPenaltyEnabled && absentWorkers.length > 0) {
-                const [fiscalYearStart, fiscalYearEnd] = getCurrentFiscalYearDates();
-                absentWorkers.forEach(worker => { if (getWorkerTotalLeaves(worker, fiscalYearStart, fiscalYearEnd) > 32) penaltyTriggeringAbsentees.push(worker); });
+                // Pass the entryDate to correctly determine the fiscal year for leave calculation
+                const [fiscalYearStart, fiscalYearEnd] = getCurrentFiscalYearDates(entryDate); 
+                
+                absentWorkers.forEach(worker => {
+                    // Pass the correct fiscal year dates to get an accurate leave count
+                    if (getWorkerTotalLeaves(worker, fiscalYearStart, fiscalYearEnd) >= 32) {
+                        penaltyTriggeringAbsentees.push(worker);
+                    }
+                });
+
                 if (penaltyTriggeringAbsentees.length > 0) {
                     const totalPenalty = penaltyTriggeringAbsentees.length * appData.configs.penaltyAmount * (dayType === 'special_overtime' ? 2 : 1);
-                    if (presentWorkers.length > 0) penaltyPerPresentWorker = totalPenalty / presentWorkers.length;
+                    if (presentWorkers.length > 0) {
+                        penaltyPerPresentWorker = totalPenalty / presentWorkers.length;
+                    }
                 }
             }
-            let grossEarningPerWorker = 0; if (presentWorkers.length > 0) grossEarningPerWorker = (tonnage * rates.tonRate) / presentWorkers.length + (appData.configs.isWagonRateEnabled ? (wagons * rates.wagonRate) / presentWorkers.length : 0);
+
+            let grossEarningPerWorker = 0;
+            if (presentWorkers.length > 0 && dayType !== 'rest') {
+                grossEarningPerWorker = (tonnage * rates.tonRate) / presentWorkers.length + (appData.configs.isWagonRateEnabled ? (wagons * rates.wagonRate) / presentWorkers.length : 0);
+            }
+            
             allWorkers.forEach(worker => {
                 if (presentWorkers.includes(worker)) {
-                    let adjustedEarning = grossEarningPerWorker - penaltyPerPresentWorker, minGuarantee = rates.layoffRate;
+                    let adjustedEarning = grossEarningPerWorker - penaltyPerPresentWorker;
+                    let minGuarantee = rates.layoffRate;
+
                     if (dayType === 'special_overtime') {
                         const overtimeGross = ((tonnage * rates.tonRate) / presentWorkers.length * 2) + rates.layoffRate + (appData.configs.isWagonRateEnabled ? (wagons * rates.wagonRate) / presentWorkers.length : 0);
-                        adjustedEarning = overtimeGross - penaltyPerPresentWorker; minGuarantee = rates.layoffRate * 3;
-                    } else if (dayType === 'rest') { adjustedEarning = rates.restRate; minGuarantee = rates.restRate; }
+                        adjustedEarning = overtimeGross - penaltyPerPresentWorker;
+                        minGuarantee = rates.layoffRate * 3;
+                    } else if (dayType === 'rest') {
+                        adjustedEarning = rates.restRate;
+                        minGuarantee = rates.restRate;
+                    }
                     earnings[worker] = Math.max(adjustedEarning, minGuarantee);
-                } else { earnings[worker] = penaltyTriggeringAbsentees.includes(worker) ? 0 : rates.layoffRate; }
+                } else { // Absent worker
+                    earnings[worker] = penaltyTriggeringAbsentees.includes(worker) ? 0 : rates.layoffRate;
+                }
             });
-            if (dayType === 'rest') allWorkers.forEach(w => earnings[w] = rates.restRate); return earnings;
+
+            return earnings;
         }
 
-        function getCurrentFiscalYearDates() {
-            const today = new Date(); const [fiscalMonth, fiscalDay] = appData.configs.fiscalYearStart.split('-').map(Number); let fiscalYearStartYear = today.getFullYear();
-            if (today < new Date(fiscalYearStartYear, fiscalMonth - 1, fiscalDay)) fiscalYearStartYear--;
-            const fiscalYearStartDate = new Date(fiscalYearStartYear, fiscalMonth - 1, fiscalDay); const fiscalYearEndDate = new Date(fiscalYearStartYear + 1, fiscalMonth - 1, fiscalDay - 1); return [fiscalYearStartDate, fiscalYearEndDate];
+        // ##### CORRECTED FUNCTION 2 #####
+        function getCurrentFiscalYearDates(referenceDateStr) {
+            const referenceDate = new Date(referenceDateStr + "T00:00:00");
+            const [fiscalMonth, fiscalDay] = appData.configs.fiscalYearStart.split('-').map(Number);
+            
+            let fiscalYearStartYear = referenceDate.getFullYear();
+
+            // Check if the reference date is before the fiscal start date in its own year
+            if (referenceDate < new Date(fiscalYearStartYear, fiscalMonth - 1, fiscalDay)) {
+                fiscalYearStartYear--; // If so, the fiscal year started in the previous calendar year
+            }
+            
+            const fiscalYearStartDate = new Date(fiscalYearStartYear, fiscalMonth - 1, fiscalDay);
+            const fiscalYearEndDate = new Date(fiscalYearStartYear + 1, fiscalMonth - 1, fiscalDay - 1);
+            
+            return [fiscalYearStartDate, fiscalYearEndDate];
         }
 
         function getWorkerTotalLeaves(workerName, fiscalYearStartDate, fiscalYearEndDate) {
-            let leaveCount = 0; Object.values(appData.salaries || {}).forEach(entry => {
+            let leaveCount = 0;
+            Object.values(appData.salaries || {}).forEach(entry => {
                 const entryDate = new Date(entry.date + "T00:00:00");
-                if (entryDate >= fiscalYearStartDate && entryDate <= fiscalYearEndDate && (entry.type !== 'rest' && !entry.presentWorkers.includes(workerName))) {
-                    leaveCount++;
+                if (entryDate >= fiscalYearStartDate && entryDate <= fiscalYearEndDate) {
+                    if (entry.type !== 'rest' && !entry.presentWorkers.includes(workerName)) {
+                        leaveCount++;
+                    }
                 }
-            }); return leaveCount;
+            });
+            return leaveCount;
         }
 
         function populateHistorySelector() {
@@ -893,7 +944,6 @@
             displayBonusReport(calculateAnnualBonus(f), f); 
         }
         
-        // ##### CORRECTED FUNCTION #####
         function calculateAnnualBonus(fiscalYearStartDateString) {
             const fiscalStart = new Date(fiscalYearStartDateString),
                 fiscalEnd = new Date(fiscalStart);
@@ -903,37 +953,33 @@
             const workerBonusData = {};
             appData.workers.forEach(workerName => {
                 let annualEarnings = 0;
-                let totalLeaves = 0; // Actual leaves (absences on work days)
+                let totalLeaves = 0; 
                 let workDays = 0;
 
                 Object.values(appData.salaries || {}).forEach(entry => {
                     const entryDate = new Date(entry.date + "T00:00:00");
 
                     if (entryDate >= fiscalStart && entryDate <= fiscalEnd) {
-                        // Accumulate earnings regardless of day type
                         if (entry.earnings && entry.earnings[workerName] !== undefined) {
                             annualEarnings += entry.earnings[workerName];
                         }
 
-                        // Count leaves and workdays correctly
                         if (entry.type === 'work' || entry.type === 'special_overtime') {
                             if (entry.presentWorkers && entry.presentWorkers.includes(workerName)) {
                                 workDays++;
                             } else {
-                                totalLeaves++; // Count as a leave only if absent on a work day
+                                totalLeaves++; 
                             }
                         }
                     }
                 });
 
-                // Add annual allowance
                 annualEarnings += (appData.agreements.current.allowance * 12);
 
                 const avgMonthlySalary = annualEarnings / 12;
                 const bonus = avgMonthlySalary;
                 const gratuity = avgMonthlySalary;
                 
-                // Use the CORRECT totalLeaves count to calculate paid leaves bonus
                 const paidLeavesUsed = Math.min(Math.max(totalLeaves - 20, 0), 12);
                 const remainingPaidLeaves = 12 - paidLeavesUsed;
                 const paidLeavesBonus = remainingPaidLeaves * appData.agreements.current.layoffRate;
@@ -973,7 +1019,6 @@
                 arrearsByWorker[worker] = { salaryArrears: 0, allowanceArrears: 0, bonusArrears: 0, annualBenefitsArrears: 0, totalArrears: 0 };
             });
 
-            // 1. Calculate SALARY Arrears
             Object.values(appData.salaries || {}).forEach(entry => {
                 const entryDate = new Date(entry.date + "T00:00:00");
                 if (entryDate >= agreementStartDate && entryDate <= today) {
@@ -985,7 +1030,6 @@
                 }
             });
 
-            // 2. Calculate ALLOWANCE Arrears
             const endMonth = today.getFullYear() * 12 + today.getMonth();
             const startMonth = agreementStartDate.getFullYear() * 12 + agreementStartDate.getMonth();
             const monthsPassed = endMonth - startMonth + 1;
@@ -994,7 +1038,6 @@
                 arrearsByWorker[worker].allowanceArrears = monthsPassed * allowanceDifference;
             });
             
-            // 3. Calculate BONUS Arrears for all COMPLETED fiscal years
             const [fiscalMonth, fiscalDay] = appData.configs.fiscalYearStart.split('-').map(Number);
             let agreementYear = agreementStartDate.getFullYear();
             let potentialFiscalStartDate = new Date(agreementYear, fiscalMonth - 1, fiscalDay);
@@ -1018,13 +1061,11 @@
                 firstFiscalYearStart.setFullYear(firstFiscalYearStart.getFullYear() + 1);
             }
 
-            // 4. Calculate Annual Benefits Arrears
             const annualBenefitsDifference = appData.agreements.new.annualBenefits - appData.agreements.current.annualBenefits;
             appData.workers.forEach(worker => {
                 arrearsByWorker[worker].annualBenefitsArrears = annualBenefitsDifference;
             });
 
-            // 5. Calculate Total Arrears
             appData.workers.forEach(worker => {
                 const w = arrearsByWorker[worker];
                 w.totalArrears = w.salaryArrears + w.allowanceArrears + w.bonusArrears + w.annualBenefitsArrears;
