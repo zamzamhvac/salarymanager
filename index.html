@@ -328,52 +328,65 @@ db.version(1).stores({
             }
         }
 
-        async function startApp() {
-            try {
-                const response = await fetch('/.netlify/functions/get-config');
-                if (!response.ok) {
-                    throw new Error('Configuration fetch karne mein masla hua.');
-                }
-                const firebaseConfig = await response.json();
-                firebase.initializeApp(firebaseConfig);
-
-                firebase.auth().onAuthStateChanged(async (user) => {
-                    if (user) {
-                        console.log("User signed in:", user.uid);
-                        currentUser = user;
-                        await loadUserData();
-                        if (appData.configs && appData.configs.isSetupComplete) {
-                            await showMainApp();
-							await syncDataWithFirebase();
-                        } else {
-                            startSetupWizard();
-                        }
-                    } else {
-                        console.log("User is signed out.");
-                        currentUser = null;
-                        showLoginPage();
-                    }
-                });
-                
-                document.querySelectorAll('.nav-btn').forEach(btn => {
-                    btn.addEventListener('click', () => showPage(btn.dataset.page));
-                });
-                document.getElementById('entryDate').value = new Date().toISOString().split('T')[0];
-                document.getElementById('dayType').addEventListener('change', function() {
-                    document.getElementById('workDetails').style.display = this.value === 'rest' ? 'none' : 'block';
-                });
-                document.getElementById('enablePenalty').addEventListener('change', (e) => {
-                    document.getElementById('penaltyAmountContainer').style.display = e.target.checked ? 'block' : 'none';
-                });
-                document.getElementById('enableWagonRate').addEventListener('change', (e) => {
-                    toggleWagonUIElements(e.target.checked);
-                });
-
-            } catch (error) {
-                console.error("Application start karne mein error:", error);
-                document.getElementById('main-content').innerHTML = `<div class="alert alert-error"><h2>Application Error</h2><p>Application configuration load nahi ho saki. Baraye meharbani baad mein try karen.</p></div>`;
-            }
+        // Naya aur behtar startApp function
+async function startApp() {
+    let firebaseConfig;
+    try {
+        // Internet se config laane ki koshish karo
+        const response = await fetch('/.netlify/functions/get-config');
+        if (!response.ok) throw new Error('Network response was not ok');
+        firebaseConfig = await response.json();
+        // Taza config ko local memory mein save kar lo
+        localStorage.setItem('firebaseConfig', JSON.stringify(firebaseConfig));
+    } catch (error) {
+        console.log("Internet se config nahi mili, local memory check ki ja rahi hai...");
+        // Agar internet nahi hai, to local memory se config uthao
+        const savedConfig = localStorage.getItem('firebaseConfig');
+        if (savedConfig) {
+            firebaseConfig = JSON.parse(savedConfig);
+        } else {
+            // Agar internet bhi nahi hai aur local memory mein bhi kuch nahi, tab error dikhao
+            console.error("Application start karne mein error:", error);
+            document.getElementById('main-content').innerHTML = `<div class="alert alert-error"><h2>Application Error</h2><p>Application configuration load nahi ho saki. Baraye meharbani baad mein try karen.</p></div>`;
+            return; // Function yahin rok do
         }
+    }
+
+    // Ab app ko shuru karo
+    firebase.initializeApp(firebaseConfig);
+
+    firebase.auth().onAuthStateChanged(async (user) => {
+        if (user) {
+            console.log("User signed in:", user.uid);
+            currentUser = user;
+            await loadUserData();
+            if (appData.configs && appData.configs.isSetupComplete) {
+                await showMainApp();
+                await syncDataWithFirebase();
+            } else {
+                startSetupWizard();
+            }
+        } else {
+            console.log("User is signed out.");
+            currentUser = null;
+            showLoginPage();
+        }
+    });
+
+    document.querySelectorAll('.nav-btn').forEach(btn => {
+        btn.addEventListener('click', () => showPage(btn.dataset.page));
+    });
+    document.getElementById('entryDate').value = new Date().toISOString().split('T')[0];
+    document.getElementById('dayType').addEventListener('change', function() {
+        document.getElementById('workDetails').style.display = this.value === 'rest' ? 'none' : 'block';
+    });
+    document.getElementById('enablePenalty').addEventListener('change', (e) => {
+        document.getElementById('penaltyAmountContainer').style.display = e.target.checked ? 'block' : 'none';
+    });
+    document.getElementById('enableWagonRate').addEventListener('change', (e) => {
+        toggleWagonUIElements(e.target.checked);
+    });
+}
 		window.addEventListener('online', syncDataWithFirebase);
         
         document.addEventListener('DOMContentLoaded', startApp);
