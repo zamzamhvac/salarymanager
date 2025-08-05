@@ -10,6 +10,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.22.2/firebase-app-compat.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.22.2/firebase-auth-compat.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.22.2/firebase-database-compat.min.js"></script>
+	<script src="https://unpkg.com/dexie@3.2.2/dist/dexie.min.js"></script>
     <style>
         :root {
             --primary-color: #6200EE;
@@ -272,6 +273,10 @@
 
     <script>
         let currentUser = null;
+		const db = new Dexie('digitalMunshiDB');
+db.version(1).stores({
+    userData: 'key, value'
+});
         let isWorkerSettingsLocked = true;
         let currentWizardStep = 1;
 
@@ -339,6 +344,7 @@
                         await loadUserData();
                         if (appData.configs && appData.configs.isSetupComplete) {
                             await showMainApp();
+							await syncDataWithFirebase();
                         } else {
                             startSetupWizard();
                         }
@@ -368,6 +374,7 @@
                 document.getElementById('main-content').innerHTML = `<div class="alert alert-error"><h2>Application Error</h2><p>Application configuration load nahi ho saki. Baraye meharbani baad mein try karen.</p></div>`;
             }
         }
+		window.addEventListener('online', syncDataWithFirebase);
         
         document.addEventListener('DOMContentLoaded', startApp);
 
@@ -446,48 +453,86 @@
         function hideSignUp() { document.getElementById('signUpForm').style.display = 'none'; }
         
         async function loadUserData() {
-            if (!currentUser) return;
-            const userRef = firebase.database().ref('users/' + currentUser.uid);
-            try {
-                const snapshot = await userRef.once('value');
-                if (snapshot.exists()) {
-                    console.log("User data loaded from Firebase.");
-                    const savedData = snapshot.val();
-                    appData = { ...appData, ...savedData,
-                        permissions: { ...(appData.permissions || {}), ...(savedData.permissions || {}) },
-                        configs: { ...appData.configs, ...(savedData.configs || {}) },
-                        agreements: {
-                            current: { ...appData.agreements.current, ...(savedData.agreements?.current || {}) },
-                            new: { ...appData.agreements.new, ...(savedData.agreements?.new || {}) }
-                        },
-                        salaries: savedData.salaries || {},
-                        workers: savedData.workers || []
-                    };
-                    if (!appData.permissions.viewableWorkers || appData.permissions.viewableWorkers.length === 0) {
-                        if (appData.workers && appData.workers.length > 0) {
-                            appData.permissions.viewableWorkers = [appData.workers[0]];
-                        } else { appData.permissions.viewableWorkers = []; }
-                    }
-                } else {
-                    console.log("No data found, preparing default data for new user.");
-                    await initializeNewUserData(); 
-                }
-            } catch (error) {
-                console.error("Error loading user data:", error);
-                showAlert("Could not load your data from the server.", "error");
-            }
+    if (!currentUser) return;
+    const userRef = firebase.database().ref('users/' + currentUser.uid);
+
+    try {
+        console.log("Internet se data laane ki koshish...");
+        const snapshot = await userRef.once('value');
+        if (snapshot.exists()) {
+            console.log("Internet se data mil gaya.");
+            const savedData = snapshot.val();
+            
+            appData = { ...appData, ...savedData,
+                permissions: { ...(appData.permissions || {}), ...(savedData.permissions || {}) },
+                configs: { ...appData.configs, ...(savedData.configs || {}) },
+                agreements: {
+                    current: { ...appData.agreements.current, ...(savedData.agreements?.current || {}) },
+                    new: { ...appData.agreements.new, ...(savedData.agreements?.new || {}) }
+                },
+                salaries: savedData.salaries || {},
+                workers: savedData.workers || []
+            };
+            
+            await db.userData.put({ key: 'appData', value: appData });
+            console.log("Taza data niji diary mein mehfooz kar liya gaya hai.");
+        } else {
+             console.log("Firebase par data nahi mila (naya user).");
+             await initializeNewUserData();
         }
+    } catch (error) {
+        console.error("Internet se data load nahi ho saka. Error:", error.message);
+        console.log("Niji diary (offline) se data load karne ki koshish...");
+        
+        const localData = await db.userData.get('appData');
+        if (localData) {
+            appData = localData.value;
+            console.log("Niji diary se data load ho gaya.");
+            showAlert("Aap offline hain. Pichla save kiya hua data dikhaya ja raha hai.", "info");
+        } else {
+            console.log("Niji diary mein bhi koi data nahi hai.");
+            showAlert("Aap offline hain aur koi purana data bhi nahi mila.", "error");
+        }
+    }
+}
         
         async function saveUserData() {
-            if (!currentUser) return;
-            try {
-                await firebase.database().ref('users/' + currentUser.uid).set(appData);
-                console.log("User data saved to Firebase.");
-            } catch (error) {
-                console.error("Error saving user data:", error);
-                showAlert("Failed to save data. Please check your connection.", "error");
+    if (!currentUser) return;
+    try {
+        await db.userData.put({ key: 'appData', value: appData });
+        console.log("Data fori taur par niji diary mein save ho gaya.");
+        localStorage.setItem('dataNeedsSync', 'true');
+        await syncDataWithFirebase();
+    } catch (error) {
+        console.error("Data save karte waqt masla hua:", error);
+        showAlert("Data save karne mein masla hua. Offline save kar liya gaya hai.", "error");
+    }
+}
+async function syncDataWithFirebase() {
+    if (!navigator.onLine) {
+        console.log("Offline hain, abhi sync nahi kar sakte.");
+        return;
+    }
+    const needsSync = localStorage.getItem('dataNeedsSync');
+    if (needsSync === 'true') {
+        showAlert("Internet mila. Offline data server par bheja ja raha hai...", "info");
+        console.log("Sync ki zaroorat hai. Firebase par data bheja ja raha hai...");
+        try {
+            const localData = await db.userData.get('appData');
+            if (localData) {
+                await firebase.database().ref('users/' + currentUser.uid).set(localData.value);
+                localStorage.removeItem('dataNeedsSync');
+                console.log("Data Firebase se successfully sync ho gaya!");
+                showAlert('Offline data server par save ho gaya hai!', 'success');
             }
+        } catch (error) {
+            console.error("Sync karne mein error:", error);
+            showAlert("Data ko server se sync karne mein masla hua.", "error");
         }
+    } else {
+        console.log("Data pehle se sync hai.");
+    }
+}
         
         async function initializeNewUserData() {
             appData = { 
@@ -1224,5 +1269,12 @@
             }, 5000);
         }
     </script>
+	<script>
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('/service-worker.js');
+        });
+    }
+</script>
 </body>
 </html>
