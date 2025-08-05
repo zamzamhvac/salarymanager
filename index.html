@@ -573,7 +573,7 @@
             appData.agreements.current.layoffRate = parseFloat(document.getElementById('wizardLayoffRate').value) || 0;
             appData.agreements.current.allowance = parseFloat(document.getElementById('wizardAllowance').value) || 0;
             
-            const agreementDate = new Date(agreementDateValue + "T00:00:00");
+            const agreementDate = new Date(agreementStartDate + "T00:00:00");
             const fiscalMonth = (agreementDate.getMonth() + 1).toString().padStart(2, '0');
             const fiscalDay = agreementDate.getDate().toString().padStart(2, '0');
             
