@@ -207,13 +207,25 @@
                     <i class="material-icons">warning</i>
                     <span>Worker ke naam tabdeel karne se purane data aur hisaab par asar par sakta hai. Ehtiyat se kaam lein.</span>
                 </div>
-                <div id="workersList"></div>
-                <div id="worker-management-buttons">
-                     <button onclick="unlockWorkerSettings()" class="btn">Unlock Worker Settings</button>
-                </div>
+                        <div id="workersList"></div>
+        
+        <!-- Naya Form Yahan Se Shuru -->
+        <div id="unlock-prompt">
+            <div class="form-group">
+                <label>Worker settings ko unlock karne ke liye neeche diya gaya jumla type karein:</label>
+                <input type="text" id="unlock-key-input" placeholder="Yahan type karein...">
+                <p><small>"unlock worker settings ke button ko unhide karo"</small></p>
             </div>
-            <button onclick="saveSettings()" class="btn">Save Settings</button>
+            <button onclick="checkUnlockKey()" class="btn">Unhide Karein</button>
         </div>
+        <!-- Naya Form Yahan Khatam -->
+
+        <!-- Original button ab shuru mein chupa hua hoga -->
+        <div id="worker-management-buttons" style="display:none;">
+        </div>
+    </div>
+    <button onclick="saveSettings()" class="btn">Save Settings</button>
+</div>
     </main>
 
     <div id="setup-wizard-overlay" class="setup-wizard-overlay">
@@ -1161,18 +1173,23 @@
         }
         
         function loadSettings() {
-            if (!appData.configs) return;
-            document.getElementById('workerCount').value = appData.configs.workerCount;
-            document.getElementById('agreementStartDate').value = appData.configs.agreementStartDate;
-            document.getElementById('fiscalYearStart').value = appData.configs.fiscalYearStart;
-            document.getElementById('enableWagonRate').checked = appData.configs.isWagonRateEnabled;
-            document.getElementById('enablePenalty').checked = appData.configs.isPenaltyEnabled;
-            document.getElementById('penaltyAmount').value = appData.configs.penaltyAmount;
-            document.getElementById('penaltyAmountContainer').style.display = appData.configs.isPenaltyEnabled ? 'block' : 'none';
-            toggleWagonUIElements(appData.configs.isWagonRateEnabled);
-            isWorkerSettingsLocked = true;
-            loadWorkersList();
-        }
+    if (!appData.configs) return;
+    document.getElementById('workerCount').value = appData.configs.workerCount;
+    document.getElementById('agreementStartDate').value = appData.configs.agreementStartDate;
+    document.getElementById('fiscalYearStart').value = appData.configs.fiscalYearStart;
+    document.getElementById('enableWagonRate').checked = appData.configs.isWagonRateEnabled;
+    document.getElementById('enablePenalty').checked = appData.configs.isPenaltyEnabled;
+    document.getElementById('penaltyAmount').value = appData.configs.penaltyAmount;
+    document.getElementById('penaltyAmountContainer').style.display = appData.configs.isPenaltyEnabled ? 'block' : 'none';
+    toggleWagonUIElements(appData.configs.isWagonRateEnabled);
+    
+    document.getElementById('unlock-prompt').style.display = 'block';
+    document.getElementById('worker-management-buttons').style.display = 'none';
+    document.getElementById('unlock-key-input').value = '';
+
+    isWorkerSettingsLocked = true;
+    loadWorkersList();
+}
 
         function loadWorkersList() {
             const container = document.getElementById('workersList'); const managementContainer = document.getElementById('worker-management-buttons'); container.innerHTML = '';
@@ -1225,7 +1242,18 @@
             loadFiscalYears(); 
         }
 
-        function showAlert(message, type = 'info') {
+        function checkUnlockKey() {
+    const inputField = document.getElementById('unlock-key-input');
+    const correctPhrase = "unlock worker settings ke button ko unhide karo";
+
+    if (inputField.value.trim() === correctPhrase) {
+        document.getElementById('worker-management-buttons').style.display = 'block';
+        document.getElementById('unlock-prompt').style.display = 'none';
+    } else {
+        showAlert('Aapne sahi jumla type nahi kiya. Dobara koshish karein.', 'error');
+    }
+}
+		function showAlert(message, type = 'info') {
             document.querySelectorAll('.alert').forEach(a => a.remove());
             const alertDiv = document.createElement('div');
             alertDiv.className = `alert alert-${type}`; alertDiv.textContent = message;
