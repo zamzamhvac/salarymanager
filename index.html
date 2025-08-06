@@ -325,70 +325,62 @@
         }
 
         async function startApp() {
-            try {
-                const response = await fetch('/.netlify/functions/get-config');
-                if (!response.ok) {
-                    throw new Error('Configuration fetch karne mein masla hua.');
-                }
-                const firebaseConfig = await response.json();
-                firebase.initializeApp(firebaseConfig);
-				 try {
-          const appCheck = firebase.appCheck();
-          appCheck.activate(
-              firebaseConfig.reCAPTCHAKey, // Yeh key Netlify se aa rahi hai
-              true);
-          console.log("Firebase App Check is active in monitoring mode.");
-        } catch (err) {
-          console.error("App Check activation failed", err);
+    try {
+        const response = await fetch('/.netlify/functions/get-config');
+        if (!response.ok) {
+            throw new Error('Configuration fetch karne mein masla hua.');
         }
-        // --- YAHAN TAK ---
+        const firebaseConfig = await response.json();
+        firebase.initializeApp(firebaseConfig);
+
+        // --- App Check ko yahan, initializeApp ke foran baad, activate karna hai ---
+        try {
+            const appCheck = firebase.appCheck();
+            appCheck.activate(
+                firebaseConfig.reCAPTCHAKey,
+                true);
+            console.log("Firebase App Check is active in monitoring mode.");
+        } catch (err) {
+            console.error("App Check activation failed", err);
+        }
+        // --- App Check ka code yahan tak hai ---
 
         firebase.auth().onAuthStateChanged(async (user) => {
-            // ...aapka baqi ka code bilkul waisa hi rahega...
+            if (user) {
+                console.log("User signed in:", user.uid);
+                currentUser = user;
+                await loadUserData();
+                if (appData.configs && appData.configs.isSetupComplete) {
+                    await showMainApp();
+                } else {
+                    startSetupWizard();
+                }
+            } else {
+                console.log("User is signed out.");
+                currentUser = null;
+                showLoginPage();
+            }
         });
         
-        // ...baqi function bhi bilkul waisa hi rahega...
+        document.querySelectorAll('.nav-btn').forEach(btn => {
+            btn.addEventListener('click', () => showPage(btn.dataset.page));
+        });
+        document.getElementById('entryDate').value = new Date().toISOString().split('T')[0];
+        document.getElementById('dayType').addEventListener('change', function() {
+            document.getElementById('workDetails').style.display = this.value === 'rest' ? 'none' : 'block';
+        });
+        document.getElementById('enablePenalty').addEventListener('change', (e) => {
+            document.getElementById('penaltyAmountContainer').style.display = e.target.checked ? 'block' : 'none';
+        });
+        document.getElementById('enableWagonRate').addEventListener('change', (e) => {
+            toggleWagonUIElements(e.target.checked);
+        });
+
     } catch (error) {
-        // ...
+        console.error("Application start karne mein error:", error);
+        document.getElementById('main-content').innerHTML = `<div class="alert alert-error"><h2>Application Error</h2><p>Application configuration load nahi ho saki. Baraye meharbani baad mein try karen.</p></div>`;
     }
 }
-
-                firebase.auth().onAuthStateChanged(async (user) => {
-                    if (user) {
-                        console.log("User signed in:", user.uid);
-                        currentUser = user;
-                        await loadUserData();
-                        if (appData.configs && appData.configs.isSetupComplete) {
-                            await showMainApp();
-                        } else {
-                            startSetupWizard();
-                        }
-                    } else {
-                        console.log("User is signed out.");
-                        currentUser = null;
-                        showLoginPage();
-                    }
-                });
-                
-                document.querySelectorAll('.nav-btn').forEach(btn => {
-                    btn.addEventListener('click', () => showPage(btn.dataset.page));
-                });
-                document.getElementById('entryDate').value = new Date().toISOString().split('T')[0];
-                document.getElementById('dayType').addEventListener('change', function() {
-                    document.getElementById('workDetails').style.display = this.value === 'rest' ? 'none' : 'block';
-                });
-                document.getElementById('enablePenalty').addEventListener('change', (e) => {
-                    document.getElementById('penaltyAmountContainer').style.display = e.target.checked ? 'block' : 'none';
-                });
-                document.getElementById('enableWagonRate').addEventListener('change', (e) => {
-                    toggleWagonUIElements(e.target.checked);
-                });
-
-            } catch (error) {
-                console.error("Application start karne mein error:", error);
-                document.getElementById('main-content').innerHTML = `<div class="alert alert-error"><h2>Application Error</h2><p>Application configuration load nahi ho saki. Baraye meharbani baad mein try karen.</p></div>`;
-            }
-        }
         
         document.addEventListener('DOMContentLoaded', startApp);
 
