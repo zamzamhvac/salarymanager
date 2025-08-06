@@ -214,7 +214,7 @@
             <div class="form-group">
                 <label>Worker settings ko unlock karne ke liye neeche diya gaya jumla type karein:</label>
                 <input type="text" id="unlock-key-input" placeholder="Yahan type karein...">
-                <p><small>"unlock worker settings ke button ko unhide karo"</small></p>
+                <p><small>"please unhide the worker settings button"</small></p>
             </div>
             <button onclick="checkUnlockKey()" class="btn">Unhide Karein</button>
         </div>
@@ -1244,7 +1244,7 @@
 
         function checkUnlockKey() {
     const inputField = document.getElementById('unlock-key-input');
-    const correctPhrase = "unlock worker settings ke button ko unhide karo";
+    const correctPhrase = "please unhide the worker settings button";
 
     if (inputField.value.trim() === correctPhrase) {
         document.getElementById('worker-management-buttons').style.display = 'block';
