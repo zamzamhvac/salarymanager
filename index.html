@@ -10,6 +10,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.22.2/firebase-app-compat.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.22.2/firebase-auth-compat.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.22.2/firebase-database-compat.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.22.2/firebase-app-check-compat.min.js"></script>
     <style>
         :root {
             --primary-color: #6200EE;
@@ -331,6 +332,26 @@
                 }
                 const firebaseConfig = await response.json();
                 firebase.initializeApp(firebaseConfig);
+				 try {
+          const appCheck = firebase.appCheck();
+          appCheck.activate(
+              firebaseConfig.reCAPTCHAKey, // Yeh key Netlify se aa rahi hai
+              true);
+          console.log("Firebase App Check is active in monitoring mode.");
+        } catch (err) {
+          console.error("App Check activation failed", err);
+        }
+        // --- YAHAN TAK ---
+
+        firebase.auth().onAuthStateChanged(async (user) => {
+            // ...aapka baqi ka code bilkul waisa hi rahega...
+        });
+        
+        // ...baqi function bhi bilkul waisa hi rahega...
+    } catch (error) {
+        // ...
+    }
+}
 
                 firebase.auth().onAuthStateChanged(async (user) => {
                     if (user) {
