@@ -176,7 +176,6 @@
         <div id="bonus" class="page"><h2>🎁 Annual Bonus & Gratuity</h2><p>Calculate annual bonus, gratuity and paid leaves bonus</p><div class="form-group"><label>Select Fiscal Year:</label><select id="fiscalYear"><option value="">Select Year</option></select></div><button onclick="calculateBonus()" class="btn">Calculate Bonus</button><div id="bonusResults"></div></div>
         <div id="arrears" class="page"><h2>📊 Arrears Calculation</h2><p>Calculate pending arrears based on agreement differences</p><button onclick="calculateArrears()" class="btn">Calculate Automatic Arrears</button><div id="arrearsResults"></div></div>
         <div id="leaves" class="page"><h2>🏖️ Leaves Report</h2><p>Track annual leaves for all workers</p><div class="form-group"><label>Select Fiscal Year:</label><select id="leavesFiscalYear"><option value="">Select Year</option></select></div><button onclick="generateLeavesReport()" class="btn">Generate Leaves Report</button><div id="leavesResults"></div></div>
-        
         <div id="settings" class="page">
             <h2>⚙️ Settings</h2><p>Configure your application settings</p>
             <h3>General Settings</h3>
@@ -184,28 +183,24 @@
             <div class="form-group"><label>Agreement Start Date:</label><input type="date" id="agreementStartDate"></div>
             <div class="form-group"><label>Fiscal Year Start (MM-DD):</label><input type="text" id="fiscalYearStart" placeholder="10-10" pattern="[0-9]{2}-[0-9]{2}" disabled></div>
             
-            <!-- === NAYA SECTION ADD HUA HAI === -->
-            <div class="settings-section">
-                <h3>Leave Settings</h3>
-                <div class="two-column">
-                    <div class="form-group">
-                        <label for="unpaidLeaves">Total Unpaid Leaves (Salana)</label>
-                        <input type="number" id="unpaidLeaves" placeholder="e.g., 20">
-                    </div>
-                    <div class="form-group">
-                        <label for="paidLeaves">Total Paid Leaves (Salana)</label>
-                        <input type="number" id="paidLeaves" placeholder="e.g., 12">
-                    </div>
-                </div>
-            </div>
-            <!-- === SECTION END === -->
-
             <div class="settings-section">
                 <h3>Feature Controls</h3>
                 <div class="checkbox-group">
                     <input type="checkbox" id="enableWagonRate">
                     <label for="enableWagonRate">Enable Wagon Rate Calculation</label>
                 </div>
+                 <!-- ===== NAYE FIELDS YAHAN ADD KIYE GAYE HAIN ===== -->
+                <div class="two-column" style="gap: 16px;">
+                    <div class="form-group">
+                        <label for="unpaidLeaves">Total Unpaid Leaves</label>
+                        <input type="number" id="unpaidLeaves" placeholder="e.g., 20">
+                    </div>
+                    <div class="form-group">
+                        <label for="paidLeaves">Total Paid Leaves</label>
+                        <input type="number" id="paidLeaves" placeholder="e.g., 12">
+                    </div>
+                </div>
+                 <!-- ===== END OF NEW FIELDS ===== -->
                 <div class="checkbox-group">
                     <input type="checkbox" id="enablePenalty">
                     <label for="enablePenalty">Enable Excess Leave Penalty</label>
@@ -225,7 +220,6 @@
                     <span>Worker ke naam tabdeel karne se purane data aur hisaab par asar par sakta hai. Ehtiyat se kaam lein.</span>
                 </div>
                 <div id="workersList"></div>
-        
                 <div id="unlock-prompt">
                     <div class="form-group">
                         <label>Worker settings ko unlock karne ke liye neeche diya gaya jumla type karein:</label>
@@ -234,7 +228,6 @@
                     </div>
                     <button onclick="checkUnlockKey()" class="btn">Unhide Karein</button>
                 </div>
-
                 <div id="worker-management-buttons" style="display:none;">
                 </div>
             </div>
@@ -267,16 +260,13 @@
                     </div>
                 </div>
                 <div id="wizard-step-3" class="wizard-step">
-                    <h3>Step 3: Agreement & Leave Details</h3>
-                    <p class="description">Apne "Current Agreement" ke rates aur salana chuttiyan yahan darj karein.</p>
+                    <h3>Step 3: Agreement Details</h3>
+                    <p class="description">Apne "Current Agreement" ke rates yahan darj karein.</p>
                     <div class="rate-grid">
                         <div class="form-group"><label>Ton Rate (Rs):</label><input type="number" id="wizardTonRate" value="22"></div>
                         <div class="form-group"><label>Rest Rate (Rs):</label><input type="number" id="wizardRestRate" value="1100"></div>
                         <div class="form-group"><label>Layoff Rate (Rs):</label><input type="number" id="wizardLayoffRate" value="549"></div>
                         <div class="form-group"><label>Monthly Allowance (Rs):</label><input type="number" id="wizardAllowance" value="20000"></div>
-                        <!-- === WIZARD MEIN NAYE FIELDS ADD HUAY HAIN === -->
-                        <div class="form-group"><label>Unpaid Leaves:</label><input type="number" id="wizardUnpaidLeaves" value="20"></div>
-                        <div class="form-group"><label>Paid Leaves:</label><input type="number" id="wizardPaidLeaves" value="12"></div>
                     </div>
                 </div>
                 <div id="wizard-step-4" class="wizard-step">
@@ -305,7 +295,7 @@
         let isWorkerSettingsLocked = true;
         let currentWizardStep = 1;
 
-        // === APPDATA MEIN NAYI PROPERTIES ADD KI GAYI HAIN ===
+        // ===== `appData` MEIN NAYI SETTINGS ADD KI GAYI HAIN =====
         let appData = { 
             salaries: {}, 
             workers: [],
@@ -319,9 +309,9 @@
                 isPenaltyEnabled: false, 
                 penaltyAmount: 231, 
                 isWagonRateEnabled: false,
-                isSetupComplete: false,
-                unpaidLeaves: 20, // Default Unpaid Leaves
-                paidLeaves: 12    // Default Paid Leaves
+                totalUnpaidLeaves: 20, // Default value
+                totalPaidLeaves: 12,   // Default value
+                isSetupComplete: false
             }, 
             agreements: { 
                 current: { tonRate: 22, restRate: 1100, layoffRate: 549, wagonRate: 0, allowance: 20000, annualBenefits: 0 }, 
@@ -532,7 +522,7 @@
             }
         }
         
-        // === INITIALIZE NEW USER DATA FUNCTION MEIN BHI UPDATE KIYA GAYA HAI ===
+        // ===== `initializeNewUserData` MEIN BHI NAYI SETTINGS ADD KI GAYI HAIN =====
         async function initializeNewUserData() {
             appData = { 
                 salaries: {}, 
@@ -545,9 +535,9 @@
                     isPenaltyEnabled: false, 
                     penaltyAmount: 231, 
                     isWagonRateEnabled: false,
-                    isSetupComplete: false,
-                    unpaidLeaves: 20, // Default value
-                    paidLeaves: 12   // Default value
+                    totalUnpaidLeaves: 20, // Default value for new users
+                    totalPaidLeaves: 12,   // Default value for new users
+                    isSetupComplete: false
                 }, 
                 agreements: { 
                     current: { tonRate: 22, restRate: 1100, layoffRate: 549, wagonRate: 0, allowance: 20000, annualBenefits: 0 }, 
@@ -600,7 +590,6 @@
             }
         }
 
-        // === FINISH SETUP FUNCTION UPDATE HUA HAI ===
         async function finishSetup() {
             const workerCount = parseInt(document.getElementById('wizardWorkerCount').value);
             const workerNames = [];
@@ -620,10 +609,6 @@
             appData.agreements.current.layoffRate = parseFloat(document.getElementById('wizardLayoffRate').value) || 0;
             appData.agreements.current.allowance = parseFloat(document.getElementById('wizardAllowance').value) || 0;
             
-            // Leaves ko bhi setup wizard se save karna
-            appData.configs.unpaidLeaves = parseInt(document.getElementById('wizardUnpaidLeaves').value) || 20;
-            appData.configs.paidLeaves = parseInt(document.getElementById('wizardPaidLeaves').value) || 12;
-
             const agreementDate = new Date(agreementStartDate + "T00:00:00");
             const fiscalMonth = (agreementDate.getMonth() + 1).toString().padStart(2, '0');
             const fiscalDay = agreementDate.getDate().toString().padStart(2, '0');
@@ -686,24 +671,22 @@
             showAlert('Daily entry saved successfully!', 'success');
         }
 
-        // === YE FUNCTION UPDATE HUA HAI ===
+        // ===== `calculateDayEarnings` MEIN HARD-CODED `32` KO REPLACE KIYA GAYA HAI =====
         function calculateDayEarnings(entryDate, dayType, tonnage, wagons, presentWorkers, rates) {
             const earnings = {};
             const allWorkers = appData.workers;
             const absentWorkers = allWorkers.filter(w => !presentWorkers.includes(w));
             let penaltyPerPresentWorker = 0;
             const penaltyTriggeringAbsentees = [];
-
-            // Default values agar user ne set na ki hon
-            const unpaidLeaves = appData.configs.unpaidLeaves || 20;
-            const paidLeaves = appData.configs.paidLeaves || 12;
-            const totalAllowedLeaves = unpaidLeaves + paidLeaves;
+            
+            // Getting total leaves from settings
+            const totalAllowedLeaves = (appData.configs.totalUnpaidLeaves || 20) + (appData.configs.totalPaidLeaves || 12);
 
             if (appData.configs.isPenaltyEnabled && absentWorkers.length > 0) {
                 const [fiscalYearStart, fiscalYearEnd] = getCurrentFiscalYearDates(entryDate); 
                 
                 absentWorkers.forEach(worker => {
-                    // Yahan 32 ki jagah dynamic value istemal ho rahi hai
+                    // Using total allowed leaves from settings instead of 32
                     if (getWorkerTotalLeaves(worker, fiscalYearStart, fiscalYearEnd) >= totalAllowedLeaves) {
                         penaltyTriggeringAbsentees.push(worker);
                     }
@@ -991,17 +974,18 @@
             displayBonusReport(calculateAnnualBonus(f), f); 
         }
         
-        // === YE FUNCTION UPDATE HUA HAI ===
+        // ===== `calculateAnnualBonus` MEIN HARD-CODED `20` AUR `12` KO REPLACE KIYA GAYA HAI =====
         function calculateAnnualBonus(fiscalYearStartDateString) {
             const fiscalStart = new Date(fiscalYearStartDateString);
             const fiscalEnd = new Date(fiscalStart);
             fiscalEnd.setFullYear(fiscalEnd.getFullYear() + 1);
             fiscalEnd.setDate(fiscalEnd.getDate() - 1);
 
-            const unpaidLeaves = appData.configs.unpaidLeaves || 20;
-            const paidLeaves = appData.configs.paidLeaves || 12;
-
             const workerBonusData = {};
+            // Getting leave values from settings
+            const unpaidLeaves = appData.configs.totalUnpaidLeaves || 20;
+            const paidLeaves = appData.configs.totalPaidLeaves || 12;
+
             appData.workers.forEach(workerName => {
                 let annualEarnings = 0;
                 let totalLeaves = 0; 
@@ -1026,7 +1010,7 @@
                 const bonus = avgMonthlySalary;
                 const gratuity = avgMonthlySalary;
                 
-                // Yahan 20 aur 12 ki jagah dynamic values istemal ho rahi hain
+                // Using leave values from settings
                 const paidLeavesUsed = Math.min(Math.max(totalLeaves - unpaidLeaves, 0), paidLeaves);
                 const remainingPaidLeaves = paidLeaves - paidLeavesUsed;
                 const paidLeavesBonus = remainingPaidLeaves * appData.agreements.current.layoffRate;
@@ -1125,17 +1109,17 @@
             return arrearsByWorker;
         }
 
-        // === YE FUNCTION UPDATE HUA HAI ===
+        // ===== `calculateAnnualBonusWithRates` MEIN BHI HARD-CODED VALUES REPLACE KI GAYI HAIN =====
         function calculateAnnualBonusWithRates(rates, fiscalYearStartDateString) {
             const fiscalStart = new Date(fiscalYearStartDateString);
             const fiscalEnd = new Date(fiscalStart);
             fiscalEnd.setFullYear(fiscalEnd.getFullYear() + 1);
             fiscalEnd.setDate(fiscalEnd.getDate() - 1);
 
-            const unpaidLeaves = appData.configs.unpaidLeaves || 20;
-            const paidLeaves = appData.configs.paidLeaves || 12;
-
             const workerBonusData = {};
+            const unpaidLeaves = appData.configs.totalUnpaidLeaves || 20;
+            const paidLeaves = appData.configs.totalPaidLeaves || 12;
+
             appData.workers.forEach(workerName => {
                 let annualEarnings = 0;
                 let totalLeaves = 0;
@@ -1159,7 +1143,6 @@
                 const bonus = avgMonthlySalary;
                 const gratuity = avgMonthlySalary;
                 
-                // Yahan 20 aur 12 ki jagah dynamic values istemal ho rahi hain
                 const paidLeavesUsed = Math.min(Math.max(totalLeaves - unpaidLeaves, 0), paidLeaves);
                 const remainingPaidLeaves = paidLeaves - paidLeavesUsed;
                 const paidLeavesBonus = remainingPaidLeaves * rates.layoffRate;
@@ -1176,16 +1159,16 @@
         
         function generateLeavesReport() { const f = document.getElementById('leavesFiscalYear').value; if(!f){showAlert('Please select a fiscal year','error'); return;} displayLeavesReport(calculateLeavesReport(f), f); }
         
-        // === YE FUNCTION UPDATE HUA HAI ===
+        // ===== `calculateLeavesReport` MEIN HARD-CODED VALUES REPLACE KI GAYI HAIN =====
         function calculateLeavesReport(f) {
             const s = new Date(f), e = new Date(s);
             e.setFullYear(e.getFullYear() + 1);
             e.setDate(e.getDate() - 1);
             const w = {};
-            
-            const unpaidLeavesConfig = appData.configs.unpaidLeaves || 20;
-            const paidLeavesConfig = appData.configs.paidLeaves || 12;
-            const totalLeavesConfig = unpaidLeavesConfig + paidLeavesConfig;
+
+            const unpaidLeaves = appData.configs.totalUnpaidLeaves || 20;
+            const paidLeaves = appData.configs.totalPaidLeaves || 12;
+            const totalLeavesAllowed = unpaidLeaves + paidLeaves;
 
             appData.workers.forEach(b => {
                 let t = 0, d = 0;
@@ -1201,13 +1184,10 @@
                         }
                     }
                 });
-
-                // Yahan 20, 12 aur 32 ki jagah dynamic values istemal ho rahi hain
-                const u = Math.min(t, unpaidLeavesConfig);
-                const p = Math.min(Math.max(t - unpaidLeavesConfig, 0), paidLeavesConfig);
-                const x = Math.max(t - totalLeavesConfig, 0);
-                const R = paidLeavesConfig - p;
-                
+                const u = Math.min(t, unpaidLeaves);
+                const p = Math.min(Math.max(t - unpaidLeaves, 0), paidLeaves);
+                const x = Math.max(t - totalLeavesAllowed, 0);
+                const R = paidLeaves - p;
                 w[b] = {
                     totalLeaves: t,
                     unpaidLeaves: u,
@@ -1220,21 +1200,32 @@
             return w;
         }
         
-        // === YE FUNCTION UPDATE HUA HAI ===
+        // ===== `displayLeavesReport` MEIN HARD-CODED TEXT KO DYNAMIC KIYA GAYA HAI =====
         function displayLeavesReport(l,f){
-            const c=document.getElementById('leavesResults'),v=appData.permissions?.viewableWorkers||[],s=new Date(f).getFullYear();
-            const unpaid = appData.configs.unpaidLeaves || 20;
-            const paid = appData.configs.paidLeaves || 12;
-            const total = unpaid + paid;
+            const c = document.getElementById('leavesResults'),
+                v = appData.permissions?.viewableWorkers||[],
+                s = new Date(f).getFullYear();
             
-            // Info message ko bhi dynamic kar diya gaya hai
-            let h=`<h3>Leaves Report: ${s}-${s+1}</h3><div class="alert alert-info"><strong>Leave Structure:</strong> ${unpaid} Unpaid Leaves + ${paid} Paid Leaves = ${total} Total Annual Leaves</div><div class="report-grid">`;
-            
+            const unpaidLeaves = appData.configs.totalUnpaidLeaves || 20;
+            const paidLeaves = appData.configs.totalPaidLeaves || 12;
+            const totalLeavesAllowed = unpaidLeaves + paidLeaves;
+
+            let h = `<h3>Leaves Report: ${s}-${s+1}</h3>
+            <div class="alert alert-info"><strong>Leave Structure:</strong> ${unpaidLeaves} Unpaid Leaves + ${paidLeaves} Paid Leaves = ${totalLeavesAllowed} Total Annual Leaves</div>
+            <div class="report-grid">`;
+
             appData.workers.forEach(w=>{
                 if(v.includes(w)){
                     const d=l[w]||{};
-                    // Report display ko bhi dynamic kar diya gaya hai
-                    h+=`<div class="report-card"><strong>${w}</strong><br>Work Days: ${d.workDays||0}<br>Total Leaves: ${d.totalLeaves||0}<br>Unpaid Leaves: ${d.unpaidLeaves||0}/${unpaid}<br>Paid Leaves Used: ${d.paidLeaves||0}/${paid}<br>Remaining Paid: ${d.remainingPaidLeaves||0}<br>${(d.excessLeaves||0)>0?`<span style="color:#e53e3e;">Excess Leaves: ${d.excessLeaves}</span>`:''}</div>`;
+                    h+=`<div class="report-card">
+                        <strong>${w}</strong><br>
+                        Work Days: ${d.workDays||0}<br>
+                        Total Leaves: ${d.totalLeaves||0}<br>
+                        Unpaid Leaves: ${d.unpaidLeaves||0}/${unpaidLeaves}<br>
+                        Paid Leaves Used: ${d.paidLeaves||0}/${paidLeaves}<br>
+                        Remaining Paid: ${d.remainingPaidLeaves||0}<br>
+                        ${(d.excessLeaves||0)>0?`<span style="color:#e53e3e;">Excess Leaves: ${d.excessLeaves}</span>`:''}
+                        </div>`;
                 } else {
                     h+=`<div class="report-card" style="background:#f1f1f1;border-left-color:#a0a0a0;"><strong>${w}</strong><br><span style="color:#6200EE;font-weight:500;">Contact admin to view details</span></div>`;
                 }
@@ -1243,20 +1234,19 @@
             c.innerHTML=h;
         }
         
-        // === YE FUNCTION UPDATE HUA HAI ===
+        // ===== `loadSettings` FUNCTION MEIN NAYE FIELDS KO LOAD KARNE KA CODE ADD KIYA GAYA HAI =====
         function loadSettings() {
             if (!appData.configs) return;
             document.getElementById('workerCount').value = appData.configs.workerCount;
             document.getElementById('agreementStartDate').value = appData.configs.agreementStartDate;
             document.getElementById('fiscalYearStart').value = appData.configs.fiscalYearStart;
-            
-            // Naye fields ko load karna
-            document.getElementById('unpaidLeaves').value = appData.configs.unpaidLeaves || 20;
-            document.getElementById('paidLeaves').value = appData.configs.paidLeaves || 12;
-
             document.getElementById('enableWagonRate').checked = appData.configs.isWagonRateEnabled;
             document.getElementById('enablePenalty').checked = appData.configs.isPenaltyEnabled;
             document.getElementById('penaltyAmount').value = appData.configs.penaltyAmount;
+            // Load new leave settings
+            document.getElementById('unpaidLeaves').value = appData.configs.totalUnpaidLeaves || 20;
+            document.getElementById('paidLeaves').value = appData.configs.totalPaidLeaves || 12;
+
             document.getElementById('penaltyAmountContainer').style.display = appData.configs.isPenaltyEnabled ? 'block' : 'none';
             toggleWagonUIElements(appData.configs.isWagonRateEnabled);
             
@@ -1275,7 +1265,7 @@
                 div.innerHTML = `<label>Worker ${index+1}:</label><div style="display:flex;gap:10px;"><input type="text" value="${worker}" onchange="updateWorkerName(${index}, this.value)" style="flex:1;" ${disabledAttr}><button onclick="removeWorker(${index})" class="btn btn-danger" style="padding:8px 12px;${isWorkerSettingsLocked?'display:none;':''}">Remove</button></div>`;
                 container.appendChild(div);
             });
-            managementContainer.innerHTML = isWorkerSettingsLocked ? `` : `<button onclick="addWorker()" class="btn btn-success">Add Worker</button>`;
+            managementContainer.innerHTML = isWorkerSettingsLocked ? `<button onclick="unlockWorkerSettings()" class="btn">Unlock Worker Settings</button>` : `<button onclick="addWorker()" class="btn btn-success">Add Worker</button>`;
         }
 
         function unlockWorkerSettings() {
@@ -1290,7 +1280,7 @@
         
         async function updateWorkerName(index, newName) { if (newName.trim()) appData.workers[index] = newName.trim(); }
         
-        // === YE FUNCTION UPDATE HUA HAI ===
+        // ===== `saveSettings` FUNCTION MEIN NAYE FIELDS KO SAVE KARNE KA CODE ADD KIYA GAYA HAI =====
         async function saveSettings() {
             if (!isWorkerSettingsLocked) {
                 const workerInputs = document.querySelectorAll('#workersList input[type="text"]'), newWorkerNames = [];
@@ -1312,11 +1302,11 @@
             appData.configs.isWagonRateEnabled = document.getElementById('enableWagonRate').checked;
             appData.configs.isPenaltyEnabled = document.getElementById('enablePenalty').checked;
             appData.configs.penaltyAmount = parseFloat(document.getElementById('penaltyAmount').value) || 231;
-
-            // Naye fields ko save karna
-            appData.configs.unpaidLeaves = parseInt(document.getElementById('unpaidLeaves').value) || 20;
-            appData.configs.paidLeaves = parseInt(document.getElementById('paidLeaves').value) || 12;
             
+            // Save new leave settings
+            appData.configs.totalUnpaidLeaves = parseInt(document.getElementById('unpaidLeaves').value) || 20;
+            appData.configs.totalPaidLeaves = parseInt(document.getElementById('paidLeaves').value) || 12;
+
             await saveUserData();
             showAlert('Settings saved successfully!', 'success');
             isWorkerSettingsLocked = true;
@@ -1331,7 +1321,6 @@
             if (inputField.value.trim() === correctPhrase) {
                 document.getElementById('worker-management-buttons').style.display = 'block';
                 document.getElementById('unlock-prompt').style.display = 'none';
-                unlockWorkerSettings();
             } else {
                 showAlert('Aapne sahi jumla type nahi kiya. Dobara koshish karein.', 'error');
             }
