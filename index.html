@@ -174,8 +174,37 @@
         <div id="agreements" class="page"><h2>📋 Agreements Management</h2><p>Manage current and new agreement rates</p><div class="two-column"><div class="agreement-section"><h3>Current Agreement</h3><div class="rate-grid"><div class="form-group"><label>Ton Rate (Rs):</label><input type="number" id="currentTonRate"></div><div class="form-group"><label>Rest Rate (Rs):</label><input type="number" id="currentRestRate"></div><div class="form-group"><label>Layoff Rate (Rs):</label><input type="number" id="currentLayoffRate"></div><div class="form-group wagon-rate-field"><label>Wagon Rate (Rs):</label><input type="number" id="currentWagonRate"></div><div class="form-group"><label>Monthly Allowance (Rs):</label><input type="number" id="currentAllowance"></div><div class="form-group"><label>Annual Benefits (Rs):</label><input type="number" id="currentAnnualBenefits"></div></div></div><div class="agreement-section"><h3>New Agreement</h3><div class="rate-grid"><div class="form-group"><label>Ton Rate (Rs):</label><input type="number" id="newTonRate"></div><div class="form-group"><label>Rest Rate (Rs):</label><input type="number" id="newRestRate"></div><div class="form-group"><label>Layoff Rate (Rs):</label><input type="number" id="newLayoffRate"></div><div class="form-group wagon-rate-field"><label>Wagon Rate (Rs):</label><input type="number" id="newWagonRate"></div><div class="form-group"><label>Monthly Allowance (Rs):</label><input type="number" id="newAllowance"></div><div class="form-group"><label>Annual Benefits (Rs):</label><input type="number" id="newAnnualBenefits"></div></div></div></div><button onclick="saveAgreements()" class="btn">Save Agreements</button></div>
         <div id="salaries" class="page"><h2>💰 Salary Reports</h2><p>View salary reports for different pay periods</p><div class="form-group"><label>Select Pay Period:</label><select id="payPeriod"><option value="">Select Period</option></select></div><button onclick="generateSalaryReport()" class="btn">Generate Report</button><div id="salaryResults"></div></div>
         <div id="bonus" class="page"><h2>🎁 Annual Bonus & Gratuity</h2><p>Calculate annual bonus, gratuity and paid leaves bonus</p><div class="form-group"><label>Select Fiscal Year:</label><select id="fiscalYear"><option value="">Select Year</option></select></div><button onclick="calculateBonus()" class="btn">Calculate Bonus</button><div id="bonusResults"></div></div>
-        <div id="arrears" class="page"><h2>📊 Arrears Calculation</h2><p>Calculate pending arrears based on agreement differences</p><button onclick="calculateArrears()" class="btn">Calculate Automatic Arrears</button><div id="arrearsResults"></div></div>
+        
+        <div id="arrears" class="page">
+            <h2>📊 Arrears Calculation</h2>
+            
+            <!-- Existing Section -->
+            <p>Calculate pending arrears based on agreement differences since the start date.</p>
+            <button onclick="calculateArrears()" class="btn">Calculate Automatic Arrears</button>
+            <div id="arrearsResults"></div>
+
+            <!-- === NAYA SECTION ADD HUA HAI === -->
+            <div class="settings-section">
+                <h3>Calculate Arrears for a Specific Period</h3>
+                <p>Select a start and end date to calculate salary and allowance arrears for that specific time frame.</p>
+                <div class="two-column">
+                    <div class="form-group">
+                        <label for="periodArrearsStartDate">Start Date:</label>
+                        <input type="date" id="periodArrearsStartDate">
+                    </div>
+                    <div class="form-group">
+                        <label for="periodArrearsEndDate">End Date:</label>
+                        <input type="date" id="periodArrearsEndDate">
+                    </div>
+                </div>
+                <button onclick="calculateAndDisplayPeriodArrears()" class="btn">Calculate Period Arrears</button>
+                <div id="periodArrearsResults"></div>
+            </div>
+            <!-- === SECTION END === -->
+        </div>
+
         <div id="leaves" class="page"><h2>🏖️ Leaves Report</h2><p>Track annual leaves for all workers</p><div class="form-group"><label>Select Fiscal Year:</label><select id="leavesFiscalYear"><option value="">Select Year</option></select></div><button onclick="generateLeavesReport()" class="btn">Generate Leaves Report</button><div id="leavesResults"></div></div>
+        
         <div id="settings" class="page">
             <h2>⚙️ Settings</h2><p>Configure your application settings</p>
             <h3>General Settings</h3>
@@ -184,23 +213,25 @@
             <div class="form-group"><label>Fiscal Year Start (MM-DD):</label><input type="text" id="fiscalYearStart" placeholder="10-10" pattern="[0-9]{2}-[0-9]{2}" disabled></div>
             
             <div class="settings-section">
+                <h3>Leave Settings</h3>
+                <div class="two-column">
+                    <div class="form-group">
+                        <label for="unpaidLeaves">Total Unpaid Leaves (Salana)</label>
+                        <input type="number" id="unpaidLeaves" placeholder="e.g., 20">
+                    </div>
+                    <div class="form-group">
+                        <label for="paidLeaves">Total Paid Leaves (Salana)</label>
+                        <input type="number" id="paidLeaves" placeholder="e.g., 12">
+                    </div>
+                </div>
+            </div>
+
+            <div class="settings-section">
                 <h3>Feature Controls</h3>
                 <div class="checkbox-group">
                     <input type="checkbox" id="enableWagonRate">
                     <label for="enableWagonRate">Enable Wagon Rate Calculation</label>
                 </div>
-                 <!-- ===== NAYE FIELDS YAHAN ADD KIYE GAYE HAIN ===== -->
-                <div class="two-column" style="gap: 16px;">
-                    <div class="form-group">
-                        <label for="unpaidLeaves">Total Unpaid Leaves</label>
-                        <input type="number" id="unpaidLeaves" placeholder="e.g., 20">
-                    </div>
-                    <div class="form-group">
-                        <label for="paidLeaves">Total Paid Leaves</label>
-                        <input type="number" id="paidLeaves" placeholder="e.g., 12">
-                    </div>
-                </div>
-                 <!-- ===== END OF NEW FIELDS ===== -->
                 <div class="checkbox-group">
                     <input type="checkbox" id="enablePenalty">
                     <label for="enablePenalty">Enable Excess Leave Penalty</label>
@@ -220,6 +251,7 @@
                     <span>Worker ke naam tabdeel karne se purane data aur hisaab par asar par sakta hai. Ehtiyat se kaam lein.</span>
                 </div>
                 <div id="workersList"></div>
+        
                 <div id="unlock-prompt">
                     <div class="form-group">
                         <label>Worker settings ko unlock karne ke liye neeche diya gaya jumla type karein:</label>
@@ -228,6 +260,7 @@
                     </div>
                     <button onclick="checkUnlockKey()" class="btn">Unhide Karein</button>
                 </div>
+
                 <div id="worker-management-buttons" style="display:none;">
                 </div>
             </div>
@@ -260,13 +293,15 @@
                     </div>
                 </div>
                 <div id="wizard-step-3" class="wizard-step">
-                    <h3>Step 3: Agreement Details</h3>
-                    <p class="description">Apne "Current Agreement" ke rates yahan darj karein.</p>
+                    <h3>Step 3: Agreement & Leave Details</h3>
+                    <p class="description">Apne "Current Agreement" ke rates aur salana chuttiyan yahan darj karein.</p>
                     <div class="rate-grid">
                         <div class="form-group"><label>Ton Rate (Rs):</label><input type="number" id="wizardTonRate" value="22"></div>
                         <div class="form-group"><label>Rest Rate (Rs):</label><input type="number" id="wizardRestRate" value="1100"></div>
                         <div class="form-group"><label>Layoff Rate (Rs):</label><input type="number" id="wizardLayoffRate" value="549"></div>
                         <div class="form-group"><label>Monthly Allowance (Rs):</label><input type="number" id="wizardAllowance" value="20000"></div>
+                        <div class="form-group"><label>Unpaid Leaves:</label><input type="number" id="wizardUnpaidLeaves" value="20"></div>
+                        <div class="form-group"><label>Paid Leaves:</label><input type="number" id="wizardPaidLeaves" value="12"></div>
                     </div>
                 </div>
                 <div id="wizard-step-4" class="wizard-step">
@@ -295,7 +330,6 @@
         let isWorkerSettingsLocked = true;
         let currentWizardStep = 1;
 
-        // ===== `appData` MEIN NAYI SETTINGS ADD KI GAYI HAIN =====
         let appData = { 
             salaries: {}, 
             workers: [],
@@ -309,9 +343,9 @@
                 isPenaltyEnabled: false, 
                 penaltyAmount: 231, 
                 isWagonRateEnabled: false,
-                totalUnpaidLeaves: 20, // Default value
-                totalPaidLeaves: 12,   // Default value
-                isSetupComplete: false
+                isSetupComplete: false,
+                unpaidLeaves: 20,
+                paidLeaves: 12
             }, 
             agreements: { 
                 current: { tonRate: 22, restRate: 1100, layoffRate: 549, wagonRate: 0, allowance: 20000, annualBenefits: 0 }, 
@@ -522,7 +556,6 @@
             }
         }
         
-        // ===== `initializeNewUserData` MEIN BHI NAYI SETTINGS ADD KI GAYI HAIN =====
         async function initializeNewUserData() {
             appData = { 
                 salaries: {}, 
@@ -535,9 +568,9 @@
                     isPenaltyEnabled: false, 
                     penaltyAmount: 231, 
                     isWagonRateEnabled: false,
-                    totalUnpaidLeaves: 20, // Default value for new users
-                    totalPaidLeaves: 12,   // Default value for new users
-                    isSetupComplete: false
+                    isSetupComplete: false,
+                    unpaidLeaves: 20,
+                    paidLeaves: 12
                 }, 
                 agreements: { 
                     current: { tonRate: 22, restRate: 1100, layoffRate: 549, wagonRate: 0, allowance: 20000, annualBenefits: 0 }, 
@@ -609,6 +642,9 @@
             appData.agreements.current.layoffRate = parseFloat(document.getElementById('wizardLayoffRate').value) || 0;
             appData.agreements.current.allowance = parseFloat(document.getElementById('wizardAllowance').value) || 0;
             
+            appData.configs.unpaidLeaves = parseInt(document.getElementById('wizardUnpaidLeaves').value) || 20;
+            appData.configs.paidLeaves = parseInt(document.getElementById('wizardPaidLeaves').value) || 12;
+
             const agreementDate = new Date(agreementStartDate + "T00:00:00");
             const fiscalMonth = (agreementDate.getMonth() + 1).toString().padStart(2, '0');
             const fiscalDay = agreementDate.getDate().toString().padStart(2, '0');
@@ -671,22 +707,21 @@
             showAlert('Daily entry saved successfully!', 'success');
         }
 
-        // ===== `calculateDayEarnings` MEIN HARD-CODED `32` KO REPLACE KIYA GAYA HAI =====
         function calculateDayEarnings(entryDate, dayType, tonnage, wagons, presentWorkers, rates) {
             const earnings = {};
             const allWorkers = appData.workers;
             const absentWorkers = allWorkers.filter(w => !presentWorkers.includes(w));
             let penaltyPerPresentWorker = 0;
             const penaltyTriggeringAbsentees = [];
-            
-            // Getting total leaves from settings
-            const totalAllowedLeaves = (appData.configs.totalUnpaidLeaves || 20) + (appData.configs.totalPaidLeaves || 12);
+
+            const unpaidLeaves = appData.configs.unpaidLeaves || 20;
+            const paidLeaves = appData.configs.paidLeaves || 12;
+            const totalAllowedLeaves = unpaidLeaves + paidLeaves;
 
             if (appData.configs.isPenaltyEnabled && absentWorkers.length > 0) {
                 const [fiscalYearStart, fiscalYearEnd] = getCurrentFiscalYearDates(entryDate); 
                 
                 absentWorkers.forEach(worker => {
-                    // Using total allowed leaves from settings instead of 32
                     if (getWorkerTotalLeaves(worker, fiscalYearStart, fiscalYearEnd) >= totalAllowedLeaves) {
                         penaltyTriggeringAbsentees.push(worker);
                     }
@@ -974,18 +1009,16 @@
             displayBonusReport(calculateAnnualBonus(f), f); 
         }
         
-        // ===== `calculateAnnualBonus` MEIN HARD-CODED `20` AUR `12` KO REPLACE KIYA GAYA HAI =====
         function calculateAnnualBonus(fiscalYearStartDateString) {
             const fiscalStart = new Date(fiscalYearStartDateString);
             const fiscalEnd = new Date(fiscalStart);
             fiscalEnd.setFullYear(fiscalEnd.getFullYear() + 1);
             fiscalEnd.setDate(fiscalEnd.getDate() - 1);
 
-            const workerBonusData = {};
-            // Getting leave values from settings
-            const unpaidLeaves = appData.configs.totalUnpaidLeaves || 20;
-            const paidLeaves = appData.configs.totalPaidLeaves || 12;
+            const unpaidLeaves = appData.configs.unpaidLeaves || 20;
+            const paidLeaves = appData.configs.paidLeaves || 12;
 
+            const workerBonusData = {};
             appData.workers.forEach(workerName => {
                 let annualEarnings = 0;
                 let totalLeaves = 0; 
@@ -1010,7 +1043,6 @@
                 const bonus = avgMonthlySalary;
                 const gratuity = avgMonthlySalary;
                 
-                // Using leave values from settings
                 const paidLeavesUsed = Math.min(Math.max(totalLeaves - unpaidLeaves, 0), paidLeaves);
                 const remainingPaidLeaves = paidLeaves - paidLeavesUsed;
                 const paidLeavesBonus = remainingPaidLeaves * appData.agreements.current.layoffRate;
@@ -1109,17 +1141,16 @@
             return arrearsByWorker;
         }
 
-        // ===== `calculateAnnualBonusWithRates` MEIN BHI HARD-CODED VALUES REPLACE KI GAYI HAIN =====
         function calculateAnnualBonusWithRates(rates, fiscalYearStartDateString) {
             const fiscalStart = new Date(fiscalYearStartDateString);
             const fiscalEnd = new Date(fiscalStart);
             fiscalEnd.setFullYear(fiscalEnd.getFullYear() + 1);
             fiscalEnd.setDate(fiscalEnd.getDate() - 1);
 
-            const workerBonusData = {};
-            const unpaidLeaves = appData.configs.totalUnpaidLeaves || 20;
-            const paidLeaves = appData.configs.totalPaidLeaves || 12;
+            const unpaidLeaves = appData.configs.unpaidLeaves || 20;
+            const paidLeaves = appData.configs.paidLeaves || 12;
 
+            const workerBonusData = {};
             appData.workers.forEach(workerName => {
                 let annualEarnings = 0;
                 let totalLeaves = 0;
@@ -1157,18 +1188,111 @@
             const c = document.getElementById('arrearsResults'), v = appData.permissions?.viewableWorkers || []; let h = `<h3>Arrears Calculation Report</h3><p>From Agreement Start Date: ${appData.configs.agreementStartDate}</p><div class="report-grid">`; appData.workers.forEach(w => { if (v.includes(w)) { const d=a[w]||{}; h+=`<div class="report-card"><strong>${w}</strong><br>Salary Arrears: Rs. ${(d.salaryArrears||0).toFixed(2)}<br>Allowance Arrears: Rs. ${(d.allowanceArrears||0).toFixed(2)}<br>Bonus Arrears: Rs. ${(d.bonusArrears||0).toFixed(2)}<br>Annual Benefits Arrears: Rs. ${(d.annualBenefitsArrears||0).toFixed(2)}<br><strong>Total Arrears: Rs. ${(d.totalArrears||0).toFixed(2)}</strong></div>`;} else {h+=`<div class="report-card" style="background:#f1f1f1;border-left-color:#a0a0a0;"><strong>${w}</strong><br><span style="color:#6200EE;font-weight:500;">Contact admin to view details</span></div>`;}}); h+=`</div>`; c.innerHTML = h;
         }
         
+        // === NAYI FUNCTIONS ADD KI GAYI HAIN ===
+        function calculateAndDisplayPeriodArrears() {
+            const startDate = document.getElementById('periodArrearsStartDate').value;
+            const endDate = document.getElementById('periodArrearsEndDate').value;
+            const resultsContainer = document.getElementById('periodArrearsResults');
+
+            if (!startDate || !endDate) {
+                showAlert('Please select both a start and end date.', 'error');
+                return;
+            }
+
+            if (new Date(startDate) > new Date(endDate)) {
+                showAlert('Start date cannot be after the end date.', 'error');
+                return;
+            }
+
+            resultsContainer.innerHTML = '<div class="loading"><div class="spinner"></div><p>Calculating period arrears...</p></div>'; 
+            
+            setTimeout(() => {
+                const periodArrears = calculateArrearsForPeriod(startDate, endDate);
+                displayPeriodArrears(periodArrears, startDate, endDate);
+            }, 500);
+        }
+
+        function calculateArrearsForPeriod(startDateStr, endDateStr) {
+            const startDate = new Date(startDateStr + "T00:00:00");
+            const endDate = new Date(endDateStr + "T00:00:00");
+            
+            const arrearsByWorker = {};
+            appData.workers.forEach(worker => {
+                arrearsByWorker[worker] = { salaryArrears: 0, allowanceArrears: 0, totalArrears: 0 };
+            });
+
+            // 1. Calculate SALARY Arrears for the period
+            Object.values(appData.salaries || {}).forEach(entry => {
+                const entryDate = new Date(entry.date + "T00:00:00");
+                if (entryDate >= startDate && entryDate <= endDate) {
+                    const earningsCurrent = calculateDayEarnings(entry.date, entry.type, entry.tonnage, entry.wagons, entry.presentWorkers, appData.agreements.current);
+                    const earningsNew = calculateDayEarnings(entry.date, entry.type, entry.tonnage, entry.wagons, entry.presentWorkers, appData.agreements.new);
+                    
+                    appData.workers.forEach(worker => {
+                        arrearsByWorker[worker].salaryArrears += ((earningsNew[worker] || 0) - (earningsCurrent[worker] || 0));
+                    });
+                }
+            });
+
+            // 2. Calculate ALLOWANCE Arrears for the period (based on number of months)
+            const endMonth = endDate.getFullYear() * 12 + endDate.getMonth();
+            const startMonth = startDate.getFullYear() * 12 + startDate.getMonth();
+            const monthsPassed = (endMonth - startMonth) + 1;
+            const allowanceDifference = appData.agreements.new.allowance - appData.agreements.current.allowance;
+
+            appData.workers.forEach(worker => {
+                arrearsByWorker[worker].allowanceArrears = monthsPassed * allowanceDifference;
+            });
+
+            // 3. Calculate Total Arrears
+            appData.workers.forEach(worker => {
+                const w = arrearsByWorker[worker];
+                w.totalArrears = w.salaryArrears + w.allowanceArrears;
+            });
+
+            return arrearsByWorker;
+        }
+
+        function displayPeriodArrears(arrearsData, startDate, endDate) {
+            const container = document.getElementById('periodArrearsResults');
+            const viewableWorkers = appData.permissions?.viewableWorkers || [];
+            let html = `<h3>Arrears Report for ${startDate} to ${endDate}</h3>
+                        <p style="font-size: 14px; color: #5f6368; margin-top: -8px; margin-bottom: 12px;">Note: This calculation only includes Salary and Monthly Allowance arrears. Bonus and Annual Benefits are calculated on a yearly basis.</p>
+                        <div class="report-grid">`;
+
+            appData.workers.forEach(worker => {
+                const data = arrearsData[worker] || {};
+                if (viewableWorkers.includes(worker)) {
+                    html += `<div class="report-card">
+                                <strong>${worker}</strong><br>
+                                Salary Arrears: Rs. ${(data.salaryArrears || 0).toFixed(2)}<br>
+                                Allowance Arrears: Rs. ${(data.allowanceArrears || 0).toFixed(2)}<br>
+                                <strong>Total Arrears for Period: Rs. ${(data.totalArrears || 0).toFixed(2)}</strong>
+                             </div>`;
+                } else {
+                    html += `<div class="report-card" style="background:#f1f1f1;border-left-color:#a0a0a0;">
+                                <strong>${worker}</strong><br>
+                                <span style="color:#6200EE;font-weight:500;">Contact admin to view details</span>
+                             </div>`;
+                }
+            });
+
+            html += `</div>`;
+            container.innerHTML = html;
+        }
+        // === FUNCTIONS END ===
+
         function generateLeavesReport() { const f = document.getElementById('leavesFiscalYear').value; if(!f){showAlert('Please select a fiscal year','error'); return;} displayLeavesReport(calculateLeavesReport(f), f); }
         
-        // ===== `calculateLeavesReport` MEIN HARD-CODED VALUES REPLACE KI GAYI HAIN =====
         function calculateLeavesReport(f) {
             const s = new Date(f), e = new Date(s);
             e.setFullYear(e.getFullYear() + 1);
             e.setDate(e.getDate() - 1);
             const w = {};
-
-            const unpaidLeaves = appData.configs.totalUnpaidLeaves || 20;
-            const paidLeaves = appData.configs.totalPaidLeaves || 12;
-            const totalLeavesAllowed = unpaidLeaves + paidLeaves;
+            
+            const unpaidLeavesConfig = appData.configs.unpaidLeaves || 20;
+            const paidLeavesConfig = appData.configs.paidLeaves || 12;
+            const totalLeavesConfig = unpaidLeavesConfig + paidLeavesConfig;
 
             appData.workers.forEach(b => {
                 let t = 0, d = 0;
@@ -1184,10 +1308,12 @@
                         }
                     }
                 });
-                const u = Math.min(t, unpaidLeaves);
-                const p = Math.min(Math.max(t - unpaidLeaves, 0), paidLeaves);
-                const x = Math.max(t - totalLeavesAllowed, 0);
-                const R = paidLeaves - p;
+
+                const u = Math.min(t, unpaidLeavesConfig);
+                const p = Math.min(Math.max(t - unpaidLeavesConfig, 0), paidLeavesConfig);
+                const x = Math.max(t - totalLeavesConfig, 0);
+                const R = paidLeavesConfig - p;
+                
                 w[b] = {
                     totalLeaves: t,
                     unpaidLeaves: u,
@@ -1200,32 +1326,18 @@
             return w;
         }
         
-        // ===== `displayLeavesReport` MEIN HARD-CODED TEXT KO DYNAMIC KIYA GAYA HAI =====
         function displayLeavesReport(l,f){
-            const c = document.getElementById('leavesResults'),
-                v = appData.permissions?.viewableWorkers||[],
-                s = new Date(f).getFullYear();
+            const c=document.getElementById('leavesResults'),v=appData.permissions?.viewableWorkers||[],s=new Date(f).getFullYear();
+            const unpaid = appData.configs.unpaidLeaves || 20;
+            const paid = appData.configs.paidLeaves || 12;
+            const total = unpaid + paid;
             
-            const unpaidLeaves = appData.configs.totalUnpaidLeaves || 20;
-            const paidLeaves = appData.configs.totalPaidLeaves || 12;
-            const totalLeavesAllowed = unpaidLeaves + paidLeaves;
-
-            let h = `<h3>Leaves Report: ${s}-${s+1}</h3>
-            <div class="alert alert-info"><strong>Leave Structure:</strong> ${unpaidLeaves} Unpaid Leaves + ${paidLeaves} Paid Leaves = ${totalLeavesAllowed} Total Annual Leaves</div>
-            <div class="report-grid">`;
-
+            let h=`<h3>Leaves Report: ${s}-${s+1}</h3><div class="alert alert-info"><strong>Leave Structure:</strong> ${unpaid} Unpaid Leaves + ${paid} Paid Leaves = ${total} Total Annual Leaves</div><div class="report-grid">`;
+            
             appData.workers.forEach(w=>{
                 if(v.includes(w)){
                     const d=l[w]||{};
-                    h+=`<div class="report-card">
-                        <strong>${w}</strong><br>
-                        Work Days: ${d.workDays||0}<br>
-                        Total Leaves: ${d.totalLeaves||0}<br>
-                        Unpaid Leaves: ${d.unpaidLeaves||0}/${unpaidLeaves}<br>
-                        Paid Leaves Used: ${d.paidLeaves||0}/${paidLeaves}<br>
-                        Remaining Paid: ${d.remainingPaidLeaves||0}<br>
-                        ${(d.excessLeaves||0)>0?`<span style="color:#e53e3e;">Excess Leaves: ${d.excessLeaves}</span>`:''}
-                        </div>`;
+                    h+=`<div class="report-card"><strong>${w}</strong><br>Work Days: ${d.workDays||0}<br>Total Leaves: ${d.totalLeaves||0}<br>Unpaid Leaves: ${d.unpaidLeaves||0}/${unpaid}<br>Paid Leaves Used: ${d.paidLeaves||0}/${paid}<br>Remaining Paid: ${d.remainingPaidLeaves||0}<br>${(d.excessLeaves||0)>0?`<span style="color:#e53e3e;">Excess Leaves: ${d.excessLeaves}</span>`:''}</div>`;
                 } else {
                     h+=`<div class="report-card" style="background:#f1f1f1;border-left-color:#a0a0a0;"><strong>${w}</strong><br><span style="color:#6200EE;font-weight:500;">Contact admin to view details</span></div>`;
                 }
@@ -1234,19 +1346,18 @@
             c.innerHTML=h;
         }
         
-        // ===== `loadSettings` FUNCTION MEIN NAYE FIELDS KO LOAD KARNE KA CODE ADD KIYA GAYA HAI =====
         function loadSettings() {
             if (!appData.configs) return;
             document.getElementById('workerCount').value = appData.configs.workerCount;
             document.getElementById('agreementStartDate').value = appData.configs.agreementStartDate;
             document.getElementById('fiscalYearStart').value = appData.configs.fiscalYearStart;
+            
+            document.getElementById('unpaidLeaves').value = appData.configs.unpaidLeaves || 20;
+            document.getElementById('paidLeaves').value = appData.configs.paidLeaves || 12;
+
             document.getElementById('enableWagonRate').checked = appData.configs.isWagonRateEnabled;
             document.getElementById('enablePenalty').checked = appData.configs.isPenaltyEnabled;
             document.getElementById('penaltyAmount').value = appData.configs.penaltyAmount;
-            // Load new leave settings
-            document.getElementById('unpaidLeaves').value = appData.configs.totalUnpaidLeaves || 20;
-            document.getElementById('paidLeaves').value = appData.configs.totalPaidLeaves || 12;
-
             document.getElementById('penaltyAmountContainer').style.display = appData.configs.isPenaltyEnabled ? 'block' : 'none';
             toggleWagonUIElements(appData.configs.isWagonRateEnabled);
             
@@ -1265,7 +1376,7 @@
                 div.innerHTML = `<label>Worker ${index+1}:</label><div style="display:flex;gap:10px;"><input type="text" value="${worker}" onchange="updateWorkerName(${index}, this.value)" style="flex:1;" ${disabledAttr}><button onclick="removeWorker(${index})" class="btn btn-danger" style="padding:8px 12px;${isWorkerSettingsLocked?'display:none;':''}">Remove</button></div>`;
                 container.appendChild(div);
             });
-            managementContainer.innerHTML = isWorkerSettingsLocked ? `<button onclick="unlockWorkerSettings()" class="btn">Unlock Worker Settings</button>` : `<button onclick="addWorker()" class="btn btn-success">Add Worker</button>`;
+            managementContainer.innerHTML = isWorkerSettingsLocked ? `` : `<button onclick="addWorker()" class="btn btn-success">Add Worker</button>`;
         }
 
         function unlockWorkerSettings() {
@@ -1280,7 +1391,6 @@
         
         async function updateWorkerName(index, newName) { if (newName.trim()) appData.workers[index] = newName.trim(); }
         
-        // ===== `saveSettings` FUNCTION MEIN NAYE FIELDS KO SAVE KARNE KA CODE ADD KIYA GAYA HAI =====
         async function saveSettings() {
             if (!isWorkerSettingsLocked) {
                 const workerInputs = document.querySelectorAll('#workersList input[type="text"]'), newWorkerNames = [];
@@ -1302,11 +1412,10 @@
             appData.configs.isWagonRateEnabled = document.getElementById('enableWagonRate').checked;
             appData.configs.isPenaltyEnabled = document.getElementById('enablePenalty').checked;
             appData.configs.penaltyAmount = parseFloat(document.getElementById('penaltyAmount').value) || 231;
-            
-            // Save new leave settings
-            appData.configs.totalUnpaidLeaves = parseInt(document.getElementById('unpaidLeaves').value) || 20;
-            appData.configs.totalPaidLeaves = parseInt(document.getElementById('paidLeaves').value) || 12;
 
+            appData.configs.unpaidLeaves = parseInt(document.getElementById('unpaidLeaves').value) || 20;
+            appData.configs.paidLeaves = parseInt(document.getElementById('paidLeaves').value) || 12;
+            
             await saveUserData();
             showAlert('Settings saved successfully!', 'success');
             isWorkerSettingsLocked = true;
@@ -1321,6 +1430,7 @@
             if (inputField.value.trim() === correctPhrase) {
                 document.getElementById('worker-management-buttons').style.display = 'block';
                 document.getElementById('unlock-prompt').style.display = 'none';
+                unlockWorkerSettings();
             } else {
                 showAlert('Aapne sahi jumla type nahi kiya. Dobara koshish karein.', 'error');
             }
