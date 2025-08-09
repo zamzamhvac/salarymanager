@@ -184,9 +184,7 @@
             <div id="entryResults"></div>
         </div>
         
-        <!-- ======================================================= -->
-        <!-- Agreements Page (Completely Rebuilt) -->
-        <!-- ======================================================= -->
+        <!-- Agreements Page (Rebuilt) -->
         <div id="agreements" class="page">
             <h2>📋 Agreements Management</h2>
             <p>Manage agreement rate history and future agreement details.</p>
@@ -235,7 +233,6 @@
             </div>
             <button onclick="saveNewAgreement()" class="btn">Save New Agreement Details</button>
         </div>
-
 
         <div id="salaries" class="page"><h2>💰 Salary Reports</h2><p>View salary reports for different pay periods</p><div class="form-group"><label>Select Pay Period:</label><select id="payPeriod"><option value="">Select Period</option></select></div><button onclick="generateSalaryReport()" class="btn">Generate Report</button><div id="salaryResults"></div></div>
         <div id="bonus" class="page"><h2>🎁 Annual Bonus & Gratuity</h2><p>Calculate annual bonus, gratuity and paid leaves bonus</p><div class="form-group"><label>Select Fiscal Year:</label><select id="fiscalYear"><option value="">Select Year</option></select></div><button onclick="calculateBonus()" class="btn">Calculate Bonus</button><div id="bonusResults"></div></div>
@@ -391,15 +388,11 @@
         let isWorkerSettingsLocked = true;
         let currentWizardStep = 1;
 
-        // =======================================================
-        // DEFAULT APPDATA OBJECT: Re-structured for Rate History
-        // =======================================================
+        // Default appData object with new 'history' structure
         let appData = { 
             salaries: {}, 
             workers: [],
-            permissions: {
-                viewableWorkers: []
-            },
+            permissions: { viewableWorkers: [] },
             configs: { 
                 workerCount: 8, 
                 agreementStartDate: '2023-10-10', 
@@ -412,26 +405,14 @@
                 paidLeaves: 12
             }, 
             agreements: { 
-                // 'current' is now 'history', an array of rate periods.
-                history: [
-                    { 
-                        effectiveDate: '2023-10-10',
-                        tonRate: 22, 
-                        restRate: 1100, 
-                        layoffRate: 549, 
-                        wagonRate: 0, 
-                        allowance: 17870, 
-                        annualBenefits: 0 
-                    }
-                ],
-                // 'new' remains the same for future arrears calculation.
+                history: [{ 
+                    effectiveDate: '2023-10-10',
+                    tonRate: 22, restRate: 1100, layoffRate: 549, 
+                    wagonRate: 0, allowance: 17870, annualBenefits: 0 
+                }],
                 new: { 
-                    tonRate: 25, 
-                    restRate: 1200, 
-                    layoffRate: 600, 
-                    wagonRate: 0, 
-                    allowance: 26000, 
-                    annualBenefits: 0 
+                    tonRate: 25, restRate: 1200, layoffRate: 600, 
+                    wagonRate: 0, allowance: 26000, annualBenefits: 0 
                 } 
             } 
         };
@@ -451,11 +432,7 @@
                 toggleNav();
             }
             switch(pageId) {
-                case 'daily-entry': 
-                    loadWorkerAttendance(); 
-                    populateHistorySelector();
-                    updateHistoryDisplay();
-                    break;
+                case 'daily-entry': loadWorkerAttendance(); populateHistorySelector(); updateHistoryDisplay(); break;
                 case 'agreements': loadAgreements(); break;
                 case 'salaries': loadPayPeriods(); break;
                 case 'bonus': case 'leaves': loadFiscalYears(); break;
@@ -466,18 +443,10 @@
         async function startApp() {
             try {
                 const response = await fetch('/.netlify/functions/get-config');
-                if (!response.ok) {
-                    throw new Error('Configuration fetch karne mein masla hua.');
-                }
+                if (!response.ok) throw new Error('Configuration fetch failed.');
                 const firebaseConfig = await response.json();
                 firebase.initializeApp(firebaseConfig);
-
-                try {
-                    const appCheck = firebase.appCheck();
-                    appCheck.activate(firebaseConfig.reCAPTCHAKey, true);
-                } catch (err) {
-                    console.error("App Check activation failed", err);
-                }
+                try { firebase.appCheck().activate(firebaseConfig.reCAPTCHAKey, true); } catch (err) { console.error("App Check activation failed", err); }
 
                 firebase.auth().onAuthStateChanged(async (user) => {
                     if (user) {
@@ -494,9 +463,7 @@
                     }
                 });
                 
-                document.querySelectorAll('.nav-btn').forEach(btn => {
-                    btn.addEventListener('click', () => showPage(btn.dataset.page));
-                });
+                document.querySelectorAll('.nav-btn').forEach(btn => btn.addEventListener('click', () => showPage(btn.dataset.page)));
                 document.getElementById('entryDate').value = new Date().toISOString().split('T')[0];
                 document.getElementById('dayType').addEventListener('change', function() {
                     document.getElementById('workDetails').style.display = this.value === 'rest' ? 'none' : 'block';
@@ -509,8 +476,8 @@
                 });
 
             } catch (error) {
-                console.error("Application start karne mein error:", error);
-                document.getElementById('main-content').innerHTML = `<div class="alert alert-error"><h2>Application Error</h2><p>Application configuration load nahi ho saki. Baraye meharbani baad mein try karen.</p></div>`;
+                console.error("Application start error:", error);
+                document.getElementById('main-content').innerHTML = `<div class="alert alert-error"><h2>Application Error</h2><p>Application configuration could not be loaded. Please try again later.</p></div>`;
             }
         }
         
@@ -523,7 +490,6 @@
             document.getElementById('userInfo').style.display = 'flex';
             document.getElementById('sideNav').style.display = 'flex';
             document.getElementById('userName').textContent = currentUser.displayName || currentUser.email;
-            
             setupUI();
             toggleWagonUIElements(appData.configs.isWagonRateEnabled);
             showPage('daily-entry');
@@ -535,58 +501,34 @@
             document.getElementById('appHeader').style.display = 'none';
             document.getElementById('sideNav').style.display = 'none';
             document.getElementById('setup-wizard-overlay').classList.remove('active');
-            if (document.getElementById('sideNav').classList.contains('open')) {
-                toggleNav();
-            }
+            if (document.getElementById('sideNav').classList.contains('open')) toggleNav();
         }
 
         function signIn() {
             const email = document.getElementById('loginEmail').value;
             const password = document.getElementById('loginPassword').value;
-            if (!email || !password) {
-                showAlert('Please enter both email and password', 'error');
-                return;
-            }
-            firebase.auth().signInWithEmailAndPassword(email, password)
-                .catch((error) => {
-                    showAlert(error.message, 'error');
-                });
+            if (!email || !password) { showAlert('Please enter both email and password', 'error'); return; }
+            firebase.auth().signInWithEmailAndPassword(email, password).catch((error) => showAlert(error.message, 'error'));
         }
 
         function signUp() {
             const email = document.getElementById('signupEmail').value;
             const password = document.getElementById('signupPassword').value;
             const companyName = document.getElementById('companyName').value.trim();
-            if (!email || password.length < 6) {
-                showAlert('Provide a valid email and a password of at least 6 characters.', 'error');
-                return;
-            }
-            if (!companyName) {
-                showAlert('Please enter your Company or Business Name.', 'error');
-                return;
-            }
-
+            if (!email || password.length < 6) { showAlert('Provide a valid email and a password of at least 6 characters.', 'error'); return; }
+            if (!companyName) { showAlert('Please enter your Company or Business Name.', 'error'); return; }
             firebase.auth().createUserWithEmailAndPassword(email, password)
-                .then((userCredential) => {
-                    return userCredential.user.updateProfile({ displayName: companyName });
-                })
-                .catch((error) => {
-                    showAlert(error.message, 'error');
-                });
+                .then((userCredential) => userCredential.user.updateProfile({ displayName: companyName }))
+                .catch((error) => showAlert(error.message, 'error'));
         }
 
         function signOut() {
-            firebase.auth().signOut().catch((error) => {
-                showAlert(error.message, 'error');
-            });
+            firebase.auth().signOut().catch((error) => showAlert(error.message, 'error'));
         }
 
         function showSignUp() { document.getElementById('signUpForm').style.display = 'block'; }
         function hideSignUp() { document.getElementById('signUpForm').style.display = 'none'; }
         
-        // =======================================================
-        // LOAD USER DATA: With MIGRATION logic for old data structure
-        // =======================================================
         async function loadUserData() {
             if (!currentUser) return;
             const userRef = firebase.database().ref('users/' + currentUser.uid);
@@ -594,21 +536,15 @@
                 const snapshot = await userRef.once('value');
                 if (snapshot.exists()) {
                     const savedData = snapshot.val();
-                    
-                    // --- MIGRATION LOGIC ---
-                    // Check if data is in the old format (with `agreements.current`)
                     if (savedData.agreements && savedData.agreements.current && !savedData.agreements.history) {
                         console.log("Old data structure found. Migrating to new 'history' structure.");
                         savedData.agreements.history = [{
                             ...savedData.agreements.current,
                             effectiveDate: savedData.configs.agreementStartDate || '2023-01-01'
                         }];
-                        delete savedData.agreements.current; // Remove the old property
+                        delete savedData.agreements.current;
                         showAlert("Data structure updated to support rate history.", "info");
                     }
-                    // --- END MIGRATION LOGIC ---
-
-                    // Merge loaded data with default structure
                     appData = { ...appData, ...savedData,
                         permissions: { ...(appData.permissions || {}), ...(savedData.permissions || {}) },
                         configs: { ...appData.configs, ...(savedData.configs || {}) },
@@ -619,14 +555,10 @@
                         salaries: savedData.salaries || {},
                         workers: savedData.workers || []
                     };
-
                     if (!appData.permissions.viewableWorkers || appData.permissions.viewableWorkers.length === 0) {
-                        if (appData.workers && appData.workers.length > 0) {
-                            appData.permissions.viewableWorkers = [appData.workers[0]];
-                        } else { appData.permissions.viewableWorkers = []; }
+                        appData.permissions.viewableWorkers = appData.workers.length > 0 ? [appData.workers[0]] : [];
                     }
                 } else {
-                    console.log("No data found, preparing default data for new user.");
                     await initializeNewUserData(); 
                 }
             } catch (error) {
@@ -638,40 +570,24 @@
         async function saveUserData() {
             if (!currentUser) return;
             try {
-                // Ensure history is sorted before saving
                 if (appData.agreements && appData.agreements.history) {
                     appData.agreements.history.sort((a, b) => new Date(b.effectiveDate) - new Date(a.effectiveDate));
                 }
                 await firebase.database().ref('users/' + currentUser.uid).set(appData);
-                console.log("User data saved to Firebase.");
             } catch (error) {
                 console.error("Error saving user data:", error);
                 showAlert("Failed to save data. Please check your connection.", "error");
             }
         }
         
-        // InitializeNewUserData is now updated to use the new 'history' structure.
         async function initializeNewUserData() {
+            const todayStr = new Date().toISOString().split('T')[0];
             appData = { 
-                salaries: {}, 
-                workers: ['Worker 1', 'Worker 2', 'Worker 3', 'Worker 4', 'Worker 5', 'Worker 6', 'Worker 7', 'Worker 8'], 
+                salaries: {}, workers: ['Worker 1', 'Worker 2', 'Worker 3', 'Worker 4', 'Worker 5', 'Worker 6', 'Worker 7', 'Worker 8'], 
                 permissions: { viewableWorkers: ['Worker 1'] },
-                configs: { 
-                    workerCount: 8, 
-                    agreementStartDate: new Date().toISOString().split('T')[0], 
-                    fiscalYearStart: '10-10', 
-                    isPenaltyEnabled: false, 
-                    penaltyAmount: 231, 
-                    isWagonRateEnabled: false,
-                    isSetupComplete: false,
-                    unpaidLeaves: 20,
-                    paidLeaves: 12
-                }, 
+                configs: { workerCount: 8, agreementStartDate: todayStr, fiscalYearStart: '10-10', isPenaltyEnabled: false, penaltyAmount: 231, isWagonRateEnabled: false, isSetupComplete: false, unpaidLeaves: 20, paidLeaves: 12 }, 
                 agreements: { 
-                    history: [{ 
-                        effectiveDate: new Date().toISOString().split('T')[0],
-                        tonRate: 22, restRate: 1100, layoffRate: 549, wagonRate: 0, allowance: 17870, annualBenefits: 0 
-                    }], 
+                    history: [{ effectiveDate: todayStr, tonRate: 22, restRate: 1100, layoffRate: 549, wagonRate: 0, allowance: 17870, annualBenefits: 0 }], 
                     new: { tonRate: 25, restRate: 1200, layoffRate: 600, wagonRate: 0, allowance: 26000, annualBenefits: 0 } 
                 }
             };
@@ -690,9 +606,7 @@
             if (direction === 'next') {
                 if (currentWizardStep === 1) {
                     const count = parseInt(document.getElementById('wizardWorkerCount').value);
-                    if (!count || count <= 0) {
-                        showAlert('Please enter a valid number of workers.', 'error'); return;
-                    }
+                    if (!count || count <= 0) { showAlert('Please enter a valid number of workers.', 'error'); return; }
                     generateWizardWorkerNames(count);
                 }
                 if (currentWizardStep < 4) currentWizardStep++;
@@ -711,33 +625,25 @@
         }
 
         function generateWizardWorkerNames(count) {
-            const container = document.getElementById('wizard-worker-names-container');
-            container.innerHTML = '';
+            const container = document.getElementById('wizard-worker-names-container'); container.innerHTML = '';
             for (let i = 0; i < count; i++) {
-                const formGroup = document.createElement('div');
-                formGroup.className = 'form-group';
+                const formGroup = document.createElement('div'); formGroup.className = 'form-group';
                 formGroup.innerHTML = `<label for="wizard_worker_${i}">Worker ${i + 1} Name</label><input type="text" id="wizard_worker_${i}" value="Worker ${i + 1}">`;
                 container.appendChild(formGroup);
             }
         }
 
-        // FinishSetup is now updated to use the new 'history' structure.
         async function finishSetup() {
             const workerCount = parseInt(document.getElementById('wizardWorkerCount').value);
             const workerNames = [];
             for (let i = 0; i < workerCount; i++) {
                 const name = document.getElementById(`wizard_worker_${i}`).value.trim();
-                if (name) workerNames.push(name);
-                else { showAlert(`Please provide a name for Worker ${i + 1}.`, 'error'); return; }
+                if (name) workerNames.push(name); else { showAlert(`Please provide a name for Worker ${i + 1}.`, 'error'); return; }
             }
             const agreementStartDate = document.getElementById('wizardAgreementStartDate').value;
             if (!agreementStartDate) { showAlert('Please select the agreement start date.', 'error'); return; }
-
-            appData.configs.workerCount = workerCount;
-            appData.workers = workerNames;
+            appData.configs.workerCount = workerCount; appData.workers = workerNames;
             appData.permissions.viewableWorkers = workerNames.length > 0 ? [workerNames[0]] : [];
-            
-            // Create the first history record
             const firstRatePeriod = {
                 effectiveDate: agreementStartDate,
                 tonRate: parseFloat(document.getElementById('wizardTonRate').value) || 0,
@@ -745,47 +651,29 @@
                 layoffRate: parseFloat(document.getElementById('wizardLayoffRate').value) || 0,
                 allowance: parseFloat(document.getElementById('wizardAllowance').value) || 0,
                 annualBenefits: parseFloat(document.getElementById('wizardAnnualBenefits').value) || 0,
-                wagonRate: 0 // Default wagon rate
+                wagonRate: 0 
             };
             appData.agreements.history = [firstRatePeriod];
-
             appData.configs.unpaidLeaves = parseInt(document.getElementById('wizardUnpaidLeaves').value) || 20;
             appData.configs.paidLeaves = parseInt(document.getElementById('wizardPaidLeaves').value) || 12;
-
             const agreementDate = new Date(agreementStartDate + "T00:00:00");
             const fiscalMonth = (agreementDate.getMonth() + 1).toString().padStart(2, '0');
             const fiscalDay = agreementDate.getDate().toString().padStart(2, '0');
-            
-            appData.configs.agreementStartDate = agreementStartDate;
-            appData.configs.fiscalYearStart = `${fiscalMonth}-${fiscalDay}`;
+            appData.configs.agreementStartDate = agreementStartDate; appData.configs.fiscalYearStart = `${fiscalMonth}-${fiscalDay}`;
             appData.configs.isSetupComplete = true;
-
             await saveUserData();
             showAlert('Setup complete! Welcome to your dashboard.', 'success');
             await showMainApp();
         }
 
-        // =======================================================
-        // NEW SUPER-FUNCTION: Gets the correct rates for any given date
-        // =======================================================
         function getRatesForDate(dateStr) {
             if (!appData.agreements || !appData.agreements.history || appData.agreements.history.length === 0) {
-                // Return a default/empty structure if no history exists to prevent errors
                 return { tonRate: 0, restRate: 0, layoffRate: 0, wagonRate: 0, allowance: 0, annualBenefits: 0 };
             }
-
             const targetDate = new Date(dateStr + "T00:00:00");
-            
-            // History is already sorted descending by date, so the first one we find that is
-            // less than or equal to the target date is the correct one.
             for (const period of appData.agreements.history) {
-                const effectiveDate = new Date(period.effectiveDate + "T00:00:00");
-                if (targetDate >= effectiveDate) {
-                    return period;
-                }
+                if (targetDate >= new Date(period.effectiveDate + "T00:00:00")) return period;
             }
-
-            // If no period is found (e.g., date is before the first effective date), return the oldest record.
             return appData.agreements.history[appData.agreements.history.length - 1];
         }
 
@@ -798,92 +686,56 @@
         function setupUI() { loadWorkerAttendance(); loadPayPeriods(); loadFiscalYears(); loadSettings(); }
         
         function loadWorkerAttendance() {
-            const container = document.getElementById('workerAttendance');
-            container.innerHTML = '';
-            if(!appData.workers || appData.workers.length === 0){ container.innerHTML = "<p>No workers found. Add workers in Settings.</p>"; return; }
+            const container = document.getElementById('workerAttendance'); container.innerHTML = '';
+            if(!appData.workers || appData.workers.length === 0){ container.innerHTML = "<p>No workers found.</p>"; return; }
             appData.workers.forEach(worker => {
-                const div = document.createElement('div');
-                div.className = 'worker-checkbox';
+                const div = document.createElement('div'); div.className = 'worker-checkbox';
                 div.innerHTML = `<input type="checkbox" id="worker_${worker.replace(/\s/g, '_')}" checked> <label for="worker_${worker.replace(/\s/g, '_')}">${worker}</label>`;
                 container.appendChild(div);
             });
         }
         
-        // =======================================================
-        // SAVE DAILY ENTRY: Now uses the correct rates for the entry date
-        // =======================================================
         async function saveDailyEntry() {
             const date = document.getElementById('entryDate').value;
             const dayType = document.getElementById('dayType').value;
             const tonnage = parseFloat(document.getElementById('tonnage').value) || 0;
             const wagons = parseInt(document.getElementById('wagons').value) || 0;
-
-            if (!date) {
-                showAlert('Please select a date', 'error');
-                return;
-            }
-
-            let presentWorkers;
-            if (dayType === 'rest') {
-                presentWorkers = [...appData.workers];
-            } else {
-                presentWorkers = appData.workers.filter(worker => document.getElementById(`worker_${worker.replace(/\s/g, '_')}`).checked);
-            }
-
-            // Get the correct rates for the specific date of the entry
+            if (!date) { showAlert('Please select a date', 'error'); return; }
+            let presentWorkers = (dayType === 'rest') ? [...appData.workers] : appData.workers.filter(w => document.getElementById(`worker_${w.replace(/\s/g, '_')}`).checked);
             const ratesForThisDay = getRatesForDate(date);
-            
-            // Calculate earnings using these correct rates
             const earnings = calculateDayEarnings(date, dayType, tonnage, wagons, presentWorkers, ratesForThisDay);
-            
             if (!appData.salaries) appData.salaries = {};
             appData.salaries[date] = { date, type: dayType, tonnage, wagons, presentWorkers, earnings };
-            
             await saveUserData();
-            populateHistorySelector();
-            updateHistoryDisplay();
+            populateHistorySelector(); updateHistoryDisplay();
             showAlert('Daily entry saved successfully!', 'success');
         }
 
-        // `calculateDayEarnings` function does not need any change as it receives the correct rates.
         function calculateDayEarnings(entryDate, dayType, tonnage, wagons, presentWorkers, rates) {
-            const earnings = {};
-            const allWorkers = appData.workers;
+            const earnings = {}; const allWorkers = appData.workers;
             const absentWorkers = allWorkers.filter(w => !presentWorkers.includes(w));
-            let penaltyPerPresentWorker = 0;
-            const penaltyTriggeringAbsentees = [];
-
-            const unpaidLeaves = appData.configs.unpaidLeaves || 20;
-            const paidLeaves = appData.configs.paidLeaves || 12;
-            const totalAllowedLeaves = unpaidLeaves + paidLeaves;
-
+            let penaltyPerPresentWorker = 0; const penaltyTriggeringAbsentees = [];
             if (appData.configs.isPenaltyEnabled && absentWorkers.length > 0) {
                 const [fiscalYearStart, fiscalYearEnd] = getCurrentFiscalYearDates(entryDate); 
-                
+                const totalAllowedLeaves = (appData.configs.unpaidLeaves || 20) + (appData.configs.paidLeaves || 12);
                 absentWorkers.forEach(worker => {
                     if (getWorkerTotalLeaves(worker, fiscalYearStart, fiscalYearEnd) >= totalAllowedLeaves) {
                         penaltyTriggeringAbsentees.push(worker);
                     }
                 });
-
                 if (penaltyTriggeringAbsentees.length > 0) {
                     const totalPenalty = penaltyTriggeringAbsentees.length * appData.configs.penaltyAmount * (dayType === 'special_overtime' ? 2 : 1);
-                    if (presentWorkers.length > 0) {
-                        penaltyPerPresentWorker = totalPenalty / presentWorkers.length;
-                    }
+                    if (presentWorkers.length > 0) penaltyPerPresentWorker = totalPenalty / presentWorkers.length;
                 }
             }
-
             let grossEarningPerWorker = 0;
             if (presentWorkers.length > 0 && dayType !== 'rest') {
                 grossEarningPerWorker = (tonnage * rates.tonRate) / presentWorkers.length + (appData.configs.isWagonRateEnabled ? (wagons * rates.wagonRate) / presentWorkers.length : 0);
             }
-            
             allWorkers.forEach(worker => {
                 if (presentWorkers.includes(worker)) {
                     let adjustedEarning = grossEarningPerWorker - penaltyPerPresentWorker;
                     let minGuarantee = rates.layoffRate;
-
                     if (dayType === 'special_overtime') {
                         const overtimeGross = ((tonnage * rates.tonRate) / presentWorkers.length * 2) + rates.layoffRate + (appData.configs.isWagonRateEnabled ? (wagons * rates.wagonRate) / presentWorkers.length : 0);
                         adjustedEarning = overtimeGross - penaltyPerPresentWorker;
@@ -897,22 +749,16 @@
                     earnings[worker] = penaltyTriggeringAbsentees.includes(worker) ? 0 : rates.layoffRate;
                 }
             });
-
             return earnings;
         }
 
         function getCurrentFiscalYearDates(referenceDateStr) {
             const referenceDate = referenceDateStr ? new Date(referenceDateStr + "T00:00:00") : new Date();
             const [fiscalMonth, fiscalDay] = appData.configs.fiscalYearStart.split('-').map(Number);
-            
             let fiscalYearStartYear = referenceDate.getFullYear();
-            if (referenceDate < new Date(fiscalYearStartYear, fiscalMonth - 1, fiscalDay)) {
-                fiscalYearStartYear--;
-            }
-            
+            if (referenceDate < new Date(fiscalYearStartYear, fiscalMonth - 1, fiscalDay)) fiscalYearStartYear--;
             const fiscalYearStartDate = new Date(fiscalYearStartYear, fiscalMonth - 1, fiscalDay);
             const fiscalYearEndDate = new Date(fiscalYearStartYear + 1, fiscalMonth - 1, fiscalDay - 1);
-            
             return [fiscalYearStartDate, fiscalYearEndDate];
         }
 
@@ -921,9 +767,7 @@
             Object.values(appData.salaries || {}).forEach(entry => {
                 const entryDate = new Date(entry.date + "T00:00:00");
                 if (entryDate >= fiscalYearStartDate && entryDate <= fiscalYearEndDate) {
-                    if (entry.type !== 'rest' && !entry.presentWorkers.includes(workerName)) {
-                        leaveCount++;
-                    }
+                    if (entry.type !== 'rest' && !entry.presentWorkers.includes(workerName)) leaveCount++;
                 }
             });
             return leaveCount;
@@ -952,8 +796,7 @@
             let tableHtml = `<div class="history-table-container"><h3>${title}</h3>`; if (entries.length === 0) return tableHtml + `<p class="no-history">No entries for this period.</p></div>`;
             tableHtml += `<div class="history-table-wrapper"><table class="history-table"><thead><tr><th>Date</th><th>Tonnage</th><th>Workers</th><th>Pay/Worker</th></tr></thead><tbody>`;
             entries.forEach(entry => {
-                const ratesForDay = getRatesForDate(entry.date);
-                let singlePay = 0; 
+                const ratesForDay = getRatesForDate(entry.date); let singlePay = 0; 
                 if (entry.presentWorkers?.length > 0) singlePay = entry.earnings[entry.presentWorkers[0]] || 0; 
                 else if (entry.type === 'rest') singlePay = ratesForDay.restRate; 
                 else if (appData.workers?.length > 0) singlePay = entry.earnings[appData.workers[0]] || 0; 
@@ -962,46 +805,27 @@
             return tableHtml + `</tbody></table></div></div>`;
         }
 
-        // =======================================================
-        // AGREEMENT PAGE FUNCTIONS: Rebuilt to manage history
-        // =======================================================
         function loadAgreements() {
-            // Load history table
             const container = document.getElementById('agreement-history-container');
             const history = appData.agreements.history || [];
-            history.sort((a, b) => new Date(b.effectiveDate) - new Date(a.effectiveDate)); // Ensure sorted
-            
-            let tableHtml = `<table id="agreement-history-table"><thead><tr>
-                <th>Effective Date</th><th>Ton</th><th>Rest</th><th>Layoff</th><th>Allowance</th>
-                <th>Actions</th>
-                </tr></thead><tbody>`;
-            
+            history.sort((a, b) => new Date(b.effectiveDate) - new Date(a.effectiveDate));
+            let tableHtml = `<table id="agreement-history-table"><thead><tr><th>Effective Date</th><th>Ton</th><th>Rest</th><th>Layoff</th><th>Allowance</th><th>Actions</th></tr></thead><tbody>`;
             if (history.length === 0) {
                 tableHtml += `<tr><td colspan="6">No rate history found. Add a rate period.</td></tr>`;
             } else {
                 history.forEach((period, index) => {
-                    tableHtml += `<tr>
-                        <td>${period.effectiveDate}</td>
-                        <td>${period.tonRate}</td>
-                        <td>${period.restRate}</td>
-                        <td>${period.layoffRate}</td>
-                        <td>${period.allowance}</td>
+                    tableHtml += `<tr><td>${period.effectiveDate}</td><td>${period.tonRate}</td><td>${period.restRate}</td><td>${period.layoffRate}</td><td>${period.allowance}</td>
                         <td class="rate-history-actions">
                             <button class="btn" onclick="editRatePeriod(${index})"><i class="material-icons" style="font-size:14px;">edit</i></button>
                             <button class="btn btn-danger" onclick="deleteRatePeriod(${index})"><i class="material-icons" style="font-size:14px;">delete</i></button>
-                        </td>
-                    </tr>`;
+                        </td></tr>`;
                 });
             }
-            tableHtml += `</tbody></table>`;
-            container.innerHTML = tableHtml;
-
-            // Load "New Agreement" fields
+            tableHtml += `</tbody></table>`; container.innerHTML = tableHtml;
             Object.keys(appData.agreements.new).forEach(key => {
                 const element = document.getElementById(`new${key.charAt(0).toUpperCase() + key.slice(1)}`);
                 if(element) element.value = appData.agreements.new[key];
             });
-
             hideAddRateForm();
         }
 
@@ -1010,7 +834,6 @@
             if (!isEdit) {
                 document.getElementById('rate-form-title').textContent = 'Add New Rate Period';
                 document.getElementById('rate-edit-index').value = '-1';
-                // Pre-fill with the latest rates to make it easier
                 const latestRates = getRatesForDate(new Date().toISOString().split('T')[0]);
                 Object.keys(latestRates).forEach(key => {
                     const input = document.getElementById(`rate${key.charAt(0).toUpperCase() + key.slice(1)}`);
@@ -1020,19 +843,13 @@
             }
         }
 
-        function hideAddRateForm() {
-            document.getElementById('add-rate-form-container').style.display = 'none';
-        }
+        function hideAddRateForm() { document.getElementById('add-rate-form-container').style.display = 'none'; }
 
         function editRatePeriod(index) {
-            const history = appData.agreements.history;
-            const periodToEdit = history[index];
-            if (!periodToEdit) return;
-
+            const periodToEdit = appData.agreements.history[index]; if (!periodToEdit) return;
             showAddRateForm(true);
             document.getElementById('rate-form-title').textContent = 'Edit Rate Period';
             document.getElementById('rate-edit-index').value = index;
-
             Object.keys(periodToEdit).forEach(key => {
                 const input = document.getElementById(`rate${key.charAt(0).toUpperCase() + key.slice(1)}`);
                 if(input) input.value = periodToEdit[key];
@@ -1042,13 +859,9 @@
         async function saveRatePeriod() {
             const index = parseInt(document.getElementById('rate-edit-index').value);
             const effectiveDate = document.getElementById('rateEffectiveDate').value;
-            if (!effectiveDate) {
-                showAlert('Effective Date is required.', 'error');
-                return;
-            }
-
+            if (!effectiveDate) { showAlert('Effective Date is required.', 'error'); return; }
             const newPeriod = {
-                effectiveDate: effectiveDate,
+                effectiveDate,
                 tonRate: parseFloat(document.getElementById('rateTonRate').value) || 0,
                 restRate: parseFloat(document.getElementById('rateRestRate').value) || 0,
                 layoffRate: parseFloat(document.getElementById('rateLayoffRate').value) || 0,
@@ -1056,23 +869,14 @@
                 allowance: parseFloat(document.getElementById('rateAllowance').value) || 0,
                 annualBenefits: parseFloat(document.getElementById('rateAnnualBenefits').value) || 0
             };
-
-            if (index === -1) { // Add new
-                appData.agreements.history.push(newPeriod);
-            } else { // Update existing
-                appData.agreements.history[index] = newPeriod;
-            }
-            
-            await saveUserData(); // This will also sort the history
+            if (index === -1) { appData.agreements.history.push(newPeriod); } else { appData.agreements.history[index] = newPeriod; }
+            await saveUserData();
             showAlert('Rate history saved successfully!', 'success');
-            loadAgreements(); // Refresh the UI
+            loadAgreements();
         }
         
         async function deleteRatePeriod(index) {
-            if (appData.agreements.history.length <= 1) {
-                showAlert('You cannot delete the only rate period. Please edit it instead.', 'error');
-                return;
-            }
+            if (appData.agreements.history.length <= 1) { showAlert('You cannot delete the only rate period. Please edit it instead.', 'error'); return; }
             if (confirm('Are you sure you want to delete this rate period? This action cannot be undone.')) {
                 appData.agreements.history.splice(index, 1);
                 await saveUserData();
@@ -1091,17 +895,12 @@
         }
         
         function loadPayPeriods() {
-            const selector = document.getElementById('payPeriod');
-            selector.innerHTML = '<option value="">Select Period</option>';
-            const today = new Date();
-            if (!appData.configs || !appData.configs.agreementStartDate) return;
-            
+            const selector = document.getElementById('payPeriod'); selector.innerHTML = '<option value="">Select Period</option>';
+            const today = new Date(); if (!appData.configs || !appData.configs.agreementStartDate) return;
             const agreementStart = new Date(appData.configs.agreementStartDate + "T00:00:00");
-            let loopDate = new Date(agreementStart.getFullYear(), agreementStart.getMonth(), 1);
-            let optionsHtml = '';
+            let loopDate = new Date(agreementStart.getFullYear(), agreementStart.getMonth(), 1); let optionsHtml = '';
             while (loopDate <= today) {
-                const year = loopDate.getFullYear();
-                const month = (loopDate.getMonth() + 1).toString().padStart(2, '0');
+                const year = loopDate.getFullYear(), month = (loopDate.getMonth() + 1).toString().padStart(2, '0');
                 const monthName = loopDate.toLocaleString('default', { month: 'long' });
                 const lastDay = new Date(year, loopDate.getMonth() + 1, 0).getDate();
                 optionsHtml = `<option value="${year}-${month}-16,${year}-${month}-${lastDay}">${monthName} ${year} (16-${lastDay})</option>` + optionsHtml;
@@ -1120,31 +919,18 @@
             displayDetailedSalaryTable(startDate, endDate);
         }
         
-        // =======================================================
-        // CALCULATE PERIOD SALARY: Upgraded to use correct allowance
-        // =======================================================
         function calculatePeriodSalary(startDate, endDate) {
-            const salaryData = {};
-            appData.workers.forEach(w => salaryData[w] = 0);
-
-            // 1. Sum up daily earnings (which are already calculated with correct rates)
-            Object.keys(appData.salaries || {})
-                .filter(d => d >= startDate && d <= endDate)
-                .forEach(d => {
-                    if (appData.salaries[d].earnings) {
-                        Object.keys(appData.salaries[d].earnings).forEach(w => {
-                            if(salaryData[w] !== undefined) salaryData[w] += appData.salaries[d].earnings[w];
-                        });
-                    }
-                });
-            
-            // 2. Add allowance for the period (using the rate applicable at the end of the period)
-            const ratesForPeriod = getRatesForDate(endDate);
-            const allowanceForPeriod = ratesForPeriod.allowance / 2; // Assuming 2 pay periods per month
-            appData.workers.forEach(w => {
-                if(salaryData[w] !== undefined) salaryData[w] += allowanceForPeriod;
+            const salaryData = {}; appData.workers.forEach(w => salaryData[w] = 0);
+            Object.keys(appData.salaries || {}).filter(d => d >= startDate && d <= endDate).forEach(d => {
+                if (appData.salaries[d].earnings) {
+                    Object.keys(appData.salaries[d].earnings).forEach(w => {
+                        if(salaryData[w] !== undefined) salaryData[w] += appData.salaries[d].earnings[w];
+                    });
+                }
             });
-            
+            const ratesForPeriod = getRatesForDate(endDate);
+            const allowanceForPeriod = ratesForPeriod.allowance / 2;
+            appData.workers.forEach(w => { if(salaryData[w] !== undefined) salaryData[w] += allowanceForPeriod; });
             return salaryData;
         }
         
@@ -1159,20 +945,14 @@
                     html += `<div class="report-card" style="background:#f1f1f1;border-left-color:#a0a0a0;"><strong>${worker}</strong><br><span style="color:#6200EE;font-weight:500;">Contact admin to view details</span></div>`;
                 }
             });
-            html += `</div>`;
-            container.innerHTML = html;
+            html += `</div>`; container.innerHTML = html;
         }
 
         function displayDetailedSalaryTable(startDate, endDate) {
             const container = document.getElementById('salaryResults');
-            const periodEntries = Object.values(appData.salaries || {})
-                .filter(e => e.date >= startDate && e.date <= endDate)
-                .sort((a, b) => new Date(a.date) - new Date(b.date));
-
+            const periodEntries = Object.values(appData.salaries || {}).filter(e => e.date >= startDate && e.date <= endDate).sort((a, b) => new Date(a.date) - new Date(b.date));
             let tableHtml = `<div class="history-table-container" style="margin-top: 24px;"><h3>Detailed Entries</h3>`;
-            if (periodEntries.length === 0) {
-                tableHtml += `<p class="no-history">No entries found.</p></div>`; container.innerHTML += tableHtml; return;
-            }
+            if (periodEntries.length === 0) { tableHtml += `<p class="no-history">No entries found.</p></div>`; container.innerHTML += tableHtml; return; }
             tableHtml += `<div class="history-table-wrapper"><table class="history-table"><thead><tr><th>Date</th><th>Tonnage</th>
                 ${appData.configs.isWagonRateEnabled ? '<th>Wagons</th>' : ''}<th>Absent</th><th>Pay/Worker (Rs)</th></tr></thead><tbody>`;
             periodEntries.forEach(entry => {
@@ -1185,8 +965,7 @@
                     ${appData.configs.isWagonRateEnabled ? `<td>${entry.wagons > 0 ? entry.wagons : '-'}</td>` : ''}
                     <td>${absentWorkers}</td><td>${singlePay.toFixed(2)}</td></tr>`;
             });
-            tableHtml += `</tbody></table></div></div>`;
-            container.innerHTML += tableHtml;
+            tableHtml += `</tbody></table></div></div>`; container.innerHTML += tableHtml;
         }
 
         function loadFiscalYears() {
@@ -1208,70 +987,41 @@
             displayBonusReport(calculateAnnualBonus(f), f); 
         }
 
-        // =======================================================
-        // NEW HELPER FUNCTION: To calculate total allowance over a period using history
-        // =======================================================
         function calculateTotalAllowanceForPeriod(startDate, endDate) {
-            let totalAllowance = 0;
-            let currentDate = new Date(startDate);
+            let totalAllowance = 0; let currentDate = new Date(startDate);
             while (currentDate <= endDate) {
                 const ratesForMonth = getRatesForDate(currentDate.toISOString().split('T')[0]);
                 totalAllowance += ratesForMonth.allowance;
-                // Move to the next month
                 currentDate.setMonth(currentDate.getMonth() + 1);
             }
             return totalAllowance;
         }
 
-        // =======================================================
-        // CALCULATE ANNUAL BONUS: Upgraded to be 100% accurate
-        // =======================================================
         function calculateAnnualBonus(fiscalYearStartDateString) {
             const fiscalStart = new Date(fiscalYearStartDateString);
-            const fiscalEnd = new Date(fiscalStart);
-            fiscalEnd.setFullYear(fiscalEnd.getFullYear() + 1); fiscalEnd.setDate(fiscalEnd.getDate() - 1);
-
+            const fiscalEnd = new Date(fiscalStart); fiscalEnd.setFullYear(fiscalEnd.getFullYear() + 1); fiscalEnd.setDate(fiscalEnd.getDate() - 1);
             const workerBonusData = {};
             appData.workers.forEach(workerName => {
-                let annualWorkEarnings = 0;
-                let totalLeaves = 0; 
-                
-                // 1. Sum up daily work earnings (already correct)
+                let annualWorkEarnings = 0, totalLeaves = 0; 
                 Object.values(appData.salaries || {}).forEach(entry => {
                     const entryDate = new Date(entry.date + "T00:00:00");
                     if (entryDate >= fiscalStart && entryDate <= fiscalEnd) {
-                        if (entry.earnings && entry.earnings[workerName] !== undefined) {
-                            annualWorkEarnings += entry.earnings[workerName];
-                        }
-                        if (entry.type !== 'rest' && !entry.presentWorkers.includes(workerName)) {
-                            totalLeaves++;
-                        }
+                        if (entry.earnings && entry.earnings[workerName] !== undefined) annualWorkEarnings += entry.earnings[workerName];
+                        if (entry.type !== 'rest' && !entry.presentWorkers.includes(workerName)) totalLeaves++;
                     }
                 });
-
-                // 2. Calculate total allowance for the 12-month fiscal year accurately
                 const totalAnnualAllowance = calculateTotalAllowanceForPeriod(fiscalStart, fiscalEnd);
                 const totalAnnualEarnings = annualWorkEarnings + totalAnnualAllowance;
-
                 const avgMonthlySalary = totalAnnualEarnings / 12;
-                const bonus = avgMonthlySalary;
-                const gratuity = avgMonthlySalary;
-                
-                // 3. Calculate paid leaves bonus
-                // For paid leaves bonus, we need an average layoff rate for the year.
-                // We'll use the layoff rate from the end of the fiscal year as a standard.
+                const bonus = avgMonthlySalary; const gratuity = avgMonthlySalary;
                 const ratesAtYearEnd = getRatesForDate(fiscalEnd.toISOString().split('T')[0]);
                 const unpaidLeaves = appData.configs.unpaidLeaves || 20;
                 const paidLeaves = appData.configs.paidLeaves || 12;
                 const paidLeavesUsed = Math.min(Math.max(totalLeaves - unpaidLeaves, 0), paidLeaves);
                 const remainingPaidLeaves = paidLeaves - paidLeavesUsed;
                 const paidLeavesBonus = remainingPaidLeaves * ratesAtYearEnd.layoffRate;
-                
                 const totalBonus = bonus + gratuity + paidLeavesBonus;
-
-                workerBonusData[workerName] = {
-                    annualEarnings: totalAnnualEarnings, avgMonthlySalary, bonus, gratuity, paidLeavesBonus, totalBonus
-                };
+                workerBonusData[workerName] = { annualEarnings: totalAnnualEarnings, avgMonthlySalary, bonus, gratuity, paidLeavesBonus, totalBonus };
             });
             return workerBonusData;
         }
@@ -1280,15 +1030,15 @@
             const c = document.getElementById('bonusResults'), v = appData.permissions?.viewableWorkers || [], s = new Date(f).getFullYear(); let h = `<h3>Annual Bonus Report: ${s}-${s + 1}</h3><div class="report-grid">`; appData.workers.forEach(w => { if (v.includes(w)) { const d=b[w]||{}; h += `<div class="report-card"><strong>${w}</strong><br>Annual Earnings: Rs. ${(d.annualEarnings||0).toFixed(2)}<br>Avg Monthly: Rs. ${(d.avgMonthlySalary||0).toFixed(2)}<br>Bonus: Rs. ${(d.bonus||0).toFixed(2)}<br>Gratuity: Rs. ${(d.gratuity||0).toFixed(2)}<br>Paid Leaves Bonus: Rs. ${(d.paidLeavesBonus||0).toFixed(2)}<br><strong>Total Bonus: Rs. ${(d.totalBonus||0).toFixed(2)}</strong></div>`; } else { h += `<div class="report-card" style="background:#f1f1f1;border-left-color:#a0a0a0;"><strong>${w}</strong><br><span style="color:#6200EE;font-weight:500;">Contact admin to view details</span></div>`; } }); h += `</div>`; c.innerHTML = h;
         }
 
-        // =======================================================
-        // ARREARS CALCULATION: Completely overhauled for accuracy
-        // =======================================================
         function calculateArrears() { 
             const c = document.getElementById('arrearsResults'); 
             c.innerHTML = '<div class="loading"><div class="spinner"></div><p>Calculating arrears...</p></div>'; 
             setTimeout(() => displayArrearsReport(calculateAllArrears()), 500); 
         }
 
+        // =======================================================
+        // FINAL, CORRECTED ARREARS CALCULATION LOGIC
+        // =======================================================
         function calculateAllArrears() {
             const agreementStartDate = new Date(appData.configs.agreementStartDate + "T00:00:00");
             const today = new Date(); today.setHours(0, 0, 0, 0);
@@ -1298,82 +1048,75 @@
                 arrearsByWorker[worker] = { salaryArrears: 0, allowanceArrears: 0, bonusArrears: 0, annualBenefitsArrears: 0, totalArrears: 0 };
             });
 
-            // 1. Calculate SALARY Arrears (Day by Day)
+            // 1. SALARY Arrears (Day by Day - No Change)
             Object.values(appData.salaries || {}).forEach(entry => {
                 const entryDate = new Date(entry.date + "T00:00:00");
                 if (entryDate >= agreementStartDate && entryDate <= today) {
                     const ratesHistoric = getRatesForDate(entry.date);
                     const earningsHistoric = calculateDayEarnings(entry.date, entry.type, entry.tonnage, entry.wagons, entry.presentWorkers, ratesHistoric);
                     const earningsNew = calculateDayEarnings(entry.date, entry.type, entry.tonnage, entry.wagons, entry.presentWorkers, appData.agreements.new);
-                    
-                    appData.workers.forEach(worker => {
-                        arrearsByWorker[worker].salaryArrears += ((earningsNew[worker] || 0) - (earningsHistoric[worker] || 0));
-                    });
+                    appData.workers.forEach(w => { arrearsByWorker[w].salaryArrears += ((earningsNew[w] || 0) - (earningsHistoric[w] || 0)); });
                 }
             });
 
-            // 2. Calculate ALLOWANCE Arrears (Month by Month)
-            let currentDate = new Date(agreementStartDate);
-            while(currentDate <= today) {
-                const ratesHistoric = getRatesForDate(currentDate.toISOString().split('T')[0]);
-                const allowanceDiff = appData.agreements.new.allowance - ratesHistoric.allowance;
-                appData.workers.forEach(worker => {
-                    arrearsByWorker[worker].allowanceArrears += allowanceDiff;
-                });
-                currentDate.setMonth(currentDate.getMonth() + 1);
+            // 2. ALLOWANCE Arrears (Corrected Month-by-Month Logic with Half-Month)
+            let totalAllowanceArrears = 0;
+            let loopDate = new Date(agreementStartDate);
+            // Loop through all full months before the current month
+            while (loopDate.getFullYear() < today.getFullYear() || (loopDate.getFullYear() === today.getFullYear() && loopDate.getMonth() < today.getMonth())) {
+                const ratesHistoric = getRatesForDate(loopDate.toISOString().split('T')[0]);
+                totalAllowanceArrears += (appData.agreements.new.allowance - ratesHistoric.allowance);
+                loopDate.setMonth(loopDate.getMonth() + 1);
             }
+            // Handle the current month
+            if (loopDate.getFullYear() === today.getFullYear() && loopDate.getMonth() === today.getMonth()) {
+                const ratesHistoric = getRatesForDate(today.toISOString().split('T')[0]);
+                const allowanceDiff = appData.agreements.new.allowance - ratesHistoric.allowance;
+                if (today.getDate() >= 16) {
+                    totalAllowanceArrears += allowanceDiff; // Full month's arrear
+                } else {
+                    totalAllowanceArrears += (allowanceDiff / 2); // Half month's arrear
+                }
+            }
+            appData.workers.forEach(w => { arrearsByWorker[w].allowanceArrears = totalAllowanceArrears; });
             
-            // 3. Calculate BONUS Arrears for all COMPLETED fiscal years
+            // 3. BONUS Arrears (No Change in Logic, but now uses accurate bonus calculation)
             const [fiscalMonth, fiscalDay] = appData.configs.fiscalYearStart.split('-').map(Number);
             let fiscalYearStart = getCurrentFiscalYearDates(appData.configs.agreementStartDate)[0];
             while (true) {
-                let fiscalYearEnd = new Date(fiscalYearStart);
-                fiscalYearEnd.setFullYear(fiscalYearEnd.getFullYear() + 1); fiscalYearEnd.setDate(fiscalYearEnd.getDate() - 1);
+                let fiscalYearEnd = new Date(fiscalYearStart); fiscalYearEnd.setFullYear(fiscalYearEnd.getFullYear() + 1); fiscalYearEnd.setDate(fiscalYearEnd.getDate() - 1);
                 if (fiscalYearEnd > today) { break; }
                 const fiscalYearString = `${fiscalYearStart.getFullYear()}-${String(fiscalMonth).padStart(2, '0')}-${String(fiscalDay).padStart(2, '0')}`;
-                
-                // We need a version of calculateAnnualBonus that can take a 'rates' object (or history).
-                // For simplicity, we'll pass the 'new' rates object to a modified calculation.
-                const bonusCurrent = calculateAnnualBonus(fiscalYearString); // This now calculates correctly based on history
+                const bonusCurrent = calculateAnnualBonus(fiscalYearString);
                 const bonusNew = calculateAnnualBonusWithRates(fiscalYearString, appData.agreements.new);
-
-                appData.workers.forEach(worker => {
-                    arrearsByWorker[worker].bonusArrears += ((bonusNew[worker]?.totalBonus || 0) - (bonusCurrent[worker]?.totalBonus || 0));
-                });
+                appData.workers.forEach(w => { arrearsByWorker[w].bonusArrears += ((bonusNew[w]?.totalBonus || 0) - (bonusCurrent[w]?.totalBonus || 0)); });
                 fiscalYearStart.setFullYear(fiscalYearStart.getFullYear() + 1);
             }
 
-            // 4. Calculate Annual Benefits Arrears (Month by Month)
-            currentDate = new Date(agreementStartDate);
-            while(currentDate <= today) {
-                const ratesHistoric = getRatesForDate(currentDate.toISOString().split('T')[0]);
-                const benefitsDiff = appData.agreements.new.annualBenefits - ratesHistoric.annualBenefits;
-                 appData.workers.forEach(worker => {
-                    arrearsByWorker[worker].annualBenefitsArrears += (benefitsDiff / 12); // Prorated monthly
-                });
-                currentDate.setMonth(currentDate.getMonth() + 1);
+            // 4. ANNUAL BENEFITS Arrears (No Change)
+            let totalBenefitsArrears = 0;
+            let benefitsLoopDate = new Date(agreementStartDate);
+            while(benefitsLoopDate <= today) {
+                const ratesHistoric = getRatesForDate(benefitsLoopDate.toISOString().split('T')[0]);
+                totalBenefitsArrears += (appData.agreements.new.annualBenefits - ratesHistoric.annualBenefits);
+                benefitsLoopDate.setMonth(benefitsLoopDate.getMonth() + 1);
             }
+            appData.workers.forEach(w => { arrearsByWorker[w].annualBenefitsArrears = totalBenefitsArrears / 12; });
 
-            // 5. Calculate Total Arrears
-            appData.workers.forEach(worker => {
-                const w = arrearsByWorker[worker];
-                w.totalArrears = w.salaryArrears + w.allowanceArrears + w.bonusArrears + w.annualBenefitsArrears;
+            // 5. TOTAL Arrears
+            appData.workers.forEach(w => {
+                const d = arrearsByWorker[w];
+                d.totalArrears = d.salaryArrears + d.allowanceArrears + d.bonusArrears + d.annualBenefitsArrears;
             });
-
             return arrearsByWorker;
         }
 
-        // This is a new version specifically for arrears, to calculate a hypothetical bonus with 'new' rates.
         function calculateAnnualBonusWithRates(fiscalYearStartDateString, newRates) {
             const fiscalStart = new Date(fiscalYearStartDateString);
-            const fiscalEnd = new Date(fiscalStart);
-            fiscalEnd.setFullYear(fiscalEnd.getFullYear() + 1); fiscalEnd.setDate(fiscalEnd.getDate() - 1);
-
+            const fiscalEnd = new Date(fiscalStart); fiscalEnd.setFullYear(fiscalEnd.getFullYear() + 1); fiscalEnd.setDate(fiscalEnd.getDate() - 1);
             const workerBonusData = {};
             appData.workers.forEach(workerName => {
-                let annualWorkEarnings = 0;
-                let totalLeaves = 0;
-                
+                let annualWorkEarnings = 0, totalLeaves = 0;
                 Object.values(appData.salaries || {}).forEach(entry => {
                     const entryDate = new Date(entry.date + "T00:00:00");
                     if (entryDate >= fiscalStart && entryDate <= fiscalEnd) {
@@ -1382,36 +1125,26 @@
                         if (entry.type !== 'rest' && !entry.presentWorkers.includes(workerName)) totalLeaves++;
                     }
                 });
-
                 const totalAnnualAllowance = newRates.allowance * 12;
                 const totalAnnualEarnings = annualWorkEarnings + totalAnnualAllowance;
                 const avgMonthlySalary = totalAnnualEarnings / 12;
-                const bonus = avgMonthlySalary;
-                const gratuity = avgMonthlySalary;
-                
-                const unpaidLeaves = appData.configs.unpaidLeaves || 20;
-                const paidLeaves = appData.configs.paidLeaves || 12;
-                const paidLeavesUsed = Math.min(Math.max(totalLeaves - unpaidLeaves, 0), paidLeaves);
-                const remainingPaidLeaves = paidLeaves - paidLeavesUsed;
+                const bonus = avgMonthlySalary; const gratuity = avgMonthlySalary;
+                const paidLeavesUsed = Math.min(Math.max(totalLeaves - (appData.configs.unpaidLeaves || 20), 0), (appData.configs.paidLeaves || 12));
+                const remainingPaidLeaves = (appData.configs.paidLeaves || 12) - paidLeavesUsed;
                 const paidLeavesBonus = remainingPaidLeaves * newRates.layoffRate;
-                
                 workerBonusData[workerName] = { totalBonus: bonus + gratuity + paidLeavesBonus };
             });
             return workerBonusData;
         }
 
-
         function displayArrearsReport(a) {
             const c = document.getElementById('arrearsResults'), v = appData.permissions?.viewableWorkers || []; let h = `<h3>Arrears Calculation Report</h3><p>From Agreement Start Date: ${appData.configs.agreementStartDate}</p><div class="report-grid">`; appData.workers.forEach(w => { if (v.includes(w)) { const d=a[w]||{}; h+=`<div class="report-card"><strong>${w}</strong><br>Salary Arrears: Rs. ${(d.salaryArrears||0).toFixed(2)}<br>Allowance Arrears: Rs. ${(d.allowanceArrears||0).toFixed(2)}<br>Bonus Arrears: Rs. ${(d.bonusArrears||0).toFixed(2)}<br>Annual Benefits Arrears: Rs. ${(d.annualBenefitsArrears||0).toFixed(2)}<br><strong>Total Arrears: Rs. ${(d.totalArrears||0).toFixed(2)}</strong></div>`;} else {h+=`<div class="report-card" style="background:#f1f1f1;border-left-color:#a0a0a0;"><strong>${w}</strong><br><span style="color:#6200EE;font-weight:500;">Contact admin to view details</span></div>`;}}); h+=`</div>`; c.innerHTML = h;
         }
         
-        // Specific Period Arrears calculation also needs to be updated
         function calculateAndDisplayPeriodArrears() {
             const startDate = document.getElementById('periodArrearsStartDate').value;
             const endDate = document.getElementById('periodArrearsEndDate').value;
-            if (!startDate || !endDate || new Date(startDate) > new Date(endDate)) {
-                showAlert('Please select a valid start and end date.', 'error'); return;
-            }
+            if (!startDate || !endDate || new Date(startDate) > new Date(endDate)) { showAlert('Please select a valid start and end date.', 'error'); return; }
             const resultsContainer = document.getElementById('periodArrearsResults');
             resultsContainer.innerHTML = '<div class="loading"><div class="spinner"></div></div>'; 
             setTimeout(() => {
@@ -1423,8 +1156,7 @@
         function calculateArrearsForPeriod(startDateStr, endDateStr) {
             const startDate = new Date(startDateStr + "T00:00:00");
             const endDate = new Date(endDateStr + "T00:00:00");
-            const arrearsByWorker = {};
-            appData.workers.forEach(w => arrearsByWorker[w] = { salaryArrears: 0, allowanceArrears: 0, totalArrears: 0 });
+            const arrearsByWorker = {}; appData.workers.forEach(w => arrearsByWorker[w] = { salaryArrears: 0, allowanceArrears: 0, totalArrears: 0 });
 
             // Salary Arrears
             Object.values(appData.salaries || {}).filter(e => e.date >= startDateStr && e.date <= endDateStr).forEach(entry => {
@@ -1434,14 +1166,19 @@
                 appData.workers.forEach(w => { arrearsByWorker[w].salaryArrears += ((earningsNew[w] || 0) - (earningsHistoric[w] || 0)); });
             });
 
-            // Allowance Arrears
-            let currentDate = new Date(startDate);
-            while(currentDate <= endDate) {
-                const ratesHistoric = getRatesForDate(currentDate.toISOString().split('T')[0]);
-                const allowanceDiff = appData.agreements.new.allowance - ratesHistoric.allowance;
-                appData.workers.forEach(w => { arrearsByWorker[w].allowanceArrears += allowanceDiff; });
-                currentDate.setMonth(currentDate.getMonth() + 1);
+            // Corrected Allowance Arrears for Period
+            let totalAllowanceArrears = 0; let loopDate = new Date(startDate);
+            while (loopDate.getFullYear() < endDate.getFullYear() || (loopDate.getFullYear() === endDate.getFullYear() && loopDate.getMonth() < endDate.getMonth())) {
+                const ratesHistoric = getRatesForDate(loopDate.toISOString().split('T')[0]);
+                totalAllowanceArrears += (appData.agreements.new.allowance - ratesHistoric.allowance);
+                loopDate.setMonth(loopDate.getMonth() + 1);
             }
+            if (loopDate.getFullYear() === endDate.getFullYear() && loopDate.getMonth() === endDate.getMonth()) {
+                const ratesHistoric = getRatesForDate(endDate.toISOString().split('T')[0]);
+                const allowanceDiff = appData.agreements.new.allowance - ratesHistoric.allowance;
+                if (endDate.getDate() >= 16) { totalAllowanceArrears += allowanceDiff; } else { totalAllowanceArrears += (allowanceDiff / 2); }
+            }
+            appData.workers.forEach(w => { arrearsByWorker[w].allowanceArrears = totalAllowanceArrears; });
 
             // Total
             appData.workers.forEach(w => { arrearsByWorker[w].totalArrears = arrearsByWorker[w].salaryArrears + arrearsByWorker[w].allowanceArrears; });
@@ -1467,24 +1204,18 @@
         
         function calculateLeavesReport(f) {
             const s = new Date(f), e = new Date(s); e.setFullYear(e.getFullYear() + 1); e.setDate(e.getDate() - 1);
-            const w = {};
-            const unpaidLeavesConfig = appData.configs.unpaidLeaves || 20;
-            const paidLeavesConfig = appData.configs.paidLeaves || 12;
-            const totalLeavesConfig = unpaidLeavesConfig + paidLeavesConfig;
+            const w = {}; const unpaidLeavesConfig = appData.configs.unpaidLeaves || 20;
+            const paidLeavesConfig = appData.configs.paidLeaves || 12; const totalLeavesConfig = unpaidLeavesConfig + paidLeavesConfig;
             appData.workers.forEach(b => {
                 let t = 0, d = 0;
                 Object.entries(appData.salaries || {}).forEach(([dt, en]) => {
                     const ed = new Date(dt + "T00:00:00");
                     if (ed >= s && ed <= e) {
-                        if (en.type === 'work' || en.type === 'special_overtime') {
-                            if (en.presentWorkers.includes(b)) d++; else t++;
-                        }
+                        if (en.type === 'work' || en.type === 'special_overtime') { if (en.presentWorkers.includes(b)) d++; else t++; }
                     }
                 });
-                const u = Math.min(t, unpaidLeavesConfig);
-                const p = Math.min(Math.max(t - unpaidLeavesConfig, 0), paidLeavesConfig);
-                const x = Math.max(t - totalLeavesConfig, 0);
-                const R = paidLeavesConfig - p;
+                const u = Math.min(t, unpaidLeavesConfig); const p = Math.min(Math.max(t - unpaidLeavesConfig, 0), paidLeavesConfig);
+                const x = Math.max(t - totalLeavesConfig, 0); const R = paidLeavesConfig - p;
                 w[b] = { totalLeaves: t, unpaidLeaves: u, paidLeaves: p, excessLeaves: x, remainingPaidLeaves: R, workDays: d };
             });
             return w;
@@ -1518,8 +1249,7 @@
             document.getElementById('unlock-prompt').style.display = 'block';
             document.getElementById('worker-management-buttons').style.display = 'none';
             document.getElementById('unlock-key-input').value = '';
-            isWorkerSettingsLocked = true;
-            loadWorkersList();
+            isWorkerSettingsLocked = true; loadWorkersList();
         }
 
         function loadWorkersList() {
