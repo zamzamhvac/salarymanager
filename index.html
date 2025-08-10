@@ -136,6 +136,35 @@
         .rate-history-actions button { padding: 4px 8px; font-size: 12px; margin: 0 4px;}
         #add-rate-form-container { display: none; padding: 16px; background: #f0f4ff; border: 1px solid #cce; margin-top: 16px; border-radius: 8px; }
 
+        /* Tab Styles */
+        .tab-container {
+            border-bottom: 2px solid #ccc;
+            margin-bottom: 20px;
+        }
+        .tab-link {
+            background-color: transparent;
+            border: none;
+            padding: 10px 20px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-bottom: -2px;
+            transition: all 0.3s ease;
+        }
+        .tab-link:hover {
+            background-color: #f0f0f0;
+        }
+        .tab-link.active {
+            border-bottom: 3px solid var(--primary-color);
+            color: var(--primary-color);
+            font-weight: 500;
+        }
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.5s;
+        }
+        .tab-content.active {
+            display: block;
+        }
     </style>
 </head>
 <body>
@@ -836,9 +865,25 @@
         }
         
         function calculateBonus() { 
-            const f = document.getElementById('fiscalYear').value; 
-            if (!f) { showAlert('Please select a fiscal year', 'error'); return; } 
-            displayBonusReport(calculateAnnualBonus(f), f); 
+            const fiscalYearStartDateString = document.getElementById('fiscalYear').value; 
+            if (!fiscalYearStartDateString) { 
+                showAlert('Please select a fiscal year', 'error'); 
+                return; 
+            }
+            
+            const agreementStart = new Date(appData.configs.agreementStartDate + "T00:00:00");
+            const fiscalStart = new Date(fiscalYearStartDateString);
+            
+            const isSubsequentYear = fiscalStart.getFullYear() > agreementStart.getFullYear();
+
+            const bonusCurrent = calculateAnnualBonus(fiscalYearStartDateString);
+
+            if (isSubsequentYear) {
+                const bonusNew = calculateAnnualBonusWithRates(fiscalYearStartDateString, appData.agreements.new);
+                displayBonusReport(bonusCurrent, fiscalYearStartDateString, bonusNew);
+            } else {
+                displayBonusReport(bonusCurrent, fiscalYearStartDateString, null);
+            }
         }
 
         function calculateTotalAllowanceForPeriod(startDate, endDate) {
@@ -879,8 +924,55 @@
             return workerBonusData;
         }
 
-        function displayBonusReport(b, f) {
-            const c = document.getElementById('bonusResults'), v = appData.permissions?.viewableWorkers || [], s = new Date(f).getFullYear(); let h = `<h3>Annual Bonus Report: ${s}-${s + 1}</h3><div class="report-grid">`; appData.workers.forEach(w => { if (v.includes(w)) { const d=b[w]||{}; h += `<div class="report-card"><strong>${w}</strong><br>Annual Earnings: Rs. ${(d.annualEarnings||0).toFixed(2)}<br>Avg Monthly: Rs. ${(d.avgMonthlySalary||0).toFixed(2)}<br>Bonus: Rs. ${(d.bonus||0).toFixed(2)}<br>Gratuity: Rs. ${(d.gratuity||0).toFixed(2)}<br>Paid Leaves Bonus: Rs. ${(d.paidLeavesBonus||0).toFixed(2)}<br><strong>Total Bonus: Rs. ${(d.totalBonus||0).toFixed(2)}</strong></div>`; } else { h += `<div class="report-card" style="background:#f1f1f1;border-left-color:#a0a0a0;"><strong>${w}</strong><br><span style="color:#6200EE;font-weight:500;">Contact admin to view details</span></div>`; } }); h += `</div>`; c.innerHTML = h;
+        function showBonusTab(tabIdToShow) {
+            document.querySelectorAll('#bonusResults .tab-content').forEach(content => {
+                content.style.display = 'none';
+            });
+            document.querySelectorAll('#bonusResults .tab-link').forEach(link => {
+                link.classList.remove('active');
+            });
+            document.getElementById(tabIdToShow).style.display = 'block';
+            const activeTabButtonId = tabIdToShow === 'currentBonusView' ? 'tab-btn-current' : 'tab-btn-new';
+            document.getElementById(activeTabButtonId).classList.add('active');
+        }
+
+        function displayBonusReport(bonusDataCurrent, fiscalYearStartDateString, bonusDataNew = null) {
+            const container = document.getElementById('bonusResults');
+            const viewableWorkers = appData.permissions?.viewableWorkers || [];
+            const startYear = new Date(fiscalYearStartDateString).getFullYear();
+            let html = `<h3>Annual Bonus Report: ${startYear}-${startYear + 1}</h3>`;
+
+            const generateReportCards = (data) => {
+                let cardsHtml = '<div class="report-grid">';
+                appData.workers.forEach(w => {
+                    if (viewableWorkers.includes(w)) {
+                        const d = data[w] || {};
+                        cardsHtml += `<div class="report-card"><strong>${w}</strong><br>Annual Earnings: Rs. ${(d.annualEarnings||0).toFixed(2)}<br>Avg Monthly: Rs. ${(d.avgMonthlySalary||0).toFixed(2)}<br>Bonus: Rs. ${(d.bonus||0).toFixed(2)}<br>Gratuity: Rs. ${(d.gratuity||0).toFixed(2)}<br>Paid Leaves Bonus: Rs. ${(d.paidLeavesBonus||0).toFixed(2)}<br><strong>Total Bonus: Rs. ${(d.totalBonus||0).toFixed(2)}</strong></div>`;
+                    } else {
+                        cardsHtml += `<div class="report-card" style="background:#f1f1f1;border-left-color:#a0a0a0;"><strong>${w}</strong><br><span style="color:#6200EE;font-weight:500;">Contact admin to view details</span></div>`;
+                    }
+                });
+                cardsHtml += '</div>';
+                return cardsHtml;
+            };
+
+            if (bonusDataNew) {
+                html += `
+                    <div class="tab-container">
+                        <button id="tab-btn-current" class="tab-link active" onclick="showBonusTab('currentBonusView')">Maujooda Bonus (Current Rates)</button>
+                        <button id="tab-btn-new" class="tab-link" onclick="showBonusTab('newBonusView')">Mumkina Bonus (New Rates)</button>
+                    </div>
+                    <div id="currentBonusView" class="tab-content active">
+                        ${generateReportCards(bonusDataCurrent)}
+                    </div>
+                    <div id="newBonusView" class="tab-content" style="display:none;">
+                         ${generateReportCards(bonusDataNew)}
+                    </div>
+                `;
+            } else {
+                html += generateReportCards(bonusDataCurrent);
+            }
+            container.innerHTML = html;
         }
 
         function calculateArrears() { 
@@ -968,7 +1060,8 @@
                 const paidLeavesUsed = Math.min(Math.max(totalLeaves - (appData.configs.unpaidLeaves || 20), 0), (appData.configs.paidLeaves || 12));
                 const remainingPaidLeaves = (appData.configs.paidLeaves || 12) - paidLeavesUsed;
                 const paidLeavesBonus = remainingPaidLeaves * newRates.layoffRate;
-                workerBonusData[workerName] = { totalBonus: bonus + gratuity + paidLeavesBonus };
+                const totalBonus = bonus + gratuity + paidLeavesBonus;
+                workerBonusData[workerName] = { annualEarnings: totalAnnualEarnings, avgMonthlySalary, bonus, gratuity, paidLeavesBonus, totalBonus };
             });
             return workerBonusData;
         }
