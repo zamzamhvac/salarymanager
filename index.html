@@ -856,72 +856,81 @@
         }
 
         // NAYI TABDEELI SHURU: Pro-Rata logic ke liye naya helper function
-        function getAllowanceForPayPeriod(periodStartDateStr, periodEndDateStr, rates) {
-            const rules = appData.allowanceRules || {};
-            const agreementStartDate = new Date(rates.effectiveDate + "T00:00:00");
-            const rule = rules[rates.effectiveDate];
+        function getAllowanceForPayPeriod(periodStartDateStr, periodEndDateStr, rates, fiscalYearStart, fiscalYearEnd) {
+    const rules = appData.allowanceRules || {};
+    const rule = rules[rates.effectiveDate];
 
-            // Agar rule "Pro-Rata" nahi hai, to hamesha adha allowance do
-            if (rule !== 'Pro-Rata') {
-                return rates.allowance / 2;
-            }
+    // Agar rule "Pro-Rata" nahi hai, to hamesha adha allowance do
+    if (rule !== 'Pro-Rata') {
+        return rates.allowance / 2;
+    }
 
-            // Agar rule "Pro-Rata" hai, to logic apply karo
-            const periodStart = new Date(periodStartDateStr + "T00:00:00");
-            const periodEnd = new Date(periodEndDateStr + "T00:00:00");
-            
-            const fiscalYearStart = new Date(agreementStartDate);
-            const fiscalYearEnd = new Date(fiscalYearStart);
-            fiscalYearEnd.setFullYear(fiscalYearEnd.getFullYear() + 1);
-            fiscalYearEnd.setDate(fiscalYearEnd.getDate() - 1);
+    // Agar rule "Pro-Rata" hai, to durust logic apply karo
+    const periodStart = new Date(periodStartDateStr + "T00:00:00");
+    const periodEnd = new Date(periodEndDateStr + "T00:00:00");
 
-            let isFirstPartialPeriod = false;
-            let isLastPartialPeriod = false;
+    let isFirstPartialPeriod = false;
+    let isLastPartialPeriod = false;
 
-            // Check karo ke kya yeh pehla adhoora period hai
-            if (periodStart <= agreementStartDate && agreementStartDate <= periodEnd) {
-                isFirstPartialPeriod = true;
-            }
+    // ISLAH SHUDA LOGIC: Ab yeh bahar se di hui sahi fiscal dates check karega
+    // Check karo ke kya yeh pehla adhoora period hai
+    if (periodStart <= fiscalYearStart && fiscalYearStart <= periodEnd) {
+        isFirstPartialPeriod = true;
+    }
 
-            // Check karo ke kya yeh aakhri adhoora period hai
-            if (periodStart <= fiscalYearEnd && fiscalYearEnd <= periodEnd) {
-                isLastPartialPeriod = true;
-            }
+    // Check karo ke kya yeh aakhri adhoora period hai
+    if (periodStart <= fiscalYearEnd && fiscalYearEnd <= periodEnd) {
+        isLastPartialPeriod = true;
+    }
 
-            const dailyAllowance = rates.allowance / 30; // 30 din ka standard farz kiya gaya
+    const dailyAllowance = rates.allowance / 30; // 30 din ka standard farz kiya gaya
 
-            if (isFirstPartialPeriod) {
-                const daysInPeriod = (periodEnd - agreementStartDate) / (1000 * 60 * 60 * 24) + 1;
-                return dailyAllowance * Math.max(0, daysInPeriod);
-            } else if (isLastPartialPeriod) {
-                const daysInPeriod = (fiscalYearEnd - periodStart) / (1000 * 60 * 60 * 24) + 1;
-                return dailyAllowance * Math.max(0, daysInPeriod);
-            } else {
-                // Darmiyani tamam periods ke liye adha allowance
-                return rates.allowance / 2;
-            }
-        }
+    if (isFirstPartialPeriod) {
+        // Time difference ko milliseconds mein nikal kar dinon mein tabdeel karna
+        const timeDiff = periodEnd.getTime() - fiscalYearStart.getTime();
+        const daysInPeriod = Math.round(timeDiff / (1000 * 60 * 60 * 24)) + 1;
+        return dailyAllowance * Math.max(0, daysInPeriod);
+    } else if (isLastPartialPeriod) {
+        // Time difference ko milliseconds mein nikal kar dinon mein tabdeel karna
+        const timeDiff = fiscalYearEnd.getTime() - periodStart.getTime();
+        const daysInPeriod = Math.round(timeDiff / (1000 * 60 * 60 * 24)) + 1;
+        return dailyAllowance * Math.max(0, daysInPeriod);
+    } else {
+        // Darmiyani tamam periods ke liye adha allowance
+        return rates.allowance / 2;
+    }
+}
+
         // NAYI TABDEELI KHATAM
         
         function calculatePeriodSalary(startDate, endDate) {
-            const salaryData = {}; appData.workers.forEach(w => salaryData[w] = 0);
-            
-            // Kaam ke dinon ki kamai jama karna
-            Object.keys(appData.salaries || {}).filter(d => d >= startDate && d <= endDate).forEach(d => {
-                if (appData.salaries[d].earnings) {
-                    Object.keys(appData.salaries[d].earnings).forEach(w => { if(salaryData[w] !== undefined) salaryData[w] += appData.salaries[d].earnings[w]; });
-                }
+    const salaryData = {}; 
+    appData.workers.forEach(w => salaryData[w] = 0);
+    
+    // Kaam ke dinon ki kamai jama karna (yeh pehle jaisa hi hai)
+    Object.keys(appData.salaries || {}).filter(d => d >= startDate && d <= endDate).forEach(d => {
+        if (appData.salaries[d].earnings) {
+            Object.keys(appData.salaries[d].earnings).forEach(w => { 
+                if(salaryData[w] !== undefined) salaryData[w] += appData.salaries[d].earnings[w]; 
             });
-
-            // NAYI TABDEELI SHURU: Allowance ko naye, aqalmand tareeqay se add karna
-            const ratesForPeriod = getRatesForDate(endDate);
-            const allowanceForPeriod = getAllowanceForPayPeriod(startDate, endDate, ratesForPeriod);
-            
-            appData.workers.forEach(w => { if(salaryData[w] !== undefined) salaryData[w] += allowanceForPeriod; });
-            // NAYI TABDEELI KHATAM
-
-            return salaryData;
         }
+    });
+
+    // ISLAH SHUDA LOGIC: Ab hum allowance nikalne se pehle sahi fiscal year ki dates nikalenge
+    const ratesForPeriod = getRatesForDate(endDate);
+    
+    // 1. Sahi fiscal year ki dates hasil karna
+    const [fiscalYearStart, fiscalYearEnd] = getCurrentFiscalYearDates(startDate);
+
+    // 2. Unn sahi dates ko function ko de kar allowance nikalna
+    const allowanceForPeriod = getAllowanceForPayPeriod(startDate, endDate, ratesForPeriod, fiscalYearStart, fiscalYearEnd);
+    
+    appData.workers.forEach(w => { 
+        if(salaryData[w] !== undefined) salaryData[w] += allowanceForPeriod; 
+    });
+    
+    return salaryData;
+}
         
         function displaySalaryReport(data, startDate, endDate) {
             const container = document.getElementById('salaryResults');
