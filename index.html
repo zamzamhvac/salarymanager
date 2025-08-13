@@ -641,7 +641,6 @@
 
         function getCurrentFiscalYearDates(referenceDateStr) {
             const referenceDate = referenceDateStr ? new Date(referenceDateStr + "T00:00:00") : new Date();
-            // NAYI TABDEELI: Fiscal Year ki tareekh hamesha master config se li jayegi
             const masterFiscalStart = appData.configs.fiscalYearStart || '10-10';
             const [fiscalMonth, fiscalDay] = masterFiscalStart.split('-').map(Number);
             
@@ -846,7 +845,6 @@
             displayDetailedSalaryTable(startDate, endDate);
         }
 
-        // NAYI ISLAH SHURU: Fiscal Year End ki ghalti ko theek karna
         function getAllowanceForPayPeriod(periodStartDateStr, periodEndDateStr, rates) {
             const rules = appData.allowanceRules || {};
             const rule = rules[rates.effectiveDate];
@@ -855,7 +853,6 @@
                 return rates.allowance / 2;
             }
             
-            // Asal Fiscal Year ki hadood (boundaries) hamesha master config se li jayengi
             const [fiscalYearStart, fiscalYearEnd] = getCurrentFiscalYearDates(periodStartDateStr);
             const agreementEffectiveDate = new Date(rates.effectiveDate + "T00:00:00");
 
@@ -865,12 +862,10 @@
             let isFirstPartialPeriod = false;
             let isLastPartialPeriod = false;
 
-            // Check karo ke kya yeh pehla adhoora period hai
             if (periodStart <= agreementEffectiveDate && agreementEffectiveDate <= periodEnd) {
                 isFirstPartialPeriod = true;
             }
 
-            // Check karo ke kya yeh aakhri adhoora period hai
             if (periodStart <= fiscalYearEnd && fiscalYearEnd <= periodEnd) {
                 isLastPartialPeriod = true;
             }
@@ -887,21 +882,34 @@
                 return rates.allowance / 2;
             }
         }
-        // NAYI ISLAH KHATAM
         
-        function calculatePeriodSalary(startDate, endDate) {
-            const salaryData = {}; appData.workers.forEach(w => salaryData[w] = 0);
+        function calculatePeriodSalary(startDateStr, endDateStr) {
+            const salaryData = {}; 
+            appData.workers.forEach(w => salaryData[w] = 0);
             
-            Object.keys(appData.salaries || {}).filter(d => d >= startDate && d <= endDate).forEach(d => {
-                if (appData.salaries[d].earnings) {
-                    Object.keys(appData.salaries[d].earnings).forEach(w => { if(salaryData[w] !== undefined) salaryData[w] += appData.salaries[d].earnings[w]; });
+            const startDate = new Date(startDateStr + "T00:00:00");
+            const endDate = new Date(endDateStr + "T00:00:00");
+
+            // NAYI ISLAH: Sirf fiscal year ke andar ki entries ko process karna
+            const [fiscalStart, fiscalEnd] = getCurrentFiscalYearDates(startDateStr);
+            
+            Object.values(appData.salaries || {}).forEach(entry => {
+                const entryDate = new Date(entry.date + "T00:00:00");
+                if (entryDate >= startDate && entryDate <= endDate && entryDate >= fiscalStart && entryDate <= fiscalEnd) {
+                    if (entry.earnings) {
+                        Object.keys(entry.earnings).forEach(w => { 
+                            if(salaryData[w] !== undefined) salaryData[w] += entry.earnings[w]; 
+                        });
+                    }
                 }
             });
 
-            const ratesForPeriod = getRatesForDate(endDate);
-            const allowanceForPeriod = getAllowanceForPayPeriod(startDate, endDate, ratesForPeriod);
+            const ratesForPeriod = getRatesForDate(endDateStr);
+            const allowanceForPeriod = getAllowanceForPayPeriod(startDateStr, endDateStr, ratesForPeriod);
             
-            appData.workers.forEach(w => { if(salaryData[w] !== undefined) salaryData[w] += allowanceForPeriod; });
+            appData.workers.forEach(w => { 
+                if(salaryData[w] !== undefined) salaryData[w] += allowanceForPeriod; 
+            });
 
             return salaryData;
         }
@@ -917,11 +925,30 @@
             html += `</div>`; container.innerHTML = html;
         }
 
-        function displayDetailedSalaryTable(startDate, endDate) {
+        // NAYI ISLAH SHURU: Detailed table display ko durust karna
+        function displayDetailedSalaryTable(startDateStr, endDateStr) {
             const container = document.getElementById('salaryResults');
-            const periodEntries = Object.values(appData.salaries || {}).filter(e => e.date >= startDate && e.date <= endDate).sort((a, b) => new Date(a.date) - new Date(b.date));
+            const startDate = new Date(startDateStr + "T00:00:00");
+            const endDate = new Date(endDateStr + "T00:00:00");
+            
+            // Asal fiscal year ki hadood (boundaries) nikalna
+            const [fiscalStart, fiscalEnd] = getCurrentFiscalYearDates(startDateStr);
+
+            // Sirf un entries ko filter karna jo select kiye gaye period AUR fiscal year, dono ke andar aati hain
+            const periodEntries = Object.values(appData.salaries || {})
+                .filter(e => { 
+                    const d = new Date(e.date + "T00:00:00"); 
+                    return d >= startDate && d <= endDate && d >= fiscalStart && d <= fiscalEnd; 
+                })
+                .sort((a, b) => new Date(a.date) - new Date(b.date));
+
             let tableHtml = `<div class="history-table-container" style="margin-top: 24px;"><h3>Detailed Entries</h3>`;
-            if (periodEntries.length === 0) { tableHtml += `<p class="no-history">No entries found.</p></div>`; container.innerHTML += tableHtml; return; }
+            if (periodEntries.length === 0) { 
+                tableHtml += `<p class="no-history">No entries found for the relevant fiscal period.</p></div>`; 
+                container.innerHTML += tableHtml; 
+                return; 
+            }
+            
             tableHtml += `<div class="history-table-wrapper"><table class="history-table"><thead><tr><th>Date</th><th>Tonnage</th>${appData.configs.isWagonRateEnabled ? '<th>Wagons</th>' : ''}<th>Absent</th><th>Pay/Worker (Rs)</th></tr></thead><tbody>`;
             periodEntries.forEach(entry => {
                 const absentWorkers = appData.workers.filter(w => !entry.presentWorkers.includes(w)).join(', ') || 'None';
@@ -931,8 +958,10 @@
                 else if (appData.workers?.length > 0) singlePay = entry.earnings[appData.workers[0]] || 0;
                 tableHtml += `<tr><td>${entry.date}</td><td>${entry.type === 'rest' ? 'Rest Day' : (entry.tonnage > 0 ? entry.tonnage.toFixed(2) : '-')}</td>${appData.configs.isWagonRateEnabled ? `<td>${entry.wagons > 0 ? entry.wagons : '-'}</td>` : ''}<td>${absentWorkers}</td><td>${singlePay.toFixed(2)}</td></tr>`;
             });
-            tableHtml += `</tbody></table></div></div>`; container.innerHTML += tableHtml;
+            tableHtml += `</tbody></table></div></div>`; 
+            container.innerHTML += tableHtml;
         }
+        // NAYI ISLAH KHATAM
 
         function loadFiscalYears() {
             const b = document.getElementById('fiscalYear'), l = document.getElementById('leavesFiscalYear');
@@ -964,19 +993,9 @@
                 return; 
             }
             
-            const agreementStart = new Date(appData.configs.agreementStartDate + "T00:00:00");
-            const fiscalStart = new Date(fiscalYearStartDateString);
-            
-            const isSubsequentYear = fiscalStart.getFullYear() > agreementStart.getFullYear();
-
             const bonusCurrent = calculateAnnualBonus(fiscalYearStartDateString, 'current');
-
-            if (isSubsequentYear) {
-                const bonusNew = calculateAnnualBonus(fiscalYearStartDateString, 'new');
-                displayBonusReport(bonusCurrent, fiscalYearStartDateString, bonusNew);
-            } else {
-                displayBonusReport(bonusCurrent, fiscalYearStartDateString, null);
-            }
+            const bonusNew = calculateAnnualBonus(fiscalYearStartDateString, 'new');
+            displayBonusReport(bonusCurrent, fiscalYearStartDateString, bonusNew);
         }
         
         function calculateAnnualBonus(fiscalYearStartDateString, rateType = 'current') {
@@ -1136,7 +1155,7 @@
                 }
                 
                 loopDate.setMonth(loopDate.getMonth() + 1);
-                loopDate.setDate(1); // Ensure we start from the 1st of next month
+                loopDate.setDate(1);
             }
             appData.workers.forEach(w => { arrearsByWorker[w].allowanceArrears = totalAllowanceArrears; });
             
