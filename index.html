@@ -565,10 +565,12 @@
             }
             if (!appData.agreements || !appData.agreements.history || appData.agreements.history.length === 0) return { tonRate: 0, restRate: 0, layoffRate: 0, wagonRate: 0, allowance: 0, annualBenefits: 0 };
             const targetDate = new Date(dateStr + "T00:00:00");
-            for (const period of appData.agreements.history) {
+            // Ensure history is sorted for correct rate lookup
+            const sortedHistory = [...appData.agreements.history].sort((a, b) => new Date(b.effectiveDate) - new Date(a.effectiveDate));
+            for (const period of sortedHistory) {
                 if (targetDate >= new Date(period.effectiveDate + "T00:00:00")) return period;
             }
-            return appData.agreements.history[appData.agreements.history.length - 1];
+            return sortedHistory[sortedHistory.length - 1];
         }
 
         function toggleWagonUIElements(isEnabled) {
@@ -610,7 +612,8 @@
             const absentWorkers = allWorkers.filter(w => !presentWorkers.includes(w));
             let penaltyPerPresentWorker = 0; const penaltyTriggeringAbsentees = [];
             if (appData.configs.isPenaltyEnabled && absentWorkers.length > 0) {
-                const [fiscalYearStart, fiscalYearEnd] = getCurrentFiscalYearDates(entryDate); 
+                const agreementForDate = getRatesForDate(entryDate);
+                const [fiscalYearStart, fiscalYearEnd] = getFiscalYearForAgreement(agreementForDate.effectiveDate);
                 const totalAllowedLeaves = (appData.configs.unpaidLeaves || 20) + (appData.configs.paidLeaves || 12);
                 absentWorkers.forEach(worker => {
                     if (getWorkerTotalLeaves(worker, fiscalYearStart, fiscalYearEnd) >= totalAllowedLeaves) penaltyTriggeringAbsentees.push(worker);
@@ -641,15 +644,13 @@
             });
             return earnings;
         }
-
-        function getCurrentFiscalYearDates(referenceDateStr) {
-            const referenceDate = referenceDateStr ? new Date(referenceDateStr + "T00:00:00") : new Date();
-            const [fiscalMonth, fiscalDay] = appData.configs.fiscalYearStart.split('-').map(Number);
-            let fiscalYearStartYear = referenceDate.getFullYear();
-            if (referenceDate < new Date(fiscalYearStartYear, fiscalMonth - 1, fiscalDay)) fiscalYearStartYear--;
-            const fiscalYearStartDate = new Date(fiscalYearStartYear, fiscalMonth - 1, fiscalDay);
-            const fiscalYearEndDate = new Date(fiscalYearStartYear + 1, fiscalMonth - 1, fiscalDay - 1);
-            return [fiscalYearStartDate, fiscalYearEndDate];
+        
+        function getFiscalYearForAgreement(agreementEffectiveDate) {
+            const fiscalStart = new Date(agreementEffectiveDate + "T00:00:00");
+            const fiscalEnd = new Date(fiscalStart);
+            fiscalEnd.setFullYear(fiscalEnd.getFullYear() + 1);
+            fiscalEnd.setDate(fiscalEnd.getDate() - 1);
+            return [fiscalStart, fiscalEnd];
         }
 
         function getWorkerTotalLeaves(workerName, fiscalYearStartDate, fiscalYearEndDate) {
@@ -823,7 +824,7 @@
                 const monthName = loopDate.toLocaleString('default', { month: 'long' });
                 const lastDay = new Date(year, loopDate.getMonth() + 1, 0).getDate();
                 optionsHtml = `<option value="${year}-${month}-16,${year}-${month}-${lastDay}">${monthName} ${year} (16-${lastDay})</option>` + optionsHtml;
-                optionsHtml = `<option value="${year}-${month}-01,${year}-${month}-15">${monthName} ${year} (1-15)</option>` + optionsHtml;
+                optionsHtml = `<option value="${year}-${month}-01,${year}-${month}-15}">${monthName} ${year} (1 - 15)</option>` + optionsHtml;
                 loopDate.setMonth(loopDate.getMonth() + 1);
             }
             selector.innerHTML += optionsHtml;
@@ -842,66 +843,69 @@
             displayDetailedSalaryTable(startDate, endDate);
         }
 
-        // FINAL FIX SHURU: getAllowanceForPayPeriod ka mukammal naya aur behtareen logic
-        function getAllowanceForPayPeriod(periodStartDateStr, periodEndDateStr, ratesForPeriod, rateType = 'current') {
-            let totalAllowance = 0;
+        // FINAL FIX: The new, robust, and correct allowance calculation engine.
+        function getAllowanceForPayPeriod(periodStartDateStr, periodEndDateStr, rateType = 'current') {
             const periodStart = new Date(periodStartDateStr + "T00:00:00");
             const periodEnd = new Date(periodEndDateStr + "T00:00:00");
-
-            // 1. Un tamam agreements ko dhoondo jinka fiscal year is pay period ke beech mein khatam ho raha hai.
-            const expiringAgreements = appData.agreements.history.filter(p => {
-                const fiscalStart = new Date(p.effectiveDate + "T00:00:00");
-                const fiscalEnd = new Date(fiscalStart);
-                fiscalEnd.setFullYear(fiscalEnd.getFullYear() + 1);
-                fiscalEnd.setDate(fiscalEnd.getDate() - 1);
-                return periodStart <= fiscalEnd && fiscalEnd < periodEnd;
-            });
-
-            let subPeriods = [{ start: periodStart, end: periodEnd }];
-
-            // 2. Pay period ko expiring agreements ki bunyad par hisson mein tordo.
-            expiringAgreements.forEach(p => {
-                const fiscalEnd = new Date(p.effectiveDate + "T00:00:00");
-                fiscalEnd.setFullYear(fiscalEnd.getFullYear() + 1);
-                fiscalEnd.setDate(fiscalEnd.getDate() - 1);
-
-                const newSubPeriods = [];
-                subPeriods.forEach(sub => {
-                    if (sub.start <= fiscalEnd && fiscalEnd < sub.end) {
-                        newSubPeriods.push({ start: sub.start, end: fiscalEnd });
-                        const nextDay = new Date(fiscalEnd);
-                        nextDay.setDate(nextDay.getDate() + 1);
-                        newSubPeriods.push({ start: nextDay, end: sub.end });
-                    } else {
-                        newSubPeriods.push(sub);
-                    }
-                });
-                subPeriods = newSubPeriods;
-            });
             
-            // 3. Har hissay (sub-period) ke liye allowance alag alag calculate karo.
-            subPeriods.forEach(sub => {
-                const rates = getRatesForDate(sub.start.toISOString().split('T')[0], rateType);
-                const rule = (appData.allowanceRules || {})[rates.effectiveDate];
-                const agreementStart = new Date(rates.effectiveDate + "T00:00:00");
+            // 1. Identify all unique dates within the period where a new agreement becomes active OR a fiscal year ends.
+            const splitPoints = new Set();
+            appData.agreements.history.forEach(p => {
+                const effectiveDate = new Date(p.effectiveDate + "T00:00:00");
+                const fiscalEnd = new Date(effectiveDate);
+                fiscalEnd.setFullYear(fiscalEnd.getFullYear() + 1);
+                fiscalEnd.setDate(fiscalEnd.getDate() - 1);
 
-                if (rule === 'Pro-Rata' && sub.start <= agreementStart && agreementStart <= sub.end) {
-                    // Yeh agreement ka pehla adhoora hissa hai
-                    const dailyAllowance = rates.allowance / 30;
-                    const daysInSubPeriod = (sub.end - agreementStart) / (1000 * 60 * 60 * 24) + 1;
-                    totalAllowance += dailyAllowance * Math.max(0, daysInSubPeriod);
-                } else {
-                    // Normal case ya darmiyani hissa, jise adha allowance milna chahiye
-                    // Lekin yahan period 15 din se kam ho sakta hai, isliye din gin kar hisaab lagana behtar hai.
-                    const daysInSubPeriod = (sub.end - sub.start) / (1000 * 60 * 60 * 24) + 1;
-                    const periodRatio = daysInSubPeriod / (periodEnd.getDate() - periodStart.getDate() + 1);
-                    totalAllowance += (rates.allowance / 2) * periodRatio;
+                // Add the start of a new agreement if it's within the period
+                if (periodStart < effectiveDate && effectiveDate <= periodEnd) {
+                    splitPoints.add(effectiveDate.getTime());
+                }
+                // Add the day AFTER a fiscal year ends if it's within the period
+                const dayAfterFiscalEnd = new Date(fiscalEnd);
+                dayAfterFiscalEnd.setDate(dayAfterFiscalEnd.getDate() + 1);
+                if (periodStart < dayAfterFiscalEnd && dayAfterFiscalEnd <= periodEnd) {
+                    splitPoints.add(dayAfterFiscalEnd.getTime());
                 }
             });
 
+            // 2. Create sub-periods based on these split points.
+            const subPeriods = [];
+            let currentStart = new Date(periodStart);
+            const sortedSplitPoints = Array.from(splitPoints).map(t => new Date(t)).sort((a,b) => a - b);
+
+            sortedSplitPoints.forEach(splitDate => {
+                const dayBeforeSplit = new Date(splitDate);
+                dayBeforeSplit.setDate(dayBeforeSplit.getDate() - 1);
+                subPeriods.push({ start: currentStart, end: dayBeforeSplit });
+                currentStart = splitDate;
+            });
+            subPeriods.push({ start: currentStart, end: periodEnd });
+            
+            // 3. Calculate allowance for each sub-period.
+            let totalAllowance = 0;
+            subPeriods.forEach(sub => {
+                if (sub.start > sub.end) return; // Skip invalid zero-day periods
+
+                const rates = getRatesForDate(sub.start.toISOString().split('T')[0], rateType);
+                const rule = (appData.allowanceRules || {})[rates.effectiveDate];
+                const agreementStart = new Date(rates.effectiveDate + "T00:00:00");
+                const dailyAllowance = rates.allowance / 30;
+                
+                let daysInSub = (sub.end - sub.start) / (1000 * 60 * 60 * 24) + 1;
+
+                if (rule === 'Pro-Rata' && sub.start < agreementStart && agreementStart <= sub.end) {
+                    // Handle the very first partial period of a pro-rata agreement
+                     const actualDays = (sub.end - agreementStart) / (1000 * 60 * 60 * 24) + 1;
+                     totalAllowance += dailyAllowance * Math.max(0, actualDays);
+                } else {
+                    // For all other cases (normal agreements, subsequent periods of pro-rata)
+                    totalAllowance += dailyAllowance * daysInSub;
+                }
+            });
+            
             return totalAllowance;
         }
-        // FINAL FIX KHATAM
+
         
         function calculatePeriodSalary(startDate, endDate) {
             const salaryData = {}; appData.workers.forEach(w => salaryData[w] = 0);
@@ -912,8 +916,8 @@
                 }
             });
 
-            const ratesForPeriod = getRatesForDate(endDate);
-            const allowanceForPeriod = getAllowanceForPayPeriod(startDate, endDate, ratesForPeriod);
+            // The allowance is now calculated correctly by the new engine.
+            const allowanceForPeriod = getAllowanceForPayPeriod(startDate, endDate, 'current');
             
             appData.workers.forEach(w => { if(salaryData[w] !== undefined) salaryData[w] += allowanceForPeriod; });
 
@@ -952,23 +956,21 @@
             const b = document.getElementById('fiscalYear'), l = document.getElementById('leavesFiscalYear');
             if (!appData.configs || !appData.configs.agreementStartDate) return;
             if(b) b.innerHTML = '<option value="">Select Year</option>'; if(l) l.innerHTML = '<option value="">Select Year</option>';
-            const [fm, fd] = appData.configs.fiscalYearStart.split('-').map(Number);
-            const currentYear = new Date().getFullYear(); let optionsHtml = '';
-            for (let i = 0; i < 5; i++) {
-                const startYear = currentYear - i;
-                optionsHtml += `<option value="${startYear}-${String(fm).padStart(2, '0')}-${String(fd).padStart(2, '0')}">${startYear}-${startYear + 1}</option>`;
-            }
+
+            const fiscalYearDates = new Set();
+            appData.agreements.history.forEach(p => {
+                const start = new Date(p.effectiveDate + "T00:00:00");
+                fiscalYearDates.add(`${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}-${String(start.getDate()).padStart(2, '0')}`);
+            });
+            const sortedDates = Array.from(fiscalYearDates).sort().reverse();
+            
+            let optionsHtml = '';
+            sortedDates.forEach(dateStr => {
+                const start = new Date(dateStr);
+                optionsHtml += `<option value="${dateStr}">${start.getFullYear()}-${start.getFullYear() + 1}</option>`;
+            });
+
             if(b) b.innerHTML += optionsHtml; if(l) l.innerHTML += optionsHtml;
-            const today = new Date();
-            let lastCompletedFiscalYearStart = getCurrentFiscalYearDates(today.toISOString().split('T')[0])[0];
-            if (today >= lastCompletedFiscalYearStart) {
-                lastCompletedFiscalYearStart.setFullYear(lastCompletedFiscalYearStart.getFullYear() - 1);
-            } else {
-                lastCompletedFiscalYearStart.setFullYear(lastCompletedFiscalYearStart.getFullYear() - 2);
-            }
-            const defaultValue = `${lastCompletedFiscalYearStart.getFullYear()}-${String(fm).padStart(2, '0')}-${String(fd).padStart(2, '0')}`;
-            if(b && b.querySelector(`option[value="${defaultValue}"]`)) b.value = defaultValue;
-            if(l && l.querySelector(`option[value="${defaultValue}"]`)) l.value = defaultValue;
         }
         
         function calculateBonus() { 
@@ -978,25 +980,14 @@
                 return; 
             }
             
-            const fiscalStart = new Date(fiscalYearStartDateString);
-            const agreementPeriod = appData.agreements.history.find(p => p.effectiveDate === fiscalYearStartDateString);
-            const isSubsequentYear = agreementPeriod ? false : true;
-
             const bonusCurrent = calculateAnnualBonus(fiscalYearStartDateString, 'current');
-
-            if (isSubsequentYear) {
-                const bonusNew = calculateAnnualBonus(fiscalYearStartDateString, 'new');
-                displayBonusReport(bonusCurrent, fiscalYearStartDateString, bonusNew);
-            } else {
-                displayBonusReport(bonusCurrent, fiscalYearStartDateString, null);
-            }
+            const bonusNew = calculateAnnualBonus(fiscalYearStartDateString, 'new');
+            
+            displayBonusReport(bonusCurrent, fiscalYearStartDateString, bonusNew);
         }
         
         function calculateAnnualBonus(fiscalYearStartDateString, rateType = 'current') {
-            const fiscalStart = new Date(fiscalYearStartDateString);
-            const fiscalEnd = new Date(fiscalStart); 
-            fiscalEnd.setFullYear(fiscalEnd.getFullYear() + 1); 
-            fiscalEnd.setDate(fiscalEnd.getDate() - 1);
+            const [fiscalStart, fiscalEnd] = getFiscalYearForAgreement(fiscalYearStartDateString);
             
             const workerBonusData = {};
             appData.workers.forEach(workerName => {
@@ -1025,13 +1016,15 @@
 
                     const startDate1 = `${year}-${String(month).padStart(2, '0')}-01`;
                     const endDate1 = `${year}-${String(month).padStart(2, '0')}-15`;
-                    const rates1 = getRatesForDate(startDate1, rateType);
-                    totalAnnualAllowance += getAllowanceForPayPeriod(startDate1, endDate1, rates1, rateType);
+                    if (new Date(startDate1) <= fiscalEnd) {
+                         totalAnnualAllowance += getAllowanceForPayPeriod(startDate1, endDate1, rateType);
+                    }
                     
                     const startDate2 = `${year}-${String(month).padStart(2, '0')}-16`;
                     const endDate2 = `${year}-${String(month).padStart(2, '0')}-${lastDay}`;
-                    const rates2 = getRatesForDate(startDate2, rateType);
-                    totalAnnualAllowance += getAllowanceForPayPeriod(startDate2, endDate2, rates2, rateType);
+                    if (new Date(startDate2) <= fiscalEnd) {
+                        totalAnnualAllowance += getAllowanceForPayPeriod(startDate2, endDate2, rateType);
+                    }
                     
                     loopDate.setMonth(loopDate.getMonth() + 1);
                 }
@@ -1138,18 +1131,16 @@
                 const startDate1 = `${year}-${String(month).padStart(2, '0')}-01`;
                 if (new Date(startDate1) <= today) {
                     const endDate1 = `${year}-${String(month).padStart(2, '0')}-15`;
-                    const ratesHistoric1 = getRatesForDate(startDate1);
-                    const allowanceHistoric1 = getAllowanceForPayPeriod(startDate1, endDate1, ratesHistoric1, 'current');
-                    const allowanceNew1 = getAllowanceForPayPeriod(startDate1, endDate1, appData.agreements.new, 'new');
+                    const allowanceHistoric1 = getAllowanceForPayPeriod(startDate1, endDate1, 'current');
+                    const allowanceNew1 = getAllowanceForPayPeriod(startDate1, endDate1, 'new');
                     totalAllowanceArrears += (allowanceNew1 - allowanceHistoric1);
                 }
 
                 const startDate2 = `${year}-${String(month).padStart(2, '0')}-16`;
                 if (new Date(startDate2) <= today) {
                     const endDate2 = `${year}-${String(month).padStart(2, '0')}-${lastDay}`;
-                    const ratesHistoric2 = getRatesForDate(startDate2);
-                    const allowanceHistoric2 = getAllowanceForPayPeriod(startDate2, endDate2, ratesHistoric2, 'current');
-                    const allowanceNew2 = getAllowanceForPayPeriod(startDate2, endDate2, appData.agreements.new, 'new');
+                    const allowanceHistoric2 = getAllowanceForPayPeriod(startDate2, endDate2, 'current');
+                    const allowanceNew2 = getAllowanceForPayPeriod(startDate2, endDate2, 'new');
                     totalAllowanceArrears += (allowanceNew2 - allowanceHistoric2);
                 }
                 
@@ -1157,19 +1148,17 @@
             }
             appData.workers.forEach(w => { arrearsByWorker[w].allowanceArrears = totalAllowanceArrears; });
             
-            const [fm, fd] = appData.configs.fiscalYearStart.split('-').map(Number);
-            let fiscalYearStart = getCurrentFiscalYearDates(appData.configs.agreementStartDate)[0];
-            while (true) {
-                let fiscalYearEnd = new Date(fiscalYearStart); fiscalYearEnd.setFullYear(fiscalYearEnd.getFullYear() + 1); fiscalYearEnd.setDate(fiscalYearEnd.getDate() - 1);
-                if (fiscalYearEnd > today) break;
-                const fiscalYearString = `${fiscalYearStart.getFullYear()}-${String(fm).padStart(2, '0')}-${String(fd).padStart(2, '0')}`;
-                
-                const bonusCurrent = calculateAnnualBonus(fiscalYearString, 'current');
-                const bonusNew = calculateAnnualBonus(fiscalYearString, 'new');
-
-                appData.workers.forEach(w => { arrearsByWorker[w].bonusArrears += ((bonusNew[w]?.totalBonus || 0) - (bonusCurrent[w]?.totalBonus || 0)); });
-                fiscalYearStart.setFullYear(fiscalYearStart.getFullYear() + 1);
-            }
+            appData.agreements.history.forEach(p => {
+                const fiscalStart = new Date(p.effectiveDate + "T00:00:00");
+                const fiscalEnd = new Date(fiscalStart);
+                fiscalEnd.setFullYear(fiscalEnd.getFullYear() + 1);
+                fiscalEnd.setDate(fiscalEnd.getDate() - 1);
+                if (fiscalEnd <= today) {
+                     const bonusCurrent = calculateAnnualBonus(p.effectiveDate, 'current');
+                     const bonusNew = calculateAnnualBonus(p.effectiveDate, 'new');
+                     appData.workers.forEach(w => { arrearsByWorker[w].bonusArrears += ((bonusNew[w]?.totalBonus || 0) - (bonusCurrent[w]?.totalBonus || 0)); });
+                }
+            });
 
             let totalBenefitsArrears = 0; let benefitsLoopDate = new Date(agreementStartDate);
             while(benefitsLoopDate <= today) {
@@ -1227,19 +1216,17 @@
 
                 const sDate1 = `${year}-${String(month).padStart(2,'0')}-01`;
                 const eDate1 = `${year}-${String(month).padStart(2,'0')}-15`;
-                if (new Date(sDate1) <= endDate && new Date(eDate1) >= startDate) {
-                    const ratesHistoric1 = getRatesForDate(sDate1);
-                    const allowanceHistoric1 = getAllowanceForPayPeriod(sDate1, eDate1, ratesHistoric1, 'current');
-                    const allowanceNew1 = getAllowanceForPayPeriod(sDate1, eDate1, appData.agreements.new, 'new');
+                 if (new Date(eDate1) >= startDate && new Date(sDate1) <= endDate) {
+                    const allowanceHistoric1 = getAllowanceForPayPeriod(sDate1, eDate1, 'current');
+                    const allowanceNew1 = getAllowanceForPayPeriod(sDate1, eDate1, 'new');
                     totalAllowanceArrears += (allowanceNew1 - allowanceHistoric1);
                 }
 
                 const sDate2 = `${year}-${String(month).padStart(2,'0')}-16`;
                 const eDate2 = `${year}-${String(month).padStart(2,'0')}-${lastDay}`;
-                 if (new Date(sDate2) <= endDate && new Date(eDate2) >= startDate) {
-                    const ratesHistoric2 = getRatesForDate(sDate2);
-                    const allowanceHistoric2 = getAllowanceForPayPeriod(sDate2, eDate2, ratesHistoric2, 'current');
-                    const allowanceNew2 = getAllowanceForPayPeriod(sDate2, eDate2, appData.agreements.new, 'new');
+                if (new Date(eDate2) >= startDate && new Date(sDate2) <= endDate) {
+                    const allowanceHistoric2 = getAllowanceForPayPeriod(sDate2, eDate2, 'current');
+                    const allowanceNew2 = getAllowanceForPayPeriod(sDate2, eDate2, 'new');
                     totalAllowanceArrears += (allowanceNew2 - allowanceHistoric2);
                 }
 
@@ -1267,7 +1254,7 @@
         function generateLeavesReport() { const f = document.getElementById('leavesFiscalYear').value; if(!f){showAlert('Please select a fiscal year','error'); return;} displayLeavesReport(calculateLeavesReport(f), f); }
         
         function calculateLeavesReport(f) {
-            const s = new Date(f), e = new Date(s); e.setFullYear(e.getFullYear() + 1); e.setDate(e.getDate() - 1);
+            const [s, e] = getFiscalYearForAgreement(f);
             const w = {}; const unpaidLeavesConfig = appData.configs.unpaidLeaves || 20;
             const paidLeavesConfig = appData.configs.paidLeaves || 12; const totalLeavesConfig = unpaidLeavesConfig + paidLeavesConfig;
             appData.workers.forEach(b => {
