@@ -883,49 +883,36 @@
 
         // ========= FIX START: ALLOWANCE CALCULATION KA FINAL LOGIC =========
         function getAllowanceForPayPeriod(periodStartDateStr, periodEndDateStr, rates) {
-            const masterAgreementStartDate = new Date(appData.configs.agreementStartDate + "T00:00:00");
-            const masterAgreementEndDate = new Date(masterAgreementStartDate);
-            masterAgreementEndDate.setFullYear(masterAgreementEndDate.getFullYear() + 2);
-            masterAgreementEndDate.setDate(masterAgreementEndDate.getDate() - 1);
-
             const rules = appData.allowanceRules || {};
             const ruleForThisRatePeriod = rules[rates.effectiveDate];
 
-            // Step 1: Agar Pro-Rata rule on nahi hai, to hamesha adha allowance do.
+            // Agar Pro-Rata rule on nahi hai, to hamesha adha allowance dein.
             if (ruleForThisRatePeriod !== 'Pro-Rata') {
                 return rates.allowance / 2;
             }
 
             const periodStart = new Date(periodStartDateStr + "T00:00:00");
             const periodEnd = new Date(periodEndDateStr + "T00:00:00");
-            const dailyAllowance = rates.allowance / 30;
 
-            // Step 2: Agreement ke bilkul pehle partial period ko handle karo.
-            if (periodStart <= masterAgreementStartDate && masterAgreementStartDate <= periodEnd) {
-                const daysInPeriod = (periodEnd - masterAgreementStartDate) / (1000 * 60 * 60 * 24) + 1;
-                return dailyAllowance * Math.max(0, daysInPeriod);
-            }
+            // Check karein ke yeh "standard" adha maheena hai ya nahi.
+            const periodStartDay = periodStart.getDate();
+            const periodEndDay = periodEnd.getDate();
+            const lastDayOfMonth = new Date(periodStart.getFullYear(), periodStart.getMonth() + 1, 0).getDate();
 
-            // Step 3: Agreement ke bilkul aakhri partial period ko handle karo.
-            if (periodStart <= masterAgreementEndDate && masterAgreementEndDate <= periodEnd) {
-                const daysInPeriod = (masterAgreementEndDate - periodStart) / (1000 * 60 * 60 * 24) + 1;
-                return dailyAllowance * Math.max(0, daysInPeriod);
-            }
+            const isStandardPeriod = 
+                (periodStartDay === 1 && periodEndDay === 15) || 
+                (periodStartDay === 16 && periodEndDay === lastDayOfMonth);
 
-            // Step 4: Darmiyan ke saalon ke "Anniversary Month" ke partial periods ko handle karo.
-            const isAnniversaryMonth = periodStart.getMonth() === masterAgreementStartDate.getMonth();
-            if (isAnniversaryMonth) {
-                // Ye check zaroori hai taake pehla saal dubara yahan handle na ho.
-                const isNotInFirstYear = periodStart.getFullYear() > masterAgreementStartDate.getFullYear();
-                if (isNotInFirstYear) {
-                    const daysInPeriod = (periodEnd - periodStart) / (1000 * 60 * 60 * 24) + 1;
-                    return dailyAllowance * Math.max(0, daysInPeriod);
-                }
+            // Agar yeh standard period hai (maslan 16-31 Oct, ya 1-15 Nov), to adha allowance dein.
+            if (isStandardPeriod) {
+                return rates.allowance / 2;
             }
             
-            // Step 5: Agar ooper di gayi koi bhi khaas surat-e-haal nahi hai, to yeh normal period hai.
-            // (e.g., November, December, etc.). Is mein adha allowance do.
-            return rates.allowance / 2;
+            // Agar yeh standard period nahi hai, to yeh zaroor koi toota hua (broken) period hai.
+            // Ab iska hisaab dino ki buniyad par (pro-rata) karein.
+            const dailyAllowance = rates.allowance / 30;
+            const daysInPeriod = (periodEnd - periodStart) / (1000 * 60 * 60 * 24) + 1;
+            return dailyAllowance * Math.max(0, daysInPeriod);
         }
         // ========= FIX END =========
         
