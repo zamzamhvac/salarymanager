@@ -11,6 +11,8 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.22.2/firebase-auth-compat.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.22.2/firebase-database-compat.min.js"></script>
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.22.2/firebase-app-check-compat.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
     <style>
         :root {
             --primary-color: #6200EE;
@@ -235,7 +237,10 @@
             <button onclick="saveNewAgreement()" class="btn">Save New Agreement Details</button>
         </div>
 
-        <div id="salaries" class="page"><h2>💰 Salary Reports</h2><p>View salary reports for different pay periods</p><div class="form-group"><label>Select Pay Period:</label><select id="payPeriod"><option value="">Select Period</option></select></div><button onclick="generateSalaryReport()" class="btn">Generate Report</button><div id="salaryResults"></div></div>
+        <div id="salaries" class="page"><h2>💰 Salary Reports</h2><p>View salary reports for different pay periods</p><div class="form-group"><label>Select Pay Period:</label><select id="payPeriod"><option value="">Select Period</option></select></div><button onclick="generateSalaryReport()" class="btn">Generate Report</button><button onclick="generateCompleteSalaryPDF()" class="btn btn-success" style="background-color: #00796b;">
+    <i class="material-icons" style="font-size: 18px; margin-right: 8px;">picture_as_pdf</i> 
+    Download Complete History (PDF)
+</button><div id="salaryResults"></div></div>
         <div id="bonus" class="page"><h2>🎁 Annual Bonus & Gratuity</h2><p>Calculate annual bonus, gratuity and paid leaves bonus</p><div class="form-group"><label>Select Fiscal Year:</label><select id="fiscalYear"><option value="">Select Year</option></select></div><button onclick="calculateBonus()" class="btn">Calculate Bonus</button><div id="bonusResults"></div></div>
         
         <div id="arrears" class="page">
@@ -965,6 +970,109 @@
             html += `</div>`;
             container.innerHTML = html;
         }
+		async function generateCompleteSalaryPDF() {
+    // User ko batayein ke process shuru ho gaya hai
+    showAlert('Generating comprehensive PDF report... This may take a moment.', 'info');
+
+    try {
+        // 1. Data Jama Karna (Agreement start se ab tak ka)
+        const agreementStartDate = new Date(appData.configs.agreementStartDate + "T00:00:00");
+        const today = new Date();
+
+        const allEntries = Object.values(appData.salaries || {})
+            .filter(entry => {
+                const entryDate = new Date(entry.date + "T00:00:00");
+                return entryDate >= agreementStartDate && entryDate <= today;
+            })
+            .sort((a, b) => new Date(a.date) - new Date(b.date)); // Tareekh ke hisab se tarteeb dein
+
+        if (allEntries.length === 0) {
+            showAlert('No salary data found to generate a report.', 'error');
+            return;
+        }
+
+        // 2. PDF Document Tayyar Karna
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({
+            orientation: 'portrait',
+            unit: 'mm',
+            format: 'a4'
+        });
+
+        // 3. Report ka Header (Title, Company ka Naam, etc.)
+        const reportTitle = "Complete Salary Payment History";
+        const companyName = currentUser.displayName || "PM's Salary Manager";
+        const reportPeriod = `Period: ${agreementStartDate.toLocaleDateString()} to ${today.toLocaleDateString()}`;
+
+        doc.setFontSize(18);
+        doc.text(reportTitle, 14, 22);
+        doc.setFontSize(11);
+        doc.setTextColor(100);
+        doc.text(companyName, 14, 30);
+        doc.text(reportPeriod, 14, 36);
+
+        // 4. PDF Table ke liye Data Format Karna
+        const tableHead = [["Date", "Day Type", "Tonnage", "Wagons", "Present", "Pay/Worker (Rs)"]];
+        const tableBody = [];
+
+        allEntries.forEach(entry => {
+            let singlePay = 0;
+            if (entry.presentWorkers && entry.presentWorkers.length > 0) {
+                singlePay = entry.earnings[entry.presentWorkers[0]] || 0;
+            } else if (entry.type === 'rest') {
+                singlePay = getRatesForDate(entry.date).restRate;
+            } else if (appData.workers && appData.workers.length > 0) {
+                 singlePay = entry.earnings[appData.workers[0]] || 0;
+            }
+
+            const row = [
+                entry.date,
+                entry.type.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
+                entry.tonnage > 0 ? entry.tonnage.toFixed(2) : '-',
+                appData.configs.isWagonRateEnabled ? (entry.wagons > 0 ? entry.wagons : '-') : 'N/A',
+                `${entry.presentWorkers.length} / ${appData.workers.length}`,
+                singlePay.toFixed(2)
+            ];
+            tableBody.push(row);
+        });
+        
+        // Agar wagon rate setting band hai, to column ko hata dein
+        if (!appData.configs.isWagonRateEnabled) {
+            tableHead[0].splice(3, 1);
+            tableBody.forEach(row => row.splice(3, 1));
+        }
+
+        // 5. PDF mein Table Banana
+        doc.autoTable({
+            head: tableHead,
+            body: tableBody,
+            startY: 45,
+            theme: 'grid',
+            headStyles: { fillColor: [62, 0, 238] }, // Aapka primary color
+            styles: { fontSize: 8, cellPadding: 1.5 },
+            columnStyles: { 0: { cellWidth: 20 }, 1: { cellWidth: 30 } }
+        });
+
+        // 6. Har Page par Footer (Page Number) lagana
+        const pageCount = doc.internal.getNumberOfPages();
+        for (let i = 1; i <= pageCount; i++) {
+            doc.setPage(i);
+            const footerText = `Page ${i} of ${pageCount} | Generated by Digital Munshi on: ${new Date().toLocaleString()}`;
+            doc.setFontSize(9);
+            doc.text(footerText, 14, doc.internal.pageSize.height - 10);
+        }
+
+        // 7. PDF ko Download karwana
+        const fileName = `Complete_Salary_History_${new Date().toISOString().split('T')[0]}.pdf`;
+        doc.save(fileName);
+
+        showAlert('PDF report downloaded successfully!', 'success');
+
+    } catch (error) {
+        console.error("PDF Generation Error:", error);
+        showAlert('An error occurred while generating the PDF.', 'error');
+    }
+}
 
         function displayDetailedSalaryTable(startDate, endDate) {
             const container = document.getElementById('salaryResults');
