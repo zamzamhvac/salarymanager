@@ -167,6 +167,36 @@
         .tab-content.active {
             display: block;
         }
+		        /* PDF Options Modal Styles */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.6);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background: white;
+            padding: 25px;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 450px;
+            text-align: center;
+        }
+        .modal-content h3 {
+            margin-top: 0;
+            color: var(--primary-color);
+        }
+        .modal-content .btn {
+            display: block;
+            width: 100%;
+            margin: 10px 0;
+        }
     </style>
 </head>
 <body>
@@ -237,9 +267,9 @@
             <button onclick="saveNewAgreement()" class="btn">Save New Agreement Details</button>
         </div>
 
-        <div id="salaries" class="page"><h2>💰 Salary Reports</h2><p>View salary reports for different pay periods</p><div class="form-group"><label>Select Pay Period:</label><select id="payPeriod"><option value="">Select Period</option></select></div><button onclick="generateSalaryReport()" class="btn">Generate Report</button><button onclick="generateCompleteSalaryPDF()" class="btn btn-success" style="background-color: #00796b;">
-    <i class="material-icons" style="font-size: 18px; margin-right: 8px;">picture_as_pdf</i> 
-    Download Complete History (PDF)
+        <div id="salaries" class="page"><h2>💰 Salary Reports</h2><p>View salary reports for different pay periods</p><div class="form-group"><label>Select Pay Period:</label><select id="payPeriod"><option value="">Select Period</option></select></div><button onclick="generateSalaryReport()" class="btn">Generate Report</button><button onclick="openPdfOptions()" class="btn" style="background-color: #c62828;">
+    <i class="material-icons" style="margin-right: 8px;">picture_as_pdf</i> 
+    Download PDF Report
 </button><div id="salaryResults"></div></div>
         <div id="bonus" class="page"><h2>🎁 Annual Bonus & Gratuity</h2><p>Calculate annual bonus, gratuity and paid leaves bonus</p><div class="form-group"><label>Select Fiscal Year:</label><select id="fiscalYear"><option value="">Select Year</option></select></div><button onclick="calculateBonus()" class="btn">Calculate Bonus</button><div id="bonusResults"></div></div>
         
@@ -1507,6 +1537,207 @@
                 document.getElementById('unlock-prompt').style.display = 'none';
             } else { showAlert('Aapne sahi jumla type nahi kiya. Dobara koshish karein.', 'error'); }
         }
+		//==================================================
+//  === PDF MODAL (POPUP) CONTROL FUNCTIONS ===
+//==================================================
+function openPdfOptions() {
+    const payPeriod = document.getElementById('payPeriod').value;
+    if (!payPeriod) {
+        showAlert('Please select a Pay Period from the dropdown first.', 'error');
+        return;
+    }
+    document.getElementById('pdf-options-modal').style.display = 'flex';
+}
+
+function closePdfOptions() {
+    document.getElementById('pdf-options-modal').style.display = 'none';
+}
+//=======================================================
+//  === MASTER PDF HANDLER & GENERATION FUNCTIONS ===
+//=======================================================
+
+async function handlePdfDownload(type) {
+    // Popup ko band karein
+    closePdfOptions();
+
+    // Selected pay period ki dates hasil karein
+    const periodValue = document.getElementById('payPeriod').value;
+    const [startDate, endDate] = periodValue.split(',');
+    
+    if (type === 'slip') {
+        showAlert('Generating Salary Slips... This may take a moment.', 'info');
+        // Salary Slip wala function call karein
+        await generateSalarySlipsPDF(startDate, endDate);
+    } else if (type === 'history_log') {
+        showAlert('Generating Complete History Log... This may take a moment.', 'info');
+        // Poori history wala function call karein
+        await generateHistoryLogPDF();
+    }
+}
+
+
+/**
+ * FUNCTION 1: Har Worker ke liye alag alag tafseeli Salary Slip banata hai.
+ */
+async function generateSalarySlipsPDF(startDate, endDate) {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
+    const companyName = currentUser.displayName || "Digital Munshi";
+
+    for (let i = 0; i < appData.workers.length; i++) {
+        const workerName = appData.workers[i];
+        
+        // Data for this specific worker
+        const periodEntries = Object.values(appData.salaries || {})
+            .filter(e => e.date >= startDate && e.date <= endDate);
+
+        let workEarning = 0;
+        const earningsBody = [];
+        const absentDates = [];
+        
+        periodEntries.forEach(entry => {
+            if (entry.presentWorkers.includes(workerName)) {
+                const earning = entry.earnings[workerName] || 0;
+                workEarning += earning;
+                earningsBody.push([
+                    entry.date,
+                    entry.type.replace('_', ' ').toUpperCase(),
+                    `Rs. ${earning.toFixed(2)}`
+                ]);
+            } else {
+                if(entry.type !== 'rest') {
+                    absentDates.push(entry.date);
+                }
+            }
+        });
+
+        // Agar pehla worker nahi hai to naya page add karein
+        if (i > 0) doc.addPage();
+        
+        // --- Page Header ---
+        doc.setFontSize(18);
+        doc.setFont('helvetica', 'bold');
+        doc.text(companyName, 105, 20, { align: 'center' });
+        doc.setFontSize(14);
+        doc.setFont('helvetica', 'normal');
+        doc.text('Salary Slip', 105, 28, { align: 'center' });
+        doc.setLineWidth(0.5);
+        doc.line(14, 32, 196, 32);
+
+        // --- Worker Details ---
+        doc.setFontSize(11);
+        doc.text(`Worker Name: ${workerName}`, 14, 40);
+        doc.text(`Pay Period: ${startDate} to ${endDate}`, 14, 46);
+
+        // --- Earnings Table ---
+        doc.autoTable({
+            head: [['Date', 'Day Type', 'Earning']],
+            body: earningsBody,
+            startY: 52,
+            theme: 'striped',
+            headStyles: { fillColor: [41, 128, 185] },
+        });
+
+        let lastTableY = doc.lastAutoTable.finalY + 10;
+        
+        // --- Absences ---
+        if (absentDates.length > 0) {
+            doc.setFontSize(12).setFont('helvetica', 'bold').text('Absences:', 14, lastTableY);
+            doc.setFontSize(10).setFont('helvetica', 'normal').text(absentDates.join(', '), 20, lastTableY + 5, { maxWidth: 170 });
+            lastTableY += 15;
+        }
+
+        // --- Summary ---
+        const ratesForPeriod = getRatesForDate(endDate);
+        const allowance = getAllowanceForPayPeriod(startDate, endDate, ratesForPeriod);
+        const totalSalary = workEarning + allowance;
+        
+        doc.setLineWidth(0.5);
+        doc.line(14, lastTableY, 196, lastTableY);
+        lastTableY += 8;
+
+        doc.setFontSize(12).setFont('helvetica', 'bold');
+        doc.text('Total Work Earning:', 14, lastTableY);
+        doc.text(`Rs. ${workEarning.toFixed(2)}`, 196, lastTableY, { align: 'right' });
+        
+        lastTableY += 7;
+        doc.setFontSize(12).setFont('helvetica', 'bold');
+        doc.text('Monthly Allowance:', 14, lastTableY);
+        doc.text(`Rs. ${allowance.toFixed(2)}`, 196, lastTableY, { align: 'right' });
+
+        lastTableY += 7;
+        doc.setLineWidth(0.2);
+        doc.line(120, lastTableY, 196, lastTableY);
+        lastTableY += 1;
+        doc.line(120, lastTableY, 196, lastTableY);
+        lastTableY += 6;
+
+        doc.setFontSize(14).setFont('helvetica', 'bold');
+        doc.text('TOTAL SALARY:', 14, lastTableY);
+        doc.text(`Rs. ${totalSalary.toFixed(2)}`, 196, lastTableY, { align: 'right' });
+        
+        // --- Page Footer ---
+        doc.setFontSize(9).setTextColor(150).text(`Page ${i + 1} | Generated by Digital Munshi`, 105, 285, { align: 'center' });
+    }
+    
+    doc.save(`Salary_Slips_${startDate}_to_${endDate}.pdf`);
+    showAlert('Salary Slips PDF downloaded successfully!', 'success');
+}
+
+
+/**
+ * FUNCTION 2: Agreement start se ab tak ki saari entries ka ek log banata hai.
+ */
+async function generateHistoryLogPDF() {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    
+    // --- Data Collection ---
+    const agreementStartDate = new Date(appData.configs.agreementStartDate + "T00:00:00");
+    const today = new Date();
+    const allEntries = Object.values(appData.salaries || {})
+        .filter(entry => new Date(entry.date + "T00:00:00") >= agreementStartDate)
+        .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+    // --- PDF Header ---
+    doc.setFontSize(18).text("Complete Salary History Log", 14, 22);
+    doc.setFontSize(11).setTextColor(100).text(`Period: ${agreementStartDate.toLocaleDateString()} - ${today.toLocaleDateString()}`, 14, 30);
+
+    // --- Table Data ---
+    const tableHead = [["Date", "Type", "Tonnage", "Present", "Pay/Worker (Rs)"]];
+    const tableBody = allEntries.map(entry => {
+        let singlePay = 0;
+        if (entry.presentWorkers?.length > 0) singlePay = entry.earnings[entry.presentWorkers[0]] || 0;
+        else if (appData.workers?.length > 0) singlePay = entry.earnings[appData.workers[0]] || 0;
+        
+        return [
+            entry.date,
+            entry.type.replace('_', ' ').toUpperCase(),
+            entry.tonnage > 0 ? entry.tonnage.toFixed(2) : '-',
+            `${entry.presentWorkers.length} / ${appData.workers.length}`,
+            singlePay.toFixed(2)
+        ];
+    });
+
+    // --- Generate Table ---
+    doc.autoTable({
+        head: tableHead,
+        body: tableBody,
+        startY: 40,
+        theme: 'grid',
+        headStyles: { fillColor: [62, 0, 238] },
+    });
+
+    // --- Page Footer ---
+    const pageCount = doc.internal.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.setFontSize(9).setTextColor(150).text(`Page ${i} of ${pageCount}`, 105, doc.internal.pageSize.height - 10, { align: 'center' });
+    }
+
+    doc.save(`Complete_History_Log_${today.toISOString().split('T')[0]}.pdf`);
+    showAlert('History Log PDF downloaded successfully!', 'success');
+}
 
 		function showAlert(message, type = 'info') {
             document.querySelectorAll('.alert').forEach(a => a.remove());
@@ -1520,5 +1751,21 @@
             }, 5000);
         }
     </script>
+	    <!-- ============================================= -->
+    <!--  === PDF DOWNLOAD OPTIONS POPUP (MODAL) === -->
+    <!-- ============================================= -->
+    <div id="pdf-options-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h3>Download PDF Report</h3>
+            <p>Aap kis qisam ki report download karna chahte hain?</p>
+            <button class="btn" onclick="handlePdfDownload('slip')">
+                <i class="material-icons" style="margin-right: 8px;">description</i> Salary Slips for Selected Period
+            </button>
+            <button class="btn btn-success" onclick="handlePdfDownload('history_log')">
+                <i class="material-icons" style="margin-right: 8px;">history</i> Complete History Log
+            </button>
+            <button class="btn btn-danger" onclick="closePdfOptions()">Cancel</button>
+        </div>
+    </div>
 </body>
 </html>
