@@ -208,6 +208,18 @@
                         <div class="form-group"><label>Monthly Allowance (Rs):</label><input type="number" id="rateAllowance"></div>
                         <div class="form-group"><label>Annual Benefits (Rs):</label><input type="number" id="rateAnnualBenefits"></div>
                     </div>
+                    
+                    <!-- NAYI TABDEELI SHURU: Allowance Calculation Rule ka Dropdown -->
+                    <div class="form-group" style="background: #eef; padding: 12px; border-radius: 6px; border: 1px solid #cce;">
+                        <label style="font-weight: 700; color: var(--primary-variant-color);">Allowance ka Hisaab (Allowance Calculation Method):</label>
+                        <select id="rateAllowanceMethod">
+                            <option value="Half Monthly">Normal (Adha Mahana)</option>
+                            <option value="Pro-Rata">Rozana ki Bunyad Par (For Mid-Month Start)</option>
+                        </select>
+                        <p style="font-size: 12px; margin-top: 8px; color: #556;">Agar agreement maheenay ke beech mein shuru ho (e.g. 10 tareekh), to "Rozana ki Bunyad Par" chunein. Warna "Normal" rehne dein.</p>
+                    </div>
+                    <!-- NAYI TABDEELI KHATAM -->
+
                     <button onclick="saveRatePeriod()" class="btn">Save Period</button><button onclick="hideAddRateForm()" class="btn btn-danger">Cancel</button>
                 </div>
             </div>
@@ -262,8 +274,6 @@
                 <div class="checkbox-group"><input type="checkbox" id="enableWagonRate"><label for="enableWagonRate">Enable Wagon Rate Calculation</label></div>
                 <div class="checkbox-group"><input type="checkbox" id="enablePenalty"><label for="enablePenalty">Enable Excess Leave Penalty</label></div>
                 <div class="sub-setting" id="penaltyAmountContainer" style="display: none;"><div class="form-group"><label for="penaltyAmount">Penalty Amount (Normal Day)</label><input type="number" id="penaltyAmount"></div></div>
-                <!-- NEW CHECKBOX ADDED HERE -->
-                <div class="checkbox-group"><input type="checkbox" id="enableCustomPayroll"><label for="enableCustomPayroll">Enable Custom Agreement-Based Payroll Cycle</label></div>
             </div>
             <div class="settings-section">
                 <h3>Manage Workers</h3>
@@ -317,14 +327,17 @@
         let isWorkerSettingsLocked = true;
         let currentWizardStep = 1;
 
+        // NAYI TABDEELI SHURU: appData mein 'allowanceRules' ka Izafa
         let appData = { 
             salaries: {}, workers: [], permissions: { viewableWorkers: [] },
-            configs: { workerCount: 8, agreementStartDate: '2023-10-10', fiscalYearStart: '10-10', isPenaltyEnabled: false, penaltyAmount: 231, isWagonRateEnabled: false, isSetupComplete: false, unpaidLeaves: 20, paidLeaves: 12, enableCustomPayroll: false }, 
+            configs: { workerCount: 8, agreementStartDate: '2023-10-10', fiscalYearStart: '10-10', isPenaltyEnabled: false, penaltyAmount: 231, isWagonRateEnabled: false, isSetupComplete: false, unpaidLeaves: 20, paidLeaves: 12 }, 
             agreements: { 
                 history: [{ effectiveDate: '2023-10-10', tonRate: 22, restRate: 1100, layoffRate: 549, wagonRate: 0, allowance: 17870, annualBenefits: 0 }],
                 new: { tonRate: 25, restRate: 1200, layoffRate: 600, wagonRate: 0, allowance: 26000, annualBenefits: 0 } 
-            } 
+            },
+            allowanceRules: {} // Yeh Bilkul Nayi, Alag List Hai
         };
+        // NAYI TABDEELI KHATAM
         
         function toggleNav() {
             document.getElementById('sideNav').classList.toggle('open');
@@ -438,7 +451,8 @@
                         permissions: { ...(appData.permissions || {}), ...(savedData.permissions || {}) },
                         configs: { ...appData.configs, ...(savedData.configs || {}) },
                         agreements: { history: savedData.agreements?.history || appData.agreements.history, new: { ...appData.agreements.new, ...(savedData.agreements?.new || {}) } },
-                        salaries: savedData.salaries || {}, workers: savedData.workers || []
+                        salaries: savedData.salaries || {}, workers: savedData.workers || [],
+                        allowanceRules: savedData.allowanceRules || {} // NAYI TABDEELI: Alag list ko load karna
                     };
                     if (!appData.permissions.viewableWorkers || appData.permissions.viewableWorkers.length === 0) {
                         appData.permissions.viewableWorkers = appData.workers.length > 0 ? [appData.workers[0]] : [];
@@ -468,11 +482,12 @@
             appData = { 
                 salaries: {}, workers: ['Worker 1', 'Worker 2', 'Worker 3', 'Worker 4', 'Worker 5', 'Worker 6', 'Worker 7', 'Worker 8'], 
                 permissions: { viewableWorkers: ['Worker 1'] },
-                configs: { workerCount: 8, agreementStartDate: todayStr, fiscalYearStart: '10-10', isPenaltyEnabled: false, penaltyAmount: 231, isWagonRateEnabled: false, isSetupComplete: false, unpaidLeaves: 20, paidLeaves: 12, enableCustomPayroll: false }, 
+                configs: { workerCount: 8, agreementStartDate: todayStr, fiscalYearStart: '10-10', isPenaltyEnabled: false, penaltyAmount: 231, isWagonRateEnabled: false, isSetupComplete: false, unpaidLeaves: 20, paidLeaves: 12 }, 
                 agreements: { 
                     history: [{ effectiveDate: todayStr, tonRate: 22, restRate: 1100, layoffRate: 549, wagonRate: 0, allowance: 17870, annualBenefits: 0 }], 
                     new: { tonRate: 25, restRate: 1200, layoffRate: 600, wagonRate: 0, allowance: 26000, annualBenefits: 0 } 
-                }
+                },
+                allowanceRules: {} // NAYI TABDEELI: Naye user ke liye khaali list banana
             };
         }
 
@@ -715,6 +730,8 @@
                     if(input) input.value = latestRates[key];
                 });
                 document.getElementById('rateEffectiveDate').value = new Date().toISOString().split('T')[0];
+                // NAYI TABDEELI: Naya form khulte waqt hamesha Normal rule select ho
+                document.getElementById('rateAllowanceMethod').value = 'Half Monthly';
             }
         }
 
@@ -729,12 +746,22 @@
                 const input = document.getElementById(`rate${key.charAt(0).toUpperCase() + key.slice(1)}`);
                 if(input) input.value = periodToEdit[key];
             });
+
+            // NAYI TABDEELI SHURU: Edit karte waqt purana rule load karna
+            const rules = appData.allowanceRules || {};
+            if (rules[periodToEdit.effectiveDate] === 'Pro-Rata') {
+                document.getElementById('rateAllowanceMethod').value = 'Pro-Rata';
+            } else {
+                document.getElementById('rateAllowanceMethod').value = 'Half Monthly';
+            }
+            // NAYI TABDEELI KHATAM
         }
 
         async function saveRatePeriod() {
             const index = parseInt(document.getElementById('rate-edit-index').value);
             const effectiveDate = document.getElementById('rateEffectiveDate').value;
             if (!effectiveDate) { showAlert('Effective Date is required.', 'error'); return; }
+            
             const newPeriod = {
                 effectiveDate,
                 tonRate: parseFloat(document.getElementById('rateTonRate').value) || 0,
@@ -744,7 +771,30 @@
                 allowance: parseFloat(document.getElementById('rateAllowance').value) || 0,
                 annualBenefits: parseFloat(document.getElementById('rateAnnualBenefits').value) || 0
             };
-            if (index === -1) { appData.agreements.history.push(newPeriod); } else { appData.agreements.history[index] = newPeriod; }
+
+            // NAYI TABDEELI SHURU: Sirf rule ko alag list mein save karna
+            // Asal agreement data waisay hi save hoga jaisa pehle hota tha
+            if (index === -1) { 
+                appData.agreements.history.push(newPeriod); 
+            } else { 
+                appData.agreements.history[index] = newPeriod; 
+            }
+
+            // Ab rule ko 'allowanceRules' list mein save karna
+            const allowanceMethod = document.getElementById('rateAllowanceMethod').value;
+            if (!appData.allowanceRules) {
+                appData.allowanceRules = {}; // Agar list na ho to bana dein
+            }
+
+            if (allowanceMethod === 'Pro-Rata') {
+                appData.allowanceRules[effectiveDate] = 'Pro-Rata';
+                showAlert('Rate period saved with "Pro-Rata" rule.', 'info');
+            } else {
+                // Agar 'Normal' select kiya hai to rule ko delete kar dein (agar pehle se tha)
+                delete appData.allowanceRules[effectiveDate];
+            }
+            // NAYI TABDEELI KHATAM
+
             await saveUserData();
             showAlert('Rate history saved successfully!', 'success');
             loadAgreements();
@@ -753,9 +803,16 @@
         async function deleteRatePeriod(index) {
             if (appData.agreements.history.length <= 1) { showAlert('You cannot delete the only rate period. Please edit it instead.', 'error'); return; }
             if (confirm('Are you sure you want to delete this rate period? This action cannot be undone.')) {
+                // NAYI TABDEELI SHURU: Agreement ke saath uska rule bhi delete karna
+                const periodToDelete = appData.agreements.history[index];
+                if (appData.allowanceRules && appData.allowanceRules[periodToDelete.effectiveDate]) {
+                    delete appData.allowanceRules[periodToDelete.effectiveDate];
+                }
+                // NAYI TABDEELI KHATAM
+
                 appData.agreements.history.splice(index, 1);
                 await saveUserData();
-                showAlert('Rate period deleted.', 'success');
+                showAlert('Rate period and any associated rule deleted.', 'success');
                 loadAgreements();
             }
         }
@@ -769,90 +826,24 @@
             showAlert('New Agreement details saved successfully!', 'success');
         }
         
-        // MODIFIED FUNCTION
         function loadPayPeriods() {
-            const selector = document.getElementById('payPeriod');
-            selector.innerHTML = '<option value="">Select Period</option>';
-            if (!appData.configs || !appData.configs.agreementStartDate) return;
-
-            const today = new Date();
-            today.setHours(23, 59, 59, 999); // Ensure today is included
-            let optionsHtml = '';
-
-            // If custom payroll is NOT enabled, use the old logic
-            if (!appData.configs.enableCustomPayroll) {
-                const agreementStart = new Date(appData.configs.agreementStartDate + "T00:00:00");
-                let loopDate = new Date(agreementStart.getFullYear(), agreementStart.getMonth(), 1);
-                while (loopDate <= today) {
-                    const year = loopDate.getFullYear(), month = (loopDate.getMonth() + 1).toString().padStart(2, '0');
-                    const monthName = loopDate.toLocaleString('default', { month: 'long' });
-                    const lastDay = new Date(year, loopDate.getMonth() + 1, 0).getDate();
-                    optionsHtml = `<option value="${year}-${month}-16,${year}-${month}-${lastDay}">${monthName} ${year} (16-${lastDay})</option>` + optionsHtml;
-                    optionsHtml = `<option value="${year}-${month}-01,${year}-${month}-15">${monthName} ${year} (1-15)</option>` + optionsHtml;
-                    loopDate.setMonth(loopDate.getMonth() + 1);
-                }
-            } else {
-                // NEW LOGIC for Custom Payroll Cycle
-                const agreementDate = new Date(appData.configs.agreementStartDate + "T00:00:00");
-                const agreementDay = agreementDate.getDate();
-                const agreementMonth = agreementDate.getMonth(); // 0-indexed
-                
-                let loopDate = new Date(today.getFullYear(), today.getMonth(), 1);
-                if (loopDate < agreementDate) loopDate = new Date(agreementDate);
-
-                while (loopDate >= agreementDate) {
-                    const year = loopDate.getFullYear(), month = loopDate.getMonth();
-                    const monthStr = (month + 1).toString().padStart(2, '0');
-                    const monthName = loopDate.toLocaleString('default', { month: 'long' });
-                    const lastDay = new Date(year, month + 1, 0).getDate();
-
-                    const addOption = (start, end, text) => {
-                        const startDate = `${year}-${monthStr}-${String(start).padStart(2,'0')}`;
-                        const endDate = `${year}-${monthStr}-${String(end).padStart(2,'0')}`;
-                        // Ensure period is not in the future
-                        if(new Date(startDate) > today) return;
-                        optionsHtml += `<option value="${startDate},${endDate}">${text}</option>`;
-                    };
-
-                    // Generate periods for the month of loopDate in reverse
-                    // Period 2: 16 to end of month
-                    if (lastDay >= 16) {
-                        const p2_start = 16, p2_end = lastDay;
-                        addOption(p2_start, p2_end, `${monthName} ${year} (${p2_start}-${p2_end})`);
-                    }
-
-                    // Period 1: Start to 15th
-                    if(agreementDay <= 15) {
-                         // Anniversary or first month
-                        if (month === agreementMonth) {
-                           addOption(agreementDay, 15, `${monthName} ${year} (${agreementDay}-15)`);
-                           if (agreementDay > 1) {
-                                addOption(1, agreementDay - 1, `${monthName} ${year} (1-${agreementDay-1})`);
-                           }
-                        } else { // Normal month
-                            addOption(1, 15, `${monthName} ${year} (1-15)`);
-                        }
-                    } else { // agreementDay is > 15
-                        if(month === agreementMonth) {
-                             addOption(agreementDay, lastDay, `${monthName} ${year} (${agreementDay}-${lastDay})`);
-                             if (agreementDay > 1) {
-                                addOption(1, agreementDay - 1, `${monthName} ${year} (1-${agreementDay-1})`);
-                             }
-                        } else {
-                            addOption(1, 15, `${monthName} ${year} (1-15)`);
-                        }
-                    }
-                    
-                    loopDate.setMonth(loopDate.getMonth() - 1);
-                }
+            const selector = document.getElementById('payPeriod'); selector.innerHTML = '<option value="">Select Period</option>';
+            const today = new Date(); if (!appData.configs || !appData.configs.agreementStartDate) return;
+            const agreementStart = new Date(appData.configs.agreementStartDate + "T00:00:00");
+            let loopDate = new Date(agreementStart.getFullYear(), agreementStart.getMonth(), 1); let optionsHtml = '';
+            while (loopDate <= today) {
+                const year = loopDate.getFullYear(), month = (loopDate.getMonth() + 1).toString().padStart(2, '0');
+                const monthName = loopDate.toLocaleString('default', { month: 'long' });
+                const lastDay = new Date(year, loopDate.getMonth() + 1, 0).getDate();
+                optionsHtml = `<option value="${year}-${month}-16,${year}-${month}-${lastDay}">${monthName} ${year} (16-${lastDay})</option>` + optionsHtml;
+                optionsHtml = `<option value="${year}-${month}-01,${year}-${month}-15">${monthName} ${year} (1-15)</option>` + optionsHtml;
+                loopDate.setMonth(loopDate.getMonth() + 1);
             }
-
             selector.innerHTML += optionsHtml;
-            
-            // Set default value to the most recent period
-            if (selector.options.length > 1) {
-                selector.selectedIndex = 1;
-            }
+            const currentDay = today.getDate(), currentYear = today.getFullYear(), currentMonth = (today.getMonth() + 1).toString().padStart(2, '0');
+            const lastDayOfMonth = new Date(currentYear, today.getMonth() + 1, 0).getDate();
+            let defaultValue = (currentDay <= 15) ? `${currentYear}-${currentMonth}-01,${currentYear}-${currentMonth}-15` : `${currentYear}-${currentMonth}-16,${currentYear}-${currentMonth}-${lastDayOfMonth}`;
+            if (selector.querySelector(`option[value="${defaultValue}"]`)) selector.value = defaultValue;
         }
 
         function generateSalaryReport() {
@@ -863,43 +854,80 @@
             displaySalaryReport(salaryData, startDate, endDate);
             displayDetailedSalaryTable(startDate, endDate);
         }
-        
-        // MODIFIED FUNCTION
-        function calculatePeriodSalary(startDate, endDate) {
-            const salaryData = {}; 
-            appData.workers.forEach(w => salaryData[w] = 0);
+
+        // ========= FIX START: MASLAY KA HAL YAHAN KIYA GAYA HAI =========
+        function getAllowanceForPayPeriod(periodStartDateStr, periodEndDateStr, rates) {
+            // Step 1: Hamesha Master Agreement Start Date ko buniyad banayein, jo "Settings" se aati hai.
+            const masterAgreementStartDate = new Date(appData.configs.agreementStartDate + "T00:00:00");
+
+            // Step 2: Agreement ki sahi End Date calculate karein (User ke mutabiq 2 saal).
+            const masterAgreementEndDate = new Date(masterAgreementStartDate);
+            masterAgreementEndDate.setFullYear(masterAgreementEndDate.getFullYear() + 2); // 2 saal add kiye
+            masterAgreementEndDate.setDate(masterAgreementEndDate.getDate() - 1); // Aakhri din ke liye 1 din peechay kiya
+
+            // Step 3: Check karein ke is rate period ke liye Pro-Rata rule apply karna hai ya nahi.
+            // Yeh rule 'Agreements' page se set hota hai. Hum rate ki effective date se rule check kar rahe hain,
+            // lekin Pro-Rata ka hisaab (calculation) hamesha Master dates se karenge.
+            const rules = appData.allowanceRules || {};
+            const ruleForThisRatePeriod = rules[rates.effectiveDate];
+
+            // Agar is rate ke liye "Pro-Rata" rule set nahi hai, to hamesha adha allowance dein.
+            // Yeh bilkul pehle jaisa hi hai aur sahi kaam kar raha hai.
+            if (ruleForThisRatePeriod !== 'Pro-Rata') {
+                return rates.allowance / 2;
+            }
+
+            // Ab Pro-Rata logic apply hoga, lekin Master dates ke sath.
+            const periodStart = new Date(periodStartDateStr + "T00:00:00");
+            const periodEnd = new Date(periodEndDateStr + "T00:00:00");
             
-            // Calculate earnings from daily work entries
+            let isFirstPartialPeriod = false;
+            let isLastPartialPeriod = false;
+
+            // Check karo ke kya yeh pehla adhoora period hai (Master Date ke hisab se)
+            if (periodStart <= masterAgreementStartDate && masterAgreementStartDate <= periodEnd) {
+                isFirstPartialPeriod = true;
+            }
+
+            // Check karo ke kya yeh aakhri adhoora period hai (Master Date ke hisab se)
+            if (periodStart <= masterAgreementEndDate && masterAgreementEndDate <= periodEnd) {
+                isLastPartialPeriod = true;
+            }
+
+            const dailyAllowance = rates.allowance / 30; // 30 din ka standard farz kiya gaya
+
+            if (isFirstPartialPeriod) {
+                // Dinon ka hisab Master Start Date se hoga.
+                const daysInPeriod = (periodEnd - masterAgreementStartDate) / (1000 * 60 * 60 * 24) + 1;
+                return dailyAllowance * Math.max(0, daysInPeriod);
+            } else if (isLastPartialPeriod) {
+                // Dinon ka hisab Master End Date tak hoga.
+                const daysInPeriod = (masterAgreementEndDate - periodStart) / (1000 * 60 * 60 * 24) + 1;
+                return dailyAllowance * Math.max(0, daysInPeriod);
+            } else {
+                // Darmiyani tamam periods ke liye adha allowance
+                return rates.allowance / 2;
+            }
+        }
+        // ========= FIX END: MASLA HAL HO GAYA =========
+        
+        function calculatePeriodSalary(startDate, endDate) {
+            const salaryData = {}; appData.workers.forEach(w => salaryData[w] = 0);
+            
+            // Kaam ke dinon ki kamai jama karna
             Object.keys(appData.salaries || {}).filter(d => d >= startDate && d <= endDate).forEach(d => {
                 if (appData.salaries[d].earnings) {
-                    Object.keys(appData.salaries[d].earnings).forEach(w => { 
-                        if(salaryData[w] !== undefined) salaryData[w] += appData.salaries[d].earnings[w]; 
-                    });
+                    Object.keys(appData.salaries[d].earnings).forEach(w => { if(salaryData[w] !== undefined) salaryData[w] += appData.salaries[d].earnings[w]; });
                 }
             });
 
+            // NAYI TABDEELI SHURU: Allowance ko naye, aqalmand tareeqay se add karna
             const ratesForPeriod = getRatesForDate(endDate);
-            let allowanceForPeriod = 0;
+            const allowanceForPeriod = getAllowanceForPayPeriod(startDate, endDate, ratesForPeriod);
+            
+            appData.workers.forEach(w => { if(salaryData[w] !== undefined) salaryData[w] += allowanceForPeriod; });
+            // NAYI TABDEELI KHATAM
 
-            if (appData.configs.enableCustomPayroll) {
-                // Pro-rata allowance calculation for custom cycle
-                const start = new Date(startDate + "T00:00:00");
-                const end = new Date(endDate + "T00:00:00");
-                const daysInPeriod = (end.getTime() - start.getTime()) / (1000 * 3600 * 24) + 1;
-                const daysInMonth = new Date(start.getFullYear(), start.getMonth() + 1, 0).getDate();
-                const monthlyAllowance = ratesForPeriod.allowance;
-                if (daysInMonth > 0) {
-                    allowanceForPeriod = (monthlyAllowance / daysInMonth) * daysInPeriod;
-                }
-            } else {
-                // Standard half-allowance calculation
-                allowanceForPeriod = ratesForPeriod.allowance / 2;
-            }
-            
-            appData.workers.forEach(w => { 
-                if(salaryData[w] !== undefined) salaryData[w] += allowanceForPeriod; 
-            });
-            
             return salaryData;
         }
         
@@ -942,14 +970,11 @@
                 optionsHtml += `<option value="${startYear}-${String(fm).padStart(2, '0')}-${String(fd).padStart(2, '0')}">${startYear}-${startYear + 1}</option>`;
             }
             if(b) b.innerHTML += optionsHtml; if(l) l.innerHTML += optionsHtml;
-            // CORRECTED: Logic to set the last COMPLETED fiscal year as default
             const today = new Date();
             let lastCompletedFiscalYearStart = getCurrentFiscalYearDates(today.toISOString().split('T')[0])[0];
             if (today >= lastCompletedFiscalYearStart) {
-                // We are in the current fiscal year, so the last completed one started last year.
                 lastCompletedFiscalYearStart.setFullYear(lastCompletedFiscalYearStart.getFullYear() - 1);
             } else {
-                // We are still in the period before the current fiscal year has started, so the last completed one started two years ago.
                 lastCompletedFiscalYearStart.setFullYear(lastCompletedFiscalYearStart.getFullYear() - 2);
             }
             const defaultValue = `${lastCompletedFiscalYearStart.getFullYear()}-${String(fm).padStart(2, '0')}-${String(fd).padStart(2, '0')}`;
@@ -969,53 +994,81 @@
             
             const isSubsequentYear = fiscalStart.getFullYear() > agreementStart.getFullYear();
 
-            const bonusCurrent = calculateAnnualBonus(fiscalYearStartDateString);
+            // NAYI TABDEELI: Bonus ko asli data par calculate karna
+            const bonusCurrent = calculateAnnualBonus(fiscalYearStartDateString, 'current');
 
             if (isSubsequentYear) {
-                const bonusNew = calculateAnnualBonusWithRates(fiscalYearStartDateString, appData.agreements.new);
+                const bonusNew = calculateAnnualBonus(fiscalYearStartDateString, 'new');
                 displayBonusReport(bonusCurrent, fiscalYearStartDateString, bonusNew);
             } else {
                 displayBonusReport(bonusCurrent, fiscalYearStartDateString, null);
             }
         }
-
-        function calculateTotalAllowanceForPeriod(startDate, endDate) {
-            let totalAllowance = 0; let currentDate = new Date(startDate);
-            while (currentDate <= endDate) {
-                totalAllowance += getRatesForDate(currentDate.toISOString().split('T')[0]).allowance;
-                currentDate.setMonth(currentDate.getMonth() + 1);
-            }
-            return totalAllowance;
-        }
-
-        function calculateAnnualBonus(fiscalYearStartDateString) {
+        
+        // NAYI TABDEELI SHURU: Bonus ka function ab haqeeqi data par kaam karega
+        function calculateAnnualBonus(fiscalYearStartDateString, rateType = 'current') {
             const fiscalStart = new Date(fiscalYearStartDateString);
-            const fiscalEnd = new Date(fiscalStart); fiscalEnd.setFullYear(fiscalEnd.getFullYear() + 1); fiscalEnd.setDate(fiscalEnd.getDate() - 1);
+            const fiscalEnd = new Date(fiscalStart); 
+            fiscalEnd.setFullYear(fiscalEnd.getFullYear() + 1); 
+            fiscalEnd.setDate(fiscalEnd.getDate() - 1);
+            
             const workerBonusData = {};
             appData.workers.forEach(workerName => {
-                let annualWorkEarnings = 0, totalLeaves = 0; 
+                let annualWorkEarnings = 0;
+                let totalLeaves = 0; 
+                
+                // 1. Saal bhar ki asli kamai ko 'salaries' data se jama karna
                 Object.values(appData.salaries || {}).forEach(entry => {
                     const entryDate = new Date(entry.date + "T00:00:00");
                     if (entryDate >= fiscalStart && entryDate <= fiscalEnd) {
-                        if (entry.earnings && entry.earnings[workerName] !== undefined) annualWorkEarnings += entry.earnings[workerName];
-                        if (entry.type !== 'rest' && !entry.presentWorkers.includes(workerName)) totalLeaves++;
+                        const rates = (rateType === 'new') ? appData.agreements.new : getRatesForDate(entry.date);
+                        const dailyEarning = calculateDayEarnings(entry.date, entry.type, entry.tonnage, entry.wagons, entry.presentWorkers, rates);
+                        annualWorkEarnings += dailyEarning[workerName] || 0;
+
+                        if (entry.type !== 'rest' && !entry.presentWorkers.includes(workerName)) {
+                            totalLeaves++;
+                        }
                     }
                 });
-                const totalAnnualAllowance = calculateTotalAllowanceForPeriod(fiscalStart, fiscalEnd);
+
+                // 2. Saal bhar ke allowance ko sahi tareeqay se jama karna
+                let totalAnnualAllowance = 0;
+                let loopDate = new Date(fiscalStart);
+                while (loopDate <= fiscalEnd) {
+                    const year = loopDate.getFullYear();
+                    const month = loopDate.getMonth() + 1;
+                    const lastDay = new Date(year, month, 0).getDate();
+
+                    // Pehla pay period (1-15)
+                    const rates1 = (rateType === 'new') ? appData.agreements.new : getRatesForDate(`${year}-${String(month).padStart(2,'0')}-01`);
+                    totalAnnualAllowance += getAllowanceForPayPeriod(`${year}-${String(month).padStart(2,'0')}-01`, `${year}-${String(month).padStart(2,'0')}-15`, rates1);
+                    
+                    // Doosra pay period (16-end)
+                    const rates2 = (rateType === 'new') ? appData.agreements.new : getRatesForDate(`${year}-${String(month).padStart(2,'0')}-16`);
+                    totalAnnualAllowance += getAllowanceForPayPeriod(`${year}-${String(month).padStart(2,'0')}-16`, `${year}-${String(month).padStart(2,'0')}-${lastDay}`, rates2);
+                    
+                    loopDate.setMonth(loopDate.getMonth() + 1);
+                }
+
                 const totalAnnualEarnings = annualWorkEarnings + totalAnnualAllowance;
                 const avgMonthlySalary = totalAnnualEarnings / 12;
-                const bonus = avgMonthlySalary; const gratuity = avgMonthlySalary;
-                const ratesAtYearEnd = getRatesForDate(fiscalEnd.toISOString().split('T')[0]);
+                const bonus = avgMonthlySalary; 
+                const gratuity = avgMonthlySalary;
+                
+                const ratesAtYearEnd = (rateType === 'new') ? appData.agreements.new : getRatesForDate(fiscalEnd.toISOString().split('T')[0]);
                 const unpaidLeaves = appData.configs.unpaidLeaves || 20;
                 const paidLeaves = appData.configs.paidLeaves || 12;
                 const paidLeavesUsed = Math.min(Math.max(totalLeaves - unpaidLeaves, 0), paidLeaves);
                 const remainingPaidLeaves = paidLeaves - paidLeavesUsed;
                 const paidLeavesBonus = remainingPaidLeaves * ratesAtYearEnd.layoffRate;
+                
                 const totalBonus = bonus + gratuity + paidLeavesBonus;
+                
                 workerBonusData[workerName] = { annualEarnings: totalAnnualEarnings, avgMonthlySalary, bonus, gratuity, paidLeavesBonus, totalBonus };
             });
             return workerBonusData;
         }
+        // NAYI TABDEELI KHATAM
 
         function showBonusTab(tabIdToShow) {
             document.querySelectorAll('#bonusResults .tab-content').forEach(content => {
@@ -1080,6 +1133,7 @@
             const arrearsByWorker = {};
             appData.workers.forEach(w => { arrearsByWorker[w] = { salaryArrears: 0, allowanceArrears: 0, bonusArrears: 0, annualBenefitsArrears: 0, totalArrears: 0 }; });
 
+            // Salary Arrears
             Object.values(appData.salaries || {}).forEach(entry => {
                 const entryDate = new Date(entry.date + "T00:00:00");
                 if (entryDate >= agreementStartDate && entryDate <= today) {
@@ -1090,34 +1144,53 @@
                 }
             });
 
-            // CORRECTED ALLOWANCE ARREARS LOGIC
+            // NAYI TABDEELI SHURU: Allowance Arrears ko durust tareeqay se calculate karna
             let totalAllowanceArrears = 0;
             let loopDate = new Date(agreementStartDate);
-            while (loopDate.getFullYear() < today.getFullYear() || (loopDate.getFullYear() === today.getFullYear() && loopDate.getMonth() < today.getMonth())) {
-                const ratesHistoric = getRatesForDate(loopDate.toISOString().split('T')[0]);
-                totalAllowanceArrears += (appData.agreements.new.allowance - ratesHistoric.allowance);
+            while (loopDate <= today) {
+                const year = loopDate.getFullYear();
+                const month = loopDate.getMonth() + 1;
+                const lastDay = new Date(year, month, 0).getDate();
+
+                // Pehla pay period (1-15)
+                const startDate1 = `${year}-${String(month).padStart(2,'0')}-01`;
+                if (new Date(startDate1) <= today) {
+                    const ratesHistoric1 = getRatesForDate(startDate1);
+                    const allowanceHistoric1 = getAllowanceForPayPeriod(startDate1, `${year}-${String(month).padStart(2,'0')}-15`, ratesHistoric1);
+                    const allowanceNew1 = getAllowanceForPayPeriod(startDate1, `${year}-${String(month).padStart(2,'0')}-15`, appData.agreements.new);
+                    totalAllowanceArrears += (allowanceNew1 - allowanceHistoric1);
+                }
+
+                // Doosra pay period (16-end)
+                const startDate2 = `${year}-${String(month).padStart(2,'0')}-16`;
+                if (new Date(startDate2) <= today) {
+                    const ratesHistoric2 = getRatesForDate(startDate2);
+                    const allowanceHistoric2 = getAllowanceForPayPeriod(startDate2, `${year}-${String(month).padStart(2,'0')}-${lastDay}`, ratesHistoric2);
+                    const allowanceNew2 = getAllowanceForPayPeriod(startDate2, `${year}-${String(month).padStart(2,'0')}-${lastDay}`, appData.agreements.new);
+                    totalAllowanceArrears += (allowanceNew2 - allowanceHistoric2);
+                }
+                
                 loopDate.setMonth(loopDate.getMonth() + 1);
             }
-            if (loopDate.getFullYear() === today.getFullYear() && loopDate.getMonth() === today.getMonth()) {
-                const ratesHistoric = getRatesForDate(today.toISOString().split('T')[0]);
-                const allowanceDiff = appData.agreements.new.allowance - ratesHistoric.allowance;
-                if (today.getDate() >= 16) totalAllowanceArrears += allowanceDiff;
-                else totalAllowanceArrears += (allowanceDiff / 2);
-            }
             appData.workers.forEach(w => { arrearsByWorker[w].allowanceArrears = totalAllowanceArrears; });
+            // NAYI TABDEELI KHATAM
             
+            // Bonus Arrears
             const [fm, fd] = appData.configs.fiscalYearStart.split('-').map(Number);
             let fiscalYearStart = getCurrentFiscalYearDates(appData.configs.agreementStartDate)[0];
             while (true) {
                 let fiscalYearEnd = new Date(fiscalYearStart); fiscalYearEnd.setFullYear(fiscalYearEnd.getFullYear() + 1); fiscalYearEnd.setDate(fiscalYearEnd.getDate() - 1);
                 if (fiscalYearEnd > today) break;
                 const fiscalYearString = `${fiscalYearStart.getFullYear()}-${String(fm).padStart(2, '0')}-${String(fd).padStart(2, '0')}`;
-                const bonusCurrent = calculateAnnualBonus(fiscalYearString);
-                const bonusNew = calculateAnnualBonusWithRates(fiscalYearString, appData.agreements.new);
+                
+                const bonusCurrent = calculateAnnualBonus(fiscalYearString, 'current');
+                const bonusNew = calculateAnnualBonus(fiscalYearString, 'new');
+
                 appData.workers.forEach(w => { arrearsByWorker[w].bonusArrears += ((bonusNew[w]?.totalBonus || 0) - (bonusCurrent[w]?.totalBonus || 0)); });
                 fiscalYearStart.setFullYear(fiscalYearStart.getFullYear() + 1);
             }
 
+            // Annual Benefits Arrears (Assuming this is a simple monthly difference)
             let totalBenefitsArrears = 0; let benefitsLoopDate = new Date(agreementStartDate);
             while(benefitsLoopDate <= today) {
                 const ratesHistoric = getRatesForDate(benefitsLoopDate.toISOString().split('T')[0]);
@@ -1133,30 +1206,10 @@
             return arrearsByWorker;
         }
 
+        // Note: calculateAnnualBonusWithRates is no longer needed as calculateAnnualBonus now handles rate types.
+        // It's kept here for reference but can be removed.
         function calculateAnnualBonusWithRates(fiscalYearStartDateString, newRates) {
-            const fiscalStart = new Date(fiscalYearStartDateString), fiscalEnd = new Date(fiscalStart); fiscalEnd.setFullYear(fiscalEnd.getFullYear() + 1); fiscalEnd.setDate(fiscalEnd.getDate() - 1);
-            const workerBonusData = {};
-            appData.workers.forEach(workerName => {
-                let annualWorkEarnings = 0, totalLeaves = 0;
-                Object.values(appData.salaries || {}).forEach(entry => {
-                    const entryDate = new Date(entry.date + "T00:00:00");
-                    if (entryDate >= fiscalStart && entryDate <= fiscalEnd) {
-                        const dailyEarning = calculateDayEarnings(entry.date, entry.type, entry.tonnage, entry.wagons, entry.presentWorkers, newRates);
-                        annualWorkEarnings += dailyEarning[workerName] || 0;
-                        if (entry.type !== 'rest' && !entry.presentWorkers.includes(workerName)) totalLeaves++;
-                    }
-                });
-                const totalAnnualAllowance = newRates.allowance * 12;
-                const totalAnnualEarnings = annualWorkEarnings + totalAnnualAllowance;
-                const avgMonthlySalary = totalAnnualEarnings / 12;
-                const bonus = avgMonthlySalary; const gratuity = avgMonthlySalary;
-                const paidLeavesUsed = Math.min(Math.max(totalLeaves - (appData.configs.unpaidLeaves || 20), 0), (appData.configs.paidLeaves || 12));
-                const remainingPaidLeaves = (appData.configs.paidLeaves || 12) - paidLeavesUsed;
-                const paidLeavesBonus = remainingPaidLeaves * newRates.layoffRate;
-                const totalBonus = bonus + gratuity + paidLeavesBonus;
-                workerBonusData[workerName] = { annualEarnings: totalAnnualEarnings, avgMonthlySalary, bonus, gratuity, paidLeavesBonus, totalBonus };
-            });
-            return workerBonusData;
+            return calculateAnnualBonus(fiscalYearStartDateString, 'new');
         }
 
         function displayArrearsReport(a) {
@@ -1179,24 +1232,47 @@
             const startDate = new Date(startDateStr + "T00:00:00");
             const endDate = new Date(endDateStr + "T00:00:00");
             const arrearsByWorker = {}; appData.workers.forEach(w => arrearsByWorker[w] = { salaryArrears: 0, allowanceArrears: 0, totalArrears: 0 });
+            
+            // Salary Arrears
             Object.values(appData.salaries || {}).filter(e => e.date >= startDateStr && e.date <= endDateStr).forEach(entry => {
                 const ratesHistoric = getRatesForDate(entry.date);
                 const earningsHistoric = calculateDayEarnings(entry.date, entry.type, entry.tonnage, entry.wagons, entry.presentWorkers, ratesHistoric);
                 const earningsNew = calculateDayEarnings(entry.date, entry.type, entry.tonnage, entry.wagons, entry.presentWorkers, appData.agreements.new);
                 appData.workers.forEach(w => { arrearsByWorker[w].salaryArrears += ((earningsNew[w] || 0) - (earningsHistoric[w] || 0)); });
             });
-            let totalAllowanceArrears = 0; let loopDate = new Date(startDate);
-            while (loopDate.getFullYear() < endDate.getFullYear() || (loopDate.getFullYear() === endDate.getFullYear() && loopDate.getMonth() < endDate.getMonth())) {
-                const ratesHistoric = getRatesForDate(loopDate.toISOString().split('T')[0]);
-                totalAllowanceArrears += (appData.agreements.new.allowance - ratesHistoric.allowance);
+            
+            // NAYI TABDEELI SHURU: Period ke Allowance Arrears ko durust karna
+            let totalAllowanceArrears = 0; 
+            let loopDate = new Date(startDate);
+            while (loopDate <= endDate) {
+                const year = loopDate.getFullYear();
+                const month = loopDate.getMonth() + 1;
+                const lastDay = new Date(year, month, 0).getDate();
+
+                // Pehla pay period (1-15)
+                const sDate1 = new Date(`${year}-${String(month).padStart(2,'0')}-01`);
+                if (sDate1 <= endDate && sDate1 >= startDate) {
+                    const ratesHistoric1 = getRatesForDate(sDate1.toISOString().split('T')[0]);
+                    const allowanceHistoric1 = getAllowanceForPayPeriod(sDate1.toISOString().split('T')[0], `${year}-${String(month).padStart(2,'0')}-15`, ratesHistoric1);
+                    const allowanceNew1 = getAllowanceForPayPeriod(sDate1.toISOString().split('T')[0], `${year}-${String(month).padStart(2,'0')}-15`, appData.agreements.new);
+                    totalAllowanceArrears += (allowanceNew1 - allowanceHistoric1);
+                }
+
+                // Doosra pay period (16-end)
+                const sDate2 = new Date(`${year}-${String(month).padStart(2,'0')}-16`);
+                 if (sDate2 <= endDate && sDate2 >= startDate) {
+                    const ratesHistoric2 = getRatesForDate(sDate2.toISOString().split('T')[0]);
+                    const allowanceHistoric2 = getAllowanceForPayPeriod(sDate2.toISOString().split('T')[0], `${year}-${String(month).padStart(2,'0')}-${lastDay}`, ratesHistoric2);
+                    const allowanceNew2 = getAllowanceForPayPeriod(sDate2.toISOString().split('T')[0], `${year}-${String(month).padStart(2,'0')}-${lastDay}`, appData.agreements.new);
+                    totalAllowanceArrears += (allowanceNew2 - allowanceHistoric2);
+                }
+
                 loopDate.setMonth(loopDate.getMonth() + 1);
             }
-            if (loopDate.getFullYear() === endDate.getFullYear() && loopDate.getMonth() === endDate.getMonth()) {
-                const ratesHistoric = getRatesForDate(endDate.toISOString().split('T')[0]);
-                const allowanceDiff = appData.agreements.new.allowance - ratesHistoric.allowance;
-                if (endDate.getDate() >= 16) { totalAllowanceArrears += allowanceDiff; } else { totalAllowanceArrears += (allowanceDiff / 2); }
-            }
+
             appData.workers.forEach(w => { arrearsByWorker[w].allowanceArrears = totalAllowanceArrears; });
+            // NAYI TABDEELI KHATAM
+
             appData.workers.forEach(w => { arrearsByWorker[w].totalArrears = arrearsByWorker[w].salaryArrears + arrearsByWorker[w].allowanceArrears; });
             return arrearsByWorker;
         }
@@ -1245,7 +1321,6 @@
             h+='</div>'; c.innerHTML=h;
         }
         
-        // MODIFIED FUNCTION
         function loadSettings() {
             if (!appData.configs) return;
             document.getElementById('workerCount').value = appData.configs.workerCount;
@@ -1257,9 +1332,6 @@
             document.getElementById('enablePenalty').checked = appData.configs.isPenaltyEnabled;
             document.getElementById('penaltyAmount').value = appData.configs.penaltyAmount;
             document.getElementById('penaltyAmountContainer').style.display = appData.configs.isPenaltyEnabled ? 'block' : 'none';
-            // Load the new setting
-            document.getElementById('enableCustomPayroll').checked = appData.configs.enableCustomPayroll || false;
-
             toggleWagonUIElements(appData.configs.isWagonRateEnabled);
             document.getElementById('unlock-prompt').style.display = 'block';
             document.getElementById('worker-management-buttons').style.display = 'none';
@@ -1291,7 +1363,6 @@
         async function removeWorker(index) { if (appData.workers.length <= 1) { showAlert('Kam se kam ek worker zaroori hai.', 'error'); return; } appData.workers.splice(index, 1); loadWorkersList(); loadWorkerAttendance(); }
         async function updateWorkerName(index, newName) { if (newName.trim()) appData.workers[index] = newName.trim(); }
         
-        // MODIFIED FUNCTION
         async function saveSettings() {
             if (!isWorkerSettingsLocked) {
                 const workerInputs = document.querySelectorAll('#workersList input[type="text"]'), newWorkerNames = [];
@@ -1312,18 +1383,11 @@
             appData.configs.penaltyAmount = parseFloat(document.getElementById('penaltyAmount').value) || 231;
             appData.configs.unpaidLeaves = parseInt(document.getElementById('unpaidLeaves').value) || 20;
             appData.configs.paidLeaves = parseInt(document.getElementById('paidLeaves').value) || 12;
-            // Save the new setting
-            appData.configs.enableCustomPayroll = document.getElementById('enableCustomPayroll').checked;
-
             await saveUserData();
             showAlert('Settings saved successfully!', 'success');
-            isWorkerSettingsLocked = true; 
-            loadSettings(); 
-            loadFiscalYears();
-            loadPayPeriods(); // Reload pay periods as the setting might have changed
+            isWorkerSettingsLocked = true; loadSettings(); loadFiscalYears(); 
         }
 
-        // CORRECTED: This function now ONLY unhides the button.
         function checkUnlockKey() {
             const inputField = document.getElementById('unlock-key-input');
             const correctPhrase = "unlock worker settings ke button ko unhide karo";
