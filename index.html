@@ -812,7 +812,6 @@
             showAlert('New Agreement details saved successfully!', 'success');
         }
         
-        // ========= FIX START #1: PAY PERIOD DROPDOWN KA NAYA LOGIC =========
         function loadPayPeriods() {
             const selector = document.getElementById('payPeriod');
             selector.innerHTML = '<option value="">Select Period</option>';
@@ -827,7 +826,6 @@
             masterAgreementEndDate.setFullYear(masterAgreementEndDate.getFullYear() + 2);
 
             let periods = [];
-            // Loop ki shuruaat agreement ke maheenay ke pehle din se karein
             let loopDate = new Date(masterAgreementStartDate.getFullYear(), masterAgreementStartDate.getMonth(), 1);
 
             while (loopDate <= today && loopDate < masterAgreementEndDate) {
@@ -839,82 +837,40 @@
                 let currentMonthPeriods = [];
 
                 if (month === startMonth) {
-                    // Anniversary Month Logic (e.g., October)
-                    // Period 1: 1st to (startDay - 1), e.g., 1-9 Oct
                     if (startDay > 1) {
-                        currentMonthPeriods.push({
-                            start: 1,
-                            end: startDay - 1,
-                            text: `${monthName} ${year} (1 - ${startDay - 1})`
-                        });
+                        currentMonthPeriods.push({ start: 1, end: startDay - 1, text: `${monthName} ${year} (1 - ${startDay - 1})` });
                     }
-                    // Period 2: startDay to 15, e.g., 10-15 Oct
                     if (startDay <= 15) {
-                        currentMonthPeriods.push({
-                            start: startDay,
-                            end: 15,
-                            text: `${monthName} ${year} (${startDay} - 15)`
-                        });
+                        currentMonthPeriods.push({ start: startDay, end: 15, text: `${monthName} ${year} (${startDay} - 15)` });
                     }
-                    // Period 3: 16 to End of Month, e.g., 16-31 Oct
-                    currentMonthPeriods.push({
-                        start: 16,
-                        end: lastDayOfMonth,
-                        text: `${monthName} ${year} (16 - ${lastDayOfMonth})`
-                    });
+                    currentMonthPeriods.push({ start: 16, end: lastDayOfMonth, text: `${monthName} ${year} (16 - ${lastDayOfMonth})` });
                 } else {
-                    // Normal Month Logic (e.g., November, December)
-                    // Period 1: 1st to 15th
-                    currentMonthPeriods.push({
-                        start: 1,
-                        end: 15,
-                        text: `${monthName} ${year} (1 - 15)`
-                    });
-                    // Period 2: 16th to End of Month
-                    currentMonthPeriods.push({
-                        start: 16,
-                        end: lastDayOfMonth,
-                        text: `${monthName} ${year} (16 - ${lastDayOfMonth})`
-                    });
+                    currentMonthPeriods.push({ start: 1, end: 15, text: `${monthName} ${year} (1 - 15)` });
+                    currentMonthPeriods.push({ start: 16, end: lastDayOfMonth, text: `${monthName} ${year} (16 - ${lastDayOfMonth})` });
                 }
 
-                // Format kiye gaye periods ko asal list mein daalein
                 currentMonthPeriods.forEach(p => {
                     const startDateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(p.start).padStart(2, '0')}`;
                     const endDateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(p.end).padStart(2, '0')}`;
                     const periodEndDate = new Date(endDateStr + "T00:00:00");
                     
-                    // Sirf woh periods rakhein jo agreement shuru honay ke baad ke hain
                     if (periodEndDate >= masterAgreementStartDate) {
-                        periods.push({
-                            text: p.text,
-                            value: `${startDateStr},${endDateStr}`
-                        });
+                        periods.push({ text: p.text, value: `${startDateStr},${endDateStr}` });
                     }
                 });
                 
-                // Aglay maheenay par jayein
                 loopDate.setMonth(month + 1);
             }
 
-            // Ho sakta hai ke kuch periods do baar ban jayein, unko saaf karein
             const uniquePeriods = periods.filter((v,i,a)=>a.findIndex(t=>(t.value === v.value))===i);
-            
-            // Sirf woh periods rakhein jo aaj se pehle shuru hotay hain
             const finalPeriods = uniquePeriods.filter(p => new Date(p.value.split(',')[0]) <= today);
-
-            // Naye periods ko ooper dikhane ke liye reverse karein
             finalPeriods.reverse();
-
-            // HTML banayein
             selector.innerHTML += finalPeriods.map(p => `<option value="${p.value}">${p.text}</option>`).join('');
 
-            // Sab se naye period ko by default select karein
             if (selector.options.length > 1) {
                 selector.selectedIndex = 1;
             }
         }
-        // ========= FIX END #1 =========
 
         function generateSalaryReport() {
             const period = document.getElementById('payPeriod').value;
@@ -925,6 +881,7 @@
             displayDetailedSalaryTable(startDate, endDate);
         }
 
+        // ========= FIX START: ALLOWANCE CALCULATION KA FINAL LOGIC =========
         function getAllowanceForPayPeriod(periodStartDateStr, periodEndDateStr, rates) {
             const masterAgreementStartDate = new Date(appData.configs.agreementStartDate + "T00:00:00");
             const masterAgreementEndDate = new Date(masterAgreementStartDate);
@@ -934,45 +891,50 @@
             const rules = appData.allowanceRules || {};
             const ruleForThisRatePeriod = rules[rates.effectiveDate];
 
+            // Step 1: Agar Pro-Rata rule on nahi hai, to hamesha adha allowance do.
             if (ruleForThisRatePeriod !== 'Pro-Rata') {
                 return rates.allowance / 2;
             }
 
             const periodStart = new Date(periodStartDateStr + "T00:00:00");
             const periodEnd = new Date(periodEndDateStr + "T00:00:00");
-            
-            let isFirstPartialPeriod = false;
-            let isLastPartialPeriod = false;
-
-            if (periodStart <= masterAgreementStartDate && masterAgreementStartDate <= periodEnd) {
-                isFirstPartialPeriod = true;
-            }
-            if (periodStart <= masterAgreementEndDate && masterAgreementEndDate <= periodEnd) {
-                isLastPartialPeriod = true;
-            }
-
             const dailyAllowance = rates.allowance / 30;
 
-            if (isFirstPartialPeriod) {
+            // Step 2: Agreement ke bilkul pehle partial period ko handle karo.
+            if (periodStart <= masterAgreementStartDate && masterAgreementStartDate <= periodEnd) {
                 const daysInPeriod = (periodEnd - masterAgreementStartDate) / (1000 * 60 * 60 * 24) + 1;
                 return dailyAllowance * Math.max(0, daysInPeriod);
-            } else if (isLastPartialPeriod) {
+            }
+
+            // Step 3: Agreement ke bilkul aakhri partial period ko handle karo.
+            if (periodStart <= masterAgreementEndDate && masterAgreementEndDate <= periodEnd) {
                 const daysInPeriod = (masterAgreementEndDate - periodStart) / (1000 * 60 * 60 * 24) + 1;
                 return dailyAllowance * Math.max(0, daysInPeriod);
-            } else {
-                return rates.allowance / 2;
             }
+
+            // Step 4: Darmiyan ke saalon ke "Anniversary Month" ke partial periods ko handle karo.
+            const isAnniversaryMonth = periodStart.getMonth() === masterAgreementStartDate.getMonth();
+            if (isAnniversaryMonth) {
+                // Ye check zaroori hai taake pehla saal dubara yahan handle na ho.
+                const isNotInFirstYear = periodStart.getFullYear() > masterAgreementStartDate.getFullYear();
+                if (isNotInFirstYear) {
+                    const daysInPeriod = (periodEnd - periodStart) / (1000 * 60 * 60 * 24) + 1;
+                    return dailyAllowance * Math.max(0, daysInPeriod);
+                }
+            }
+            
+            // Step 5: Agar ooper di gayi koi bhi khaas surat-e-haal nahi hai, to yeh normal period hai.
+            // (e.g., November, December, etc.). Is mein adha allowance do.
+            return rates.allowance / 2;
         }
+        // ========= FIX END =========
         
-        // ========= FIX START #2A: SALARY CALCULATION MEIN TABDEELI =========
         function calculatePeriodSalary(startDate, endDate) {
             const salaryData = {};
-            // Har worker ke liye object banayein jismein tafseel hogi
             appData.workers.forEach(w => {
                 salaryData[w] = { workEarning: 0, allowance: 0, total: 0 };
             });
             
-            // Kaam ke dinon ki kamai jama karna (Work Earnings)
             Object.keys(appData.salaries || {}).filter(d => d >= startDate && d <= endDate).forEach(d => {
                 if (appData.salaries[d].earnings) {
                     Object.keys(appData.salaries[d].earnings).forEach(w => {
@@ -983,11 +945,9 @@
                 }
             });
 
-            // Allowance ka hisaab karna
             const ratesForPeriod = getRatesForDate(endDate);
             const allowanceForPeriod = getAllowanceForPayPeriod(startDate, endDate, ratesForPeriod);
             
-            // Har worker ke data mein allowance aur total salary add karna
             appData.workers.forEach(w => {
                 if(salaryData[w] !== undefined) {
                     salaryData[w].allowance = allowanceForPeriod;
@@ -997,9 +957,7 @@
 
             return salaryData;
         }
-        // ========= FIX END #2A =========
         
-        // ========= FIX START #2B: SALARY REPORT DISPLAY MEIN TABDEELI =========
         function displaySalaryReport(data, startDate, endDate) {
             const container = document.getElementById('salaryResults');
             const viewableWorkers = appData.permissions?.viewableWorkers || [];
@@ -1007,7 +965,6 @@
             appData.workers.forEach(worker => {
                 const workerData = data[worker] || { total: 0, allowance: 0 };
                 if (viewableWorkers.includes(worker)) {
-                    // Yahan HTML ko tabdeel kiya gaya hai taake allowance alag se dikhe
                     html += `<div class="report-card">
                                 <strong>${worker}</strong><br>
                                 Rs. ${(workerData.total || 0).toFixed(2)}
@@ -1021,7 +978,6 @@
             html += `</div>`;
             container.innerHTML = html;
         }
-        // ========= FIX END #2B =========
 
         function displayDetailedSalaryTable(startDate, endDate) {
             const container = document.getElementById('salaryResults');
