@@ -812,93 +812,109 @@
             showAlert('New Agreement details saved successfully!', 'success');
         }
         
-        // ========= FIX START: DROPDOWN MENU KA MUKAMMAL HAL YAHAN HAI =========
+        // ========= FIX START #1: PAY PERIOD DROPDOWN KA NAYA LOGIC =========
         function loadPayPeriods() {
             const selector = document.getElementById('payPeriod');
             selector.innerHTML = '<option value="">Select Period</option>';
             if (!appData.configs || !appData.configs.agreementStartDate) return;
 
             const today = new Date();
-            today.setHours(23, 59, 59, 999); // Din ke aakhir tak ka waqt set karein
-            
-            const agreementStart = new Date(appData.configs.agreementStartDate + "T00:00:00");
-            const splitDay = agreementStart.getDate();
-            const anniversaryMonth = agreementStart.getMonth(); // 0-11
+            const masterAgreementStartDate = new Date(appData.configs.agreementStartDate + "T00:00:00");
+            const startDay = masterAgreementStartDate.getDate();
+            const startMonth = masterAgreementStartDate.getMonth(); // 0-indexed
 
-            let loopDate = new Date(agreementStart.getFullYear(), agreementStart.getMonth(), 1);
-            let optionsHtml = '';
+            const masterAgreementEndDate = new Date(masterAgreementStartDate);
+            masterAgreementEndDate.setFullYear(masterAgreementEndDate.getFullYear() + 2);
 
-            while (loopDate <= today) {
+            let periods = [];
+            // Loop ki shuruaat agreement ke maheenay ke pehle din se karein
+            let loopDate = new Date(masterAgreementStartDate.getFullYear(), masterAgreementStartDate.getMonth(), 1);
+
+            while (loopDate <= today && loopDate < masterAgreementEndDate) {
                 const year = loopDate.getFullYear();
-                const month = loopDate.getMonth(); // 0-11
-                const monthNumber = month + 1;
+                const month = loopDate.getMonth();
                 const monthName = loopDate.toLocaleString('default', { month: 'long' });
-                const lastDay = new Date(year, monthNumber, 0).getDate();
+                const lastDayOfMonth = new Date(year, month + 1, 0).getDate();
 
-                let periodsForMonth = [];
+                let currentMonthPeriods = [];
 
-                if (month === anniversaryMonth) {
-                    // --- Anniversary Month Logic ---
-                    // Period 1: 1st to day before split day
-                    if (splitDay > 1) {
-                        const p_start = 1;
-                        const p_end = splitDay - 1;
-                        periodsForMonth.push({
-                            text: `${monthName} ${year} (${p_start} - ${p_end})`,
-                            value: `${year}-${String(monthNumber).padStart(2, '0')}-${String(p_start).padStart(2, '0')},${year}-${String(monthNumber).padStart(2, '0')}-${String(p_end).padStart(2, '0')}`,
-                            endDate: new Date(year, month, p_end)
+                if (month === startMonth) {
+                    // Anniversary Month Logic (e.g., October)
+                    // Period 1: 1st to (startDay - 1), e.g., 1-9 Oct
+                    if (startDay > 1) {
+                        currentMonthPeriods.push({
+                            start: 1,
+                            end: startDay - 1,
+                            text: `${monthName} ${year} (1 - ${startDay - 1})`
                         });
                     }
-                    // Period 2: split day to 15th
-                    if (splitDay <= 15) {
-                        const p_start = splitDay;
-                        const p_end = 15;
-                        periodsForMonth.push({
-                            text: `${monthName} ${year} (${p_start} - ${p_end})`,
-                            value: `${year}-${String(monthNumber).padStart(2, '0')}-${String(p_start).padStart(2, '0')},${year}-${String(monthNumber).padStart(2, '0')}-${String(p_end).padStart(2, '0')}`,
-                            endDate: new Date(year, month, p_end)
+                    // Period 2: startDay to 15, e.g., 10-15 Oct
+                    if (startDay <= 15) {
+                        currentMonthPeriods.push({
+                            start: startDay,
+                            end: 15,
+                            text: `${monthName} ${year} (${startDay} - 15)`
                         });
                     }
-                    // Period 3: 16th to end of month
-                    periodsForMonth.push({
-                        text: `${monthName} ${year} (16 - ${lastDay})`,
-                        value: `${year}-${String(monthNumber).padStart(2, '0')}-16,${year}-${String(monthNumber).padStart(2, '0')}-${lastDay}`,
-                        endDate: new Date(year, month, lastDay)
+                    // Period 3: 16 to End of Month, e.g., 16-31 Oct
+                    currentMonthPeriods.push({
+                        start: 16,
+                        end: lastDayOfMonth,
+                        text: `${monthName} ${year} (16 - ${lastDayOfMonth})`
                     });
                 } else {
-                    // --- Normal Month Logic ---
+                    // Normal Month Logic (e.g., November, December)
                     // Period 1: 1st to 15th
-                    periodsForMonth.push({
-                        text: `${monthName} ${year} (1 - 15)`,
-                        value: `${year}-${String(monthNumber).padStart(2, '0')}-01,${year}-${String(monthNumber).padStart(2, '0')}-15`,
-                        endDate: new Date(year, month, 15)
+                    currentMonthPeriods.push({
+                        start: 1,
+                        end: 15,
+                        text: `${monthName} ${year} (1 - 15)`
                     });
-                    // Period 2: 16th to end of month
-                    periodsForMonth.push({
-                        text: `${monthName} ${year} (16 - ${lastDay})`,
-                        value: `${year}-${String(monthNumber).padStart(2, '0')}-16,${year}-${String(monthNumber).padStart(2, '0')}-${lastDay}`,
-                        endDate: new Date(year, month, lastDay)
+                    // Period 2: 16th to End of Month
+                    currentMonthPeriods.push({
+                        start: 16,
+                        end: lastDayOfMonth,
+                        text: `${monthName} ${year} (16 - ${lastDayOfMonth})`
                     });
                 }
 
-                // Add only periods that have already passed or are current
-                periodsForMonth.forEach(p => {
-                    if (p.endDate <= today && new Date(p.value.split(',')[0]) >= agreementStart) {
-                        optionsHtml = `<option value="${p.value}">${p.text}</option>` + optionsHtml;
+                // Format kiye gaye periods ko asal list mein daalein
+                currentMonthPeriods.forEach(p => {
+                    const startDateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(p.start).padStart(2, '0')}`;
+                    const endDateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(p.end).padStart(2, '0')}`;
+                    const periodEndDate = new Date(endDateStr + "T00:00:00");
+                    
+                    // Sirf woh periods rakhein jo agreement shuru honay ke baad ke hain
+                    if (periodEndDate >= masterAgreementStartDate) {
+                        periods.push({
+                            text: p.text,
+                            value: `${startDateStr},${endDateStr}`
+                        });
                     }
                 });
-
-                loopDate.setMonth(loopDate.getMonth() + 1);
+                
+                // Aglay maheenay par jayein
+                loopDate.setMonth(month + 1);
             }
 
-            selector.innerHTML += optionsHtml;
+            // Ho sakta hai ke kuch periods do baar ban jayein, unko saaf karein
+            const uniquePeriods = periods.filter((v,i,a)=>a.findIndex(t=>(t.value === v.value))===i);
+            
+            // Sirf woh periods rakhein jo aaj se pehle shuru hotay hain
+            const finalPeriods = uniquePeriods.filter(p => new Date(p.value.split(',')[0]) <= today);
 
-            // Set default value to the most recent period
+            // Naye periods ko ooper dikhane ke liye reverse karein
+            finalPeriods.reverse();
+
+            // HTML banayein
+            selector.innerHTML += finalPeriods.map(p => `<option value="${p.value}">${p.text}</option>`).join('');
+
+            // Sab se naye period ko by default select karein
             if (selector.options.length > 1) {
                 selector.selectedIndex = 1;
             }
         }
-        // ========= FIX END: DROPDOWN MENU AB SAHI KAAM KAREGA =========
+        // ========= FIX END #1 =========
 
         function generateSalaryReport() {
             const period = document.getElementById('payPeriod').value;
@@ -931,7 +947,6 @@
             if (periodStart <= masterAgreementStartDate && masterAgreementStartDate <= periodEnd) {
                 isFirstPartialPeriod = true;
             }
-
             if (periodStart <= masterAgreementEndDate && masterAgreementEndDate <= periodEnd) {
                 isLastPartialPeriod = true;
             }
@@ -949,33 +964,64 @@
             }
         }
         
+        // ========= FIX START #2A: SALARY CALCULATION MEIN TABDEELI =========
         function calculatePeriodSalary(startDate, endDate) {
-            const salaryData = {}; appData.workers.forEach(w => salaryData[w] = 0);
+            const salaryData = {};
+            // Har worker ke liye object banayein jismein tafseel hogi
+            appData.workers.forEach(w => {
+                salaryData[w] = { workEarning: 0, allowance: 0, total: 0 };
+            });
             
+            // Kaam ke dinon ki kamai jama karna (Work Earnings)
             Object.keys(appData.salaries || {}).filter(d => d >= startDate && d <= endDate).forEach(d => {
                 if (appData.salaries[d].earnings) {
-                    Object.keys(appData.salaries[d].earnings).forEach(w => { if(salaryData[w] !== undefined) salaryData[w] += appData.salaries[d].earnings[w]; });
+                    Object.keys(appData.salaries[d].earnings).forEach(w => {
+                        if(salaryData[w] !== undefined) {
+                            salaryData[w].workEarning += appData.salaries[d].earnings[w];
+                        }
+                    });
                 }
             });
 
+            // Allowance ka hisaab karna
             const ratesForPeriod = getRatesForDate(endDate);
             const allowanceForPeriod = getAllowanceForPayPeriod(startDate, endDate, ratesForPeriod);
             
-            appData.workers.forEach(w => { if(salaryData[w] !== undefined) salaryData[w] += allowanceForPeriod; });
+            // Har worker ke data mein allowance aur total salary add karna
+            appData.workers.forEach(w => {
+                if(salaryData[w] !== undefined) {
+                    salaryData[w].allowance = allowanceForPeriod;
+                    salaryData[w].total = salaryData[w].workEarning + salaryData[w].allowance;
+                }
+            });
 
             return salaryData;
         }
+        // ========= FIX END #2A =========
         
+        // ========= FIX START #2B: SALARY REPORT DISPLAY MEIN TABDEELI =========
         function displaySalaryReport(data, startDate, endDate) {
             const container = document.getElementById('salaryResults');
             const viewableWorkers = appData.permissions?.viewableWorkers || [];
             let html = `<h3>Salary Report: ${startDate} to ${endDate}</h3><div class="report-grid">`;
             appData.workers.forEach(worker => {
-                if (viewableWorkers.includes(worker)) html += `<div class="report-card"><strong>${worker}</strong><br>Rs. ${(data[worker] || 0).toFixed(2)}</div>`;
-                else html += `<div class="report-card" style="background:#f1f1f1;border-left-color:#a0a0a0;"><strong>${worker}</strong><br><span style="color:#6200EE;font-weight:500;">Contact admin to view details</span></div>`;
+                const workerData = data[worker] || { total: 0, allowance: 0 };
+                if (viewableWorkers.includes(worker)) {
+                    // Yahan HTML ko tabdeel kiya gaya hai taake allowance alag se dikhe
+                    html += `<div class="report-card">
+                                <strong>${worker}</strong><br>
+                                Rs. ${(workerData.total || 0).toFixed(2)}
+                                <br>
+                                <small style="color:#4a5568; font-size: 12px;">(Allowance: Rs. ${(workerData.allowance || 0).toFixed(2)})</small>
+                             </div>`;
+                } else {
+                    html += `<div class="report-card" style="background:#f1f1f1;border-left-color:#a0a0a0;"><strong>${worker}</strong><br><span style="color:#6200EE;font-weight:500;">Contact admin to view details</span></div>`;
+                }
             });
-            html += `</div>`; container.innerHTML = html;
+            html += `</div>`;
+            container.innerHTML = html;
         }
+        // ========= FIX END #2B =========
 
         function displayDetailedSalaryTable(startDate, endDate) {
             const container = document.getElementById('salaryResults');
@@ -1225,6 +1271,10 @@
                 d.totalArrears = d.salaryArrears + d.allowanceArrears + d.bonusArrears + d.annualBenefitsArrears;
             });
             return arrearsByWorker;
+        }
+
+        function calculateAnnualBonusWithRates(fiscalYearStartDateString, newRates) {
+            return calculateAnnualBonus(fiscalYearStartDateString, 'new');
         }
 
         function displayArrearsReport(a) {
