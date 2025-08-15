@@ -1529,8 +1529,8 @@ async function downloadPdfReport(type) {
         ];
     });
 
-    // YAHAN CHANGE HUA HAI: doc.autoTable ki jagah autoTable(doc, ...)
-    autoTable(doc, {
+    // YEH HAI SAHI TAREEKA: autoTable ko jspdf object ke zariye call karein
+    jspdf.autoTable(doc, {
         head: summaryHead,
         body: summaryBody,
         startY: 35,
@@ -1565,8 +1565,8 @@ async function downloadPdfReport(type) {
             ];
         });
 
-        // YAHAN BHI CHANGE HUA HAI: doc.autoTable ki jagah autoTable(doc, ...)
-        autoTable(doc, {
+        // YEH HAI SAHI TAREEKA: autoTable ko jspdf object ke zariye call karein
+        jspdf.autoTable(doc, {
             head: detailsHead,
             body: detailsBody,
             startY: doc.lastAutoTable.finalY + 15,
