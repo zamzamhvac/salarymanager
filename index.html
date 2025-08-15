@@ -12,7 +12,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.22.2/firebase-database-compat.min.js"></script>
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.22.2/firebase-app-check-compat.min.js"></script>
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.autotable.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
     <style>
         :root {
             --primary-color: #6200EE;
@@ -1529,8 +1529,8 @@ async function downloadPdfReport(type) {
         ];
     });
 
-    // YEH HAI SAHI TAREEKA: autoTable ko jspdf object ke zariye call karein
-    jspdf.autoTable(doc, {
+    // YEH ASAL AUR SAHI TAREEKA HAI: doc.autoTable(...)
+    doc.autoTable({
         head: summaryHead,
         body: summaryBody,
         startY: 35,
@@ -1565,8 +1565,8 @@ async function downloadPdfReport(type) {
             ];
         });
 
-        // YEH HAI SAHI TAREEKA: autoTable ko jspdf object ke zariye call karein
-        jspdf.autoTable(doc, {
+        // YEH ASAL AUR SAHI TAREEKA HAI: doc.autoTable(...)
+        doc.autoTable({
             head: detailsHead,
             body: detailsBody,
             startY: doc.lastAutoTable.finalY + 15,
