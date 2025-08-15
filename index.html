@@ -1464,6 +1464,7 @@ async function downloadPdfReport(type) {
     hidePdfDownloadOptions();
 
     const { jsPDF } = window.jspdf;
+	jsPDF.API.autoTable = window.autoTable;
     const doc = new jsPDF();
 
     // Permissions check: Sirf viewable workers ka data liya jayega
