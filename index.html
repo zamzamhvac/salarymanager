@@ -11,6 +11,8 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.22.2/firebase-auth-compat.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.22.2/firebase-database-compat.min.js"></script>
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.22.2/firebase-app-check-compat.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.autotable.min.js"></script>
     <style>
         :root {
             --primary-color: #6200EE;
@@ -235,7 +237,10 @@
             <button onclick="saveNewAgreement()" class="btn">Save New Agreement Details</button>
         </div>
 
-        <div id="salaries" class="page"><h2>💰 Salary Reports</h2><p>View salary reports for different pay periods</p><div class="form-group"><label>Select Pay Period:</label><select id="payPeriod"><option value="">Select Period</option></select></div><button onclick="generateSalaryReport()" class="btn">Generate Report</button><div id="salaryResults"></div></div>
+        <div id="salaries" class="page"><h2>💰 Salary Reports</h2><p>View salary reports for different pay periods</p><div class="form-group"><label>Select Pay Period:</label><select id="payPeriod"><option value="">Select Period</option></select></div><button onclick="generateSalaryReport()" class="btn">Generate Report</button><button id="downloadPdfBtn" onclick="showPdfDownloadOptions()" class="btn btn-success" style="display: none;">Download PDF</button>
+
+        <div id="salaryResults"></div>
+    </div>
         <div id="bonus" class="page"><h2>🎁 Annual Bonus & Gratuity</h2><p>Calculate annual bonus, gratuity and paid leaves bonus</p><div class="form-group"><label>Select Fiscal Year:</label><select id="fiscalYear"><option value="">Select Year</option></select></div><button onclick="calculateBonus()" class="btn">Calculate Bonus</button><div id="bonusResults"></div></div>
         
         <div id="arrears" class="page">
@@ -291,6 +296,31 @@
             <button onclick="saveSettings()" class="btn">Save Settings</button>
         </div>
     </main>
+	<div id="pdf-options-overlay" class="setup-wizard-overlay" style="z-index: 3000;">
+        <div class="setup-wizard" style="max-width: 450px;">
+            <div class="wizard-header">
+                <i class="material-icons">picture_as_pdf</i>
+                <div>
+                    <h2>Download Salary Report</h2>
+                    <p>Select the report you want to download.</p>
+                </div>
+            </div>
+            <div class="wizard-body" style="text-align: center;">
+                <p>Aap kaunsi report download karna chahte hain?</p>
+                <br>
+                <button onclick="downloadPdfReport('current')" class="btn" style="width: 80%;">
+                    <i class="material-icons" style="margin-right: 8px;">today</i> Current Period Report
+                </button>
+                <br><br>
+                <button onclick="downloadPdfReport('all')" class="btn btn-primary" style="width: 80%;">
+                    <i class="material-icons" style="margin-right: 8px;">event_note</i> All Reports (Since Start)
+                </button>
+            </div>
+            <div class="wizard-footer" style="justify-content: center;">
+                <button onclick="hidePdfDownloadOptions()" class="btn btn-danger">Cancel</button>
+            </div>
+        </div>
+    </div>
 
     <div id="setup-wizard-overlay" class="setup-wizard-overlay">
         <div class="setup-wizard">
@@ -879,6 +909,7 @@
             const salaryData = calculatePeriodSalary(startDate, endDate);
             displaySalaryReport(salaryData, startDate, endDate);
             displayDetailedSalaryTable(startDate, endDate);
+            document.getElementById('downloadPdfBtn').style.display = 'inline-flex';
         }
 
         function getAllowanceForPayPeriod(periodStartDateStr, periodEndDateStr, rates) {
@@ -1417,6 +1448,136 @@
                 document.getElementById('unlock-prompt').style.display = 'none';
             } else { showAlert('Aapne sahi jumla type nahi kiya. Dobara koshish karein.', 'error'); }
         }
+		function showPdfDownloadOptions() {
+    document.getElementById('pdf-options-overlay').classList.add('active');
+}
+
+// Yeh function download options ka pop-up chupata hai
+function hidePdfDownloadOptions() {
+    document.getElementById('pdf-options-overlay').classList.remove('active');
+}
+
+// Asal PDF generation ka kaam yeh function karega
+async function downloadPdfReport(type) {
+    showAlert('PDF report ban rahi hai, please wait...', 'info');
+    hidePdfDownloadOptions();
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+
+    // Permissions check: Sirf viewable workers ka data liya jayega
+    const viewableWorkers = appData.permissions?.viewableWorkers || appData.workers;
+    const userName = currentUser.displayName || "Salary Report";
+
+    if (type === 'current') {
+        // Sirf current period ki report download karein
+        const period = document.getElementById('payPeriod').value;
+        const [startDate, endDate] = period.split(',');
+        generatePdfForPeriod(doc, startDate, endDate, viewableWorkers, userName, `Salary Report: ${startDate} to ${endDate}`);
+    } else if (type === 'all') {
+        // Agreement start se ab tak ki saari reports download karein
+        const agreementStart = new Date(appData.configs.agreementStartDate + "T00:00:00");
+        
+        const payPeriodSelector = document.getElementById('payPeriod');
+        const allPeriods = Array.from(payPeriodSelector.options)
+            .map(opt => opt.value)
+            .filter(val => val) 
+            .reverse(); 
+
+        let isFirstPage = true;
+        for (const period of allPeriods) {
+            const [startDate, endDate] = period.split(',');
+            const periodStartDate = new Date(startDate + "T00:00:00");
+            
+            if (periodStartDate >= agreementStart) {
+                if (!isFirstPage) {
+                    doc.addPage();
+                }
+                const periodTitle = `Salary Report: ${startDate} to ${endDate}`;
+                generatePdfForPeriod(doc, startDate, endDate, viewableWorkers, userName, periodTitle);
+                isFirstPage = false;
+            }
+        }
+    }
+
+    doc.save(`${userName.replace(/\s/g, '_')}-${type}_report.pdf`);
+    showAlert('PDF report successfully download hogayi!', 'success');
+}
+
+// Yeh helper function ek specific period ke liye PDF ka content banata hai
+function generatePdfForPeriod(doc, startDate, endDate, viewableWorkers, userName, periodTitle) {
+    const salaryData = calculatePeriodSalary(startDate, endDate);
+    const periodEntries = Object.values(appData.salaries || {})
+        .filter(e => e.date >= startDate && e.date <= endDate)
+        .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+    // Page Header
+    doc.setFontSize(18);
+    doc.text(userName, 14, 22);
+    doc.setFontSize(12);
+    doc.text(periodTitle, 14, 30);
+
+    // Summary Table (Har worker ki total salary)
+    const summaryHead = [['Worker Name', 'Work Earning (Rs)', 'Allowance (Rs)', 'Total Salary (Rs)']];
+    const summaryBody = viewableWorkers.map(worker => {
+        const workerData = salaryData[worker] || { workEarning: 0, allowance: 0, total: 0 };
+        return [
+            worker,
+            workerData.workEarning.toFixed(2),
+            workerData.allowance.toFixed(2),
+            workerData.total.toFixed(2)
+        ];
+    });
+
+    doc.autoTable({
+        head: summaryHead,
+        body: summaryBody,
+        startY: 35,
+        theme: 'grid',
+        headStyles: { fillColor: [98, 0, 238] }
+    });
+
+    // Detailed Entries Table (Rozana ki entries)
+    if (periodEntries.length > 0) {
+        doc.setFontSize(14);
+        doc.text("Daily Entry Details", 14, doc.lastAutoTable.finalY + 12);
+        
+        const detailsHead = [['Date', 'Tonnage', 'Absent Workers', 'Pay / Worker (Rs)']];
+        const detailsBody = periodEntries.map(entry => {
+            // Ghair hazir workers ki list, lekin sirf unki jo viewable hain
+            const absentWorkers = appData.workers.filter(w => !entry.presentWorkers.includes(w) && viewableWorkers.includes(w)).join(', ') || 'None';
+            
+            let singlePay = 0;
+            if (entry.presentWorkers?.length > 0) {
+                // Pehle present worker ki pay nikalein jo viewable ho
+                const firstPresentViewableWorker = entry.presentWorkers.find(w => viewableWorkers.includes(w));
+                if (firstPresentViewableWorker) {
+                    singlePay = entry.earnings[firstPresentViewableWorker] || 0;
+                }
+            } else if (entry.type === 'rest') {
+                singlePay = getRatesForDate(entry.date).restRate;
+            } else if (viewableWorkers.length > 0) { // Agar koi present nahi to viewable worker ki layoff pay
+                singlePay = entry.earnings[viewableWorkers[0]] || 0;
+            }
+            return [
+                entry.date,
+                entry.type === 'rest' ? 'Rest Day' : (entry.tonnage > 0 ? entry.tonnage.toFixed(2) : '-'),
+                absentWorkers,
+                singlePay.toFixed(2)
+            ];
+        });
+
+        doc.autoTable({
+            head: detailsHead,
+            body: detailsBody,
+            startY: doc.lastAutoTable.finalY + 15,
+            theme: 'striped',
+            headStyles: { fillColor: [74, 85, 104] }
+        });
+    } else {
+        doc.text("No daily entries found for this period.", 14, doc.lastAutoTable.finalY + 15);
+    }
+}
 
 		function showAlert(message, type = 'info') {
             document.querySelectorAll('.alert').forEach(a => a.remove());
