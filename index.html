@@ -881,13 +881,16 @@
             displayDetailedSalaryTable(startDate, endDate);
         }
 
-        // ========= FIX START: ALLOWANCE CALCULATION KA FINAL LOGIC =========
+        // ========= FIX START: FINAL ALLOWANCE CALCULATION LOGIC =========
         function getAllowanceForPayPeriod(periodStartDateStr, periodEndDateStr, rates) {
+            const masterAgreementStartDateStr = appData.configs.agreementStartDate;
             const rules = appData.allowanceRules || {};
-            const ruleForThisRatePeriod = rules[rates.effectiveDate];
+            
+            // Pro-rata rule ko hamesha Master Agreement Start Date se check karein.
+            const isProRataEnabled = rules[masterAgreementStartDateStr] === 'Pro-Rata';
 
-            // Agar Pro-Rata rule on nahi hai, to hamesha adha allowance dein.
-            if (ruleForThisRatePeriod !== 'Pro-Rata') {
+            // Agar Pro-rata rule on hi nahi hai, to hamesha adha allowance dein.
+            if (!isProRataEnabled) {
                 return rates.allowance / 2;
             }
 
@@ -899,19 +902,25 @@
             const periodEndDay = periodEnd.getDate();
             const lastDayOfMonth = new Date(periodStart.getFullYear(), periodStart.getMonth() + 1, 0).getDate();
 
-            const isStandardPeriod = 
-                (periodStartDay === 1 && periodEndDay === 15) || 
-                (periodStartDay === 16 && periodEndDay === lastDayOfMonth);
+            const isStandardFirstHalf = periodStartDay === 1 && periodEndDay === 15;
+            const isStandardSecondHalf = periodStartDay === 16 && periodEndDay === lastDayOfMonth;
 
             // Agar yeh standard period hai (maslan 16-31 Oct, ya 1-15 Nov), to adha allowance dein.
-            if (isStandardPeriod) {
+            if (isStandardFirstHalf || isStandardSecondHalf) {
                 return rates.allowance / 2;
             }
             
             // Agar yeh standard period nahi hai, to yeh zaroor koi toota hua (broken) period hai.
             // Ab iska hisaab dino ki buniyad par (pro-rata) karein.
             const dailyAllowance = rates.allowance / 30;
-            const daysInPeriod = (periodEnd - periodStart) / (1000 * 60 * 60 * 24) + 1;
+            let daysInPeriod = (periodEnd - periodStart) / (1000 * 60 * 60 * 24) + 1;
+            
+            // Khas taur par pehle din ke liye check, jahan period shuru to 10 ko hota hai lekin hisab 15 tak ka hota hai.
+            const masterAgreementStartDate = new Date(masterAgreementStartDateStr + "T00:00:00");
+            if (periodStart <= masterAgreementStartDate && masterAgreementStartDate <= periodEnd) {
+                 daysInPeriod = (periodEnd - masterAgreementStartDate) / (1000 * 60 * 60 * 24) + 1;
+            }
+
             return dailyAllowance * Math.max(0, daysInPeriod);
         }
         // ========= FIX END =========
