@@ -1463,11 +1463,7 @@ async function downloadPdfReport(type) {
     hidePdfDownloadOptions();
 
     const { jsPDF } = window.jspdf;
-	jsPDF.API.autoTable = window.autoTable;
     const doc = new jsPDF();
-	if (typeof doc.autoTable !== 'function') {
-        doc.autoTable = window.autoTable;
-    }
 
     // Permissions check: Sirf viewable workers ka data liya jayega
     const viewableWorkers = appData.permissions?.viewableWorkers || appData.workers;
@@ -1509,7 +1505,7 @@ async function downloadPdfReport(type) {
 }
 
 // Yeh helper function ek specific period ke liye PDF ka content banata hai
-function generatePdfForPeriod(doc, startDate, endDate, viewableWorkers, userName, periodTitle) {
+        function generatePdfForPeriod(doc, startDate, endDate, viewableWorkers, userName, periodTitle) {
     const salaryData = calculatePeriodSalary(startDate, endDate);
     const periodEntries = Object.values(appData.salaries || {})
         .filter(e => e.date >= startDate && e.date <= endDate)
@@ -1533,7 +1529,8 @@ function generatePdfForPeriod(doc, startDate, endDate, viewableWorkers, userName
         ];
     });
 
-    doc.autoTable({
+    // YAHAN CHANGE HUA HAI: doc.autoTable ki jagah autoTable(doc, ...)
+    autoTable(doc, {
         head: summaryHead,
         body: summaryBody,
         startY: 35,
@@ -1548,19 +1545,16 @@ function generatePdfForPeriod(doc, startDate, endDate, viewableWorkers, userName
         
         const detailsHead = [['Date', 'Tonnage', 'Absent Workers', 'Pay / Worker (Rs)']];
         const detailsBody = periodEntries.map(entry => {
-            // Ghair hazir workers ki list, lekin sirf unki jo viewable hain
             const absentWorkers = appData.workers.filter(w => !entry.presentWorkers.includes(w) && viewableWorkers.includes(w)).join(', ') || 'None';
-            
             let singlePay = 0;
             if (entry.presentWorkers?.length > 0) {
-                // Pehle present worker ki pay nikalein jo viewable ho
                 const firstPresentViewableWorker = entry.presentWorkers.find(w => viewableWorkers.includes(w));
                 if (firstPresentViewableWorker) {
                     singlePay = entry.earnings[firstPresentViewableWorker] || 0;
                 }
             } else if (entry.type === 'rest') {
                 singlePay = getRatesForDate(entry.date).restRate;
-            } else if (viewableWorkers.length > 0) { // Agar koi present nahi to viewable worker ki layoff pay
+            } else if (viewableWorkers.length > 0) {
                 singlePay = entry.earnings[viewableWorkers[0]] || 0;
             }
             return [
@@ -1571,7 +1565,8 @@ function generatePdfForPeriod(doc, startDate, endDate, viewableWorkers, userName
             ];
         });
 
-        doc.autoTable({
+        // YAHAN BHI CHANGE HUA HAI: doc.autoTable ki jagah autoTable(doc, ...)
+        autoTable(doc, {
             head: detailsHead,
             body: detailsBody,
             startY: doc.lastAutoTable.finalY + 15,
