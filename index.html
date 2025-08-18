@@ -393,6 +393,7 @@
                 if (!response.ok) throw new Error('Configuration fetch failed.');
                 const firebaseConfig = await response.json();
                 firebase.initializeApp(firebaseConfig);
+				firebase.database().enablePersistence(true);
                 try { firebase.appCheck().activate(firebaseConfig.reCAPTCHAKey, true); } catch (err) { console.error("App Check activation failed", err); }
                 firebase.auth().onAuthStateChanged(async (user) => {
                     if (user) {
