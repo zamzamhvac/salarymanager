@@ -13,8 +13,8 @@
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.22.2/firebase-app-check-compat.min.js"></script>
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
-	<link rel="manifest" href="manifest.json">
-    <style>
+    <link rel="manifest" href="manifest.json">
+   <style>
         :root {
             --primary-color: #6200EE;
             --primary-variant-color: #3700B3;
@@ -387,59 +387,60 @@
             }
         }
 
-        async function startApp() {
-    try {
-        const response = await fetch('/.netlify/functions/get-config');
-        if (!response.ok) throw new Error('Configuration fetch failed.');
-        const firebaseConfig = await response.json();
+                async function startApp() {
+            try {
+                const response = await fetch('/.netlify/functions/get-config');
+                if (!response.ok) throw new Error('Configuration fetch failed.');
+                const firebaseConfig = await response.json();
 
-        // Step 1: Hamesha sab se pehle Firebase ko 'connect' karein
-        firebase.initializeApp(firebaseConfig);
+                // Step 1: Hamesha sab se pehle Firebase ko 'connect' karein
+                firebase.initializeApp(firebaseConfig);
 
-        // Step 2: Connect hone ke BAAD, usay offline kaam karne ka bolein
-        firebase.database().setPersistenceEnabled(true)
-        .catch(function(error) {
-            if (error.code == 'failed-precondition') {
-                console.warn('Multiple tabs open, persistence can only be enabled in one tab at a a time.');
-            } else if (error.code == 'unimplemented') {
-                console.warn('The current browser does not support all of the features required to enable persistence.');
-            }
-        });
-
-        // Step 3: PWA wala feature (Service Worker) register karein
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/sw.js').then(registration => {
-                    console.log('ServiceWorker registration successful with scope: ', registration.scope);
-                }, err => {
-                    console.log('ServiceWorker registration failed: ', err);
+                // Step 2: Connect hone ke BAAD, usay offline kaam karne ka bolein
+                // YEH SAHI AUR FINAL CODE HAI
+                firebase.database().setPersistenceEnabled(true)
+                .catch(function(error) {
+                    if (error.code == 'failed-precondition') {
+                        console.warn('Multiple tabs open, persistence can only be enabled in one tab at a a time.');
+                    } else if (error.code == 'unimplemented') {
+                        console.warn('The current browser does not support all of the features required to enable persistence.');
+                    }
                 });
-            });
-        }
 
-        // --- Baaqi ka code waisa hi hai jaisa pehle tha ---
-        try { firebase.appCheck().activate(firebaseConfig.reCAPTCHAKey, true); } catch (err) { console.error("App Check activation failed", err); }
-        firebase.auth().onAuthStateChanged(async (user) => {
-            if (user) {
-                currentUser = user;
-                await loadUserData();
-                if (appData.configs && appData.configs.isSetupComplete) await showMainApp();
-                else startSetupWizard();
-            } else {
-                currentUser = null;
-                showLoginPage();
+                // Step 3: PWA wala feature (Service Worker) register karein
+                if ('serviceWorker' in navigator) {
+                    window.addEventListener('load', () => {
+                        navigator.serviceWorker.register('/sw.js').then(registration => {
+                            console.log('ServiceWorker registration successful with scope: ', registration.scope);
+                        }, err => {
+                            console.log('ServiceWorker registration failed: ', err);
+                        });
+                    });
+                }
+
+                // --- Baaqi ka code waisa hi hai jaisa pehle tha ---
+                try { firebase.appCheck().activate(firebaseConfig.reCAPTCHAKey, true); } catch (err) { console.error("App Check activation failed", err); }
+                firebase.auth().onAuthStateChanged(async (user) => {
+                    if (user) {
+                        currentUser = user;
+                        await loadUserData();
+                        if (appData.configs && appData.configs.isSetupComplete) await showMainApp();
+                        else startSetupWizard();
+                    } else {
+                        currentUser = null;
+                        showLoginPage();
+                    }
+                });
+                document.querySelectorAll('.nav-btn').forEach(btn => btn.addEventListener('click', () => showPage(btn.dataset.page)));
+                document.getElementById('entryDate').value = new Date().toISOString().split('T')[0];
+                document.getElementById('dayType').addEventListener('change', function() { document.getElementById('workDetails').style.display = this.value === 'rest' ? 'none' : 'block'; });
+                document.getElementById('enablePenalty').addEventListener('change', (e) => { document.getElementById('penaltyAmountContainer').style.display = e.target.checked ? 'block' : 'none'; });
+                document.getElementById('enableWagonRate').addEventListener('change', (e) => { toggleWagonUIElements(e.target.checked); });
+            } catch (error) {
+                console.error("Application start error:", error);
+                document.getElementById('main-content').innerHTML = `<div class="alert alert-error"><h2>Application Error</h2><p>Application configuration could not be loaded. Please try again later.</p></div>`;
             }
-        });
-        document.querySelectorAll('.nav-btn').forEach(btn => btn.addEventListener('click', () => showPage(btn.dataset.page)));
-        document.getElementById('entryDate').value = new Date().toISOString().split('T')[0];
-        document.getElementById('dayType').addEventListener('change', function() { document.getElementById('workDetails').style.display = this.value === 'rest' ? 'none' : 'block'; });
-        document.getElementById('enablePenalty').addEventListener('change', (e) => { document.getElementById('penaltyAmountContainer').style.display = e.target.checked ? 'block' : 'none'; });
-        document.getElementById('enableWagonRate').addEventListener('change', (e) => { toggleWagonUIElements(e.target.checked); });
-    } catch (error) {
-        console.error("Application start error:", error);
-        document.getElementById('main-content').innerHTML = `<div class="alert alert-error"><h2>Application Error</h2><p>Application configuration could not be loaded. Please try again later.</p></div>`;
-    }
-}
+        }
         
         document.addEventListener('DOMContentLoaded', startApp);
 
