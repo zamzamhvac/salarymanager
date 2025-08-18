@@ -13,6 +13,7 @@
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.22.2/firebase-app-check-compat.min.js"></script>
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
+	<link rel="manifest" href="manifest.json">
     <style>
         :root {
             --primary-color: #6200EE;
@@ -392,6 +393,26 @@
                 if (!response.ok) throw new Error('Configuration fetch failed.');
                 const firebaseConfig = await response.json();
                 firebase.initializeApp(firebaseConfig);
+				// Offline data persistence ko enable karein
+firebase.database().setPersistenceEnabled(true)
+.catch(function(error) {
+    if (error.code == 'failed-precondition') {
+        console.warn('Multiple tabs open, persistence can only be enabled in one tab at a a time.');
+    } else if (error.code == 'unimplemented') {
+        console.warn('The current browser does not support all of the features required to enable persistence.');
+    }
+});
+
+// Service Worker ko register karein
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js').then(registration => {
+            console.log('ServiceWorker registration successful with scope: ', registration.scope);
+        }, err => {
+            console.log('ServiceWorker registration failed: ', err);
+        });
+    });
+}
                 try { firebase.appCheck().activate(firebaseConfig.reCAPTCHAKey, true); } catch (err) { console.error("App Check activation failed", err); }
                 firebase.auth().onAuthStateChanged(async (user) => {
                     if (user) {
