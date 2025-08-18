@@ -13,8 +13,7 @@
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.22.2/firebase-app-check-compat.min.js"></script>
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
-    <link rel="manifest" href="manifest.json">
-   <style>
+    <style>
         :root {
             --primary-color: #6200EE;
             --primary-variant-color: #3700B3;
@@ -387,28 +386,12 @@
             }
         }
 
-                async function startApp() {
+        async function startApp() {
             try {
                 const response = await fetch('/.netlify/functions/get-config');
                 if (!response.ok) throw new Error('Configuration fetch failed.');
                 const firebaseConfig = await response.json();
-
-                // Step 1: Hamesha sab se pehle Firebase ko 'connect' karein
                 firebase.initializeApp(firebaseConfig);
-
-
-                // Step 3: PWA wala feature (Service Worker) register karein
-                if ('serviceWorker' in navigator) {
-                    window.addEventListener('load', () => {
-                        navigator.serviceWorker.register('/sw.js').then(registration => {
-                            console.log('ServiceWorker registration successful with scope: ', registration.scope);
-                        }, err => {
-                            console.log('ServiceWorker registration failed: ', err);
-                        });
-                    });
-                }
-
-                // --- Baaqi ka code waisa hi hai jaisa pehle tha ---
                 try { firebase.appCheck().activate(firebaseConfig.reCAPTCHAKey, true); } catch (err) { console.error("App Check activation failed", err); }
                 firebase.auth().onAuthStateChanged(async (user) => {
                     if (user) {
