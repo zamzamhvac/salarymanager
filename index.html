@@ -168,6 +168,7 @@
             display: block;
         }
     </style>
+	<link rel="manifest" href="/manifest.json">
 </head>
 <body>
     <header class="header" id="appHeader" style="display:none;"><i class="material-icons menu-icon" onclick="toggleNav()">menu</i><h1>Pm&s Salary Manager</h1><div id="userInfo"><span id="userName"></span><button onclick="signOut()" class="btn btn-danger" style="padding: 5px 10px; font-size: 12px; margin-left: 8px;">Sign Out</button></div></header>
@@ -1590,5 +1591,18 @@ async function downloadPdfReport(type) {
             }, 5000);
         }
     </script>
+	<script>
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('/sw.js')
+                .then(registration => {
+                    console.log('Service Worker registered successfully:', registration);
+                })
+                .catch(error => {
+                    console.log('Service Worker registration failed:', error);
+                });
+        });
+    }
+</script>
 </body>
 </html>
