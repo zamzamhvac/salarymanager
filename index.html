@@ -168,6 +168,7 @@
             display: block;
         }
     </style>
+	<script src="capacitor.js"></script>
 </head>
 <body>
     <header class="header" id="appHeader" style="display:none;"><i class="material-icons menu-icon" onclick="toggleNav()">menu</i><h1>Pm&s Salary Manager</h1><div id="userInfo"><span id="userName"></span><button onclick="signOut()" class="btn btn-danger" style="padding: 5px 10px; font-size: 12px; margin-left: 8px;">Sign Out</button></div></header>
@@ -1457,42 +1458,32 @@ function hidePdfDownloadOptions() {
     document.getElementById('pdf-options-overlay').classList.remove('active');
 }
 
-// Asal PDF generation ka kaam yeh function karega
+// Asal PDF generation ka kaam yeh function karega (Capacitor Official Plugin Version)
 async function downloadPdfReport(type) {
     showAlert('PDF report ban rahi hai, please wait...', 'info');
     hidePdfDownloadOptions();
 
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
-
-    // Permissions check: Sirf viewable workers ka data liya jayega
+    
     const viewableWorkers = appData.permissions?.viewableWorkers || appData.workers;
     const userName = currentUser.displayName || "Salary Report";
+    const fileName = `${userName.replace(/\s/g, '_')}-${type}_report.pdf`;
 
     if (type === 'current') {
-        // Sirf current period ki report download karein
         const period = document.getElementById('payPeriod').value;
         const [startDate, endDate] = period.split(',');
         generatePdfForPeriod(doc, startDate, endDate, viewableWorkers, userName, `Salary Report: ${startDate} to ${endDate}`);
     } else if (type === 'all') {
-        // Agreement start se ab tak ki saari reports download karein
         const agreementStart = new Date(appData.configs.agreementStartDate + "T00:00:00");
-        
         const payPeriodSelector = document.getElementById('payPeriod');
-        const allPeriods = Array.from(payPeriodSelector.options)
-            .map(opt => opt.value)
-            .filter(val => val) 
-            .reverse(); 
-
+        const allPeriods = Array.from(payPeriodSelector.options).map(opt => opt.value).filter(val => val).reverse();
         let isFirstPage = true;
         for (const period of allPeriods) {
             const [startDate, endDate] = period.split(',');
             const periodStartDate = new Date(startDate + "T00:00:00");
-            
             if (periodStartDate >= agreementStart) {
-                if (!isFirstPage) {
-                    doc.addPage();
-                }
+                if (!isFirstPage) doc.addPage();
                 const periodTitle = `Salary Report: ${startDate} to ${endDate}`;
                 generatePdfForPeriod(doc, startDate, endDate, viewableWorkers, userName, periodTitle);
                 isFirstPage = false;
@@ -1500,8 +1491,31 @@ async function downloadPdfReport(type) {
         }
     }
 
-    doc.save(`${userName.replace(/\s/g, '_')}-${type}_report.pdf`);
-    showAlert('PDF report successfully download hogayi!', 'success');
+    // Ab file save karne ka naya, aakhri aur sahi tareeka
+    try {
+        // Check karein ke app Capacitor ke andar chal rahi hai ya browser mein
+        if (window.Capacitor && Capacitor.isNativePlatform()) {
+            // Agar app hai, to official Filesystem plugin istemal karein
+            const { Filesystem, Directory } = Capacitor.Plugins;
+            const pdf_b64 = doc.output('base64'); // PDF ko Base64 data mein convert karein
+
+            await Filesystem.writeFile({
+                path: fileName,
+                data: pdf_b64,
+                directory: Directory.Downloads, // Phone ke Downloads folder mein save hoga
+            });
+            showAlert('PDF report Downloads folder mein save hogayi!', 'success');
+        } else {
+            // Agar normal browser hai, to purana tareeka istemal karein
+            doc.save(fileName);
+            showAlert('PDF report successfully download hogayi!', 'success');
+        }
+    } catch (e) {
+        console.error('File save nahi ho saki', e);
+        // Browser ke liye fallback
+        doc.save(fileName);
+        showAlert('Error: PDF save nahi ho saki. Browser download shuru kar rahe hain.', 'error');
+    }
 }
 
 // Yeh helper function ek specific period ke liye PDF ka content banata hai
