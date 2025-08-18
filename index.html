@@ -7,7 +7,9 @@
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <!-- Firebase Libraries (already included) -->
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.22.2/firebase-app-compat.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.22.2/firebase-auth-compat.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.22.2/firebase-database-compat.min.js"></script>
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.22.2/firebase-app-check-compat.min.js"></script>
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
@@ -166,7 +168,6 @@
             display: block;
         }
     </style>
-	<link rel="manifest" href="/manifest.json">
 </head>
 <body>
     <header class="header" id="appHeader" style="display:none;"><i class="material-icons menu-icon" onclick="toggleNav()">menu</i><h1>Pm&s Salary Manager</h1><div id="userInfo"><span id="userName"></span><button onclick="signOut()" class="btn btn-danger" style="padding: 5px 10px; font-size: 12px; margin-left: 8px;">Sign Out</button></div></header>
@@ -391,7 +392,6 @@
                 if (!response.ok) throw new Error('Configuration fetch failed.');
                 const firebaseConfig = await response.json();
                 firebase.initializeApp(firebaseConfig);
-				firebase.database().enablePersistence(true);
                 try { firebase.appCheck().activate(firebaseConfig.reCAPTCHAKey, true); } catch (err) { console.error("App Check activation failed", err); }
                 firebase.auth().onAuthStateChanged(async (user) => {
                     if (user) {
@@ -1590,18 +1590,5 @@ async function downloadPdfReport(type) {
             }, 5000);
         }
     </script>
-	<script>
-    if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-            navigator.serviceWorker.register('/sw.js')
-                .then(registration => {
-                    console.log('Service Worker registered successfully:', registration);
-                })
-                .catch(error => {
-                    console.log('Service Worker registration failed:', error);
-                });
-        });
-    }
-</script>
 </body>
 </html>
