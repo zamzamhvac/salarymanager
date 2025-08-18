@@ -1,0 +1,21 @@
+{
+  "name": "Digital Munshi - Salary Manager",
+  "short_name": "Digital Munshi",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f5f5f5",
+  "theme_color": "#6200EE",
+  "description": "PM's Salary Manager - Your Payroll Assistant",
+  "icons": [
+    {
+      "src": "/images/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/images/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
