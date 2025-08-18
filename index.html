@@ -396,16 +396,6 @@
                 // Step 1: Hamesha sab se pehle Firebase ko 'connect' karein
                 firebase.initializeApp(firebaseConfig);
 
-                // Step 2: Connect hone ke BAAD, usay offline kaam karne ka bolein
-                // YEH SAHI AUR FINAL CODE HAI
-                firebase.database().setPersistenceEnabled(true)
-                .catch(function(error) {
-                    if (error.code == 'failed-precondition') {
-                        console.warn('Multiple tabs open, persistence can only be enabled in one tab at a a time.');
-                    } else if (error.code == 'unimplemented') {
-                        console.warn('The current browser does not support all of the features required to enable persistence.');
-                    }
-                });
 
                 // Step 3: PWA wala feature (Service Worker) register karein
                 if ('serviceWorker' in navigator) {
