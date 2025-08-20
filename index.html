@@ -617,21 +617,70 @@
             });
         }
         
-        async function saveDailyEntry() {
+                async function saveDailyEntry() {
             const date = document.getElementById('entryDate').value;
             const dayType = document.getElementById('dayType').value;
             const tonnage = parseFloat(document.getElementById('tonnage').value) || 0;
             const wagons = parseInt(document.getElementById('wagons').value) || 0;
             if (!date) { showAlert('Please select a date', 'error'); return; }
             let presentWorkers = (dayType === 'rest') ? [...appData.workers] : appData.workers.filter(w => document.getElementById(`worker_${w.replace(/\s/g, '_')}`).checked);
+            
             const ratesForThisDay = getRatesForDate(date);
             const earnings = calculateDayEarnings(date, dayType, tonnage, wagons, presentWorkers, ratesForThisDay);
+            
             if (!appData.salaries) appData.salaries = {};
             appData.salaries[date] = { date, type: dayType, tonnage, wagons, presentWorkers, earnings };
-            await saveUserData();
-            populateHistorySelector(); updateHistoryDisplay();
-            showAlert('Daily entry saved successfully!', 'success');
+
+            // Offline Logic Yahan Hai
+            if (navigator.onLine) {
+                // Agar internet hai, to direct save karo
+                await saveUserData();
+                showAlert('Daily entry saved and synced successfully!', 'success');
+            } else {
+                // Agar internet nahi hai, to local diary mein save karo
+                saveDataLocallyForSync(appData);
+                showAlert('Internet nahi hai. Entry offline save ho gayi hai.', 'info');
+            }
+            
+            populateHistorySelector(); 
+            updateHistoryDisplay();
         }
+		
+		        // NAYA FUNCTION 1: Data ko local diary (Local Storage) mein save karne ke liye
+        function saveDataLocallyForSync(dataToSave) {
+            // Hum poora 'appData' object save kar rahe hain taake sab kuch sync rahe
+            localStorage.setItem('pendingData', JSON.stringify(dataToSave));
+            console.log('Data offline save ho gaya.');
+        }
+
+        // NAYA FUNCTION 2: Pending data ko Firebase par bhejne ke liye
+        async function syncPendingData() {
+            const pendingDataString = localStorage.getItem('pendingData');
+            if (pendingDataString) {
+                console.log('Pending data mila, sync kar raha hoon...');
+                showAlert('Internet wapas aa gaya. Offline data sync ho raha hai...', 'info');
+                
+                const pendingAppData = JSON.parse(pendingDataString);
+                
+                // appData ko local data se update karo
+                appData = pendingAppData;
+
+                try {
+                    await saveUserData(); // saveUserData ab Firebase par bhej dega
+                    localStorage.removeItem('pendingData'); // Sync hone ke baad local diary se mita do
+                    console.log('Syncing kaamyaab!');
+                    showAlert('Offline data successfully sync ho gaya!', 'success');
+                    // UI ko refresh karo
+                    showPage(document.querySelector('.page.active').id);
+                } catch (error) {
+                    console.error('Syncing fail ho gayi:', error);
+                    showAlert('Offline data sync nahi ho saka. Dobara koshish karein.', 'error');
+                }
+            }
+        }
+
+        // NAYA FUNCTION 3: Internet connection ko check karte rehne ke liye
+        window.addEventListener('online', syncPendingData);
 
         function calculateDayEarnings(entryDate, dayType, tonnage, wagons, presentWorkers, rates) {
             const earnings = {}; const allWorkers = appData.workers;
@@ -1591,5 +1640,22 @@ async function downloadPdfReport(type) {
             }, 5000);
         }
     </script>
+	    <!-- YEH WALA SCRIPT AAPKO ADD KARNA HAI -->
+    <script>
+        // Check karo ke browser Service Worker ko support karta hai ya nahi
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(registration => {
+                        console.log('Service Worker register ho gaya hai: ', registration);
+                    })
+                    .catch(error => {
+                        console.log('Service Worker registration fail ho gayi: ', error);
+                    });
+            });
+        }
+    </script>
+</body>
+</html>
 </body>
 </html>
