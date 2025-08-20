@@ -1,0 +1,8 @@
+[{
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": "app.netlify.salarypro.twa",
+        "sha256_cert_fingerprints": ["40:EA:5E:09:C9:3E:D0:A0:F6:8E:73:1A:AC:20:AA:32:B8:0D:4D:5B:48:72:8C:17:5A:94:02:F8:1B:76:36:CC"]
+      }
+    }]
