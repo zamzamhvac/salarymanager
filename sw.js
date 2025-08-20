@@ -3,7 +3,7 @@
 const CACHE_NAME = 'digital-munshi-cache-v2'; // Humne version badal diya taake browser naya cache banaye
 const urlsToCache = [
   '/',
-  '/20 PWA .html',
+  '/index.html',
   '/manifest.json',
   'https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap',
   'https://fonts.googleapis.com/icon?family=Material+Icons',
