@@ -1,54 +1,71 @@
-// This is the service worker with the combined offline experience (Offline page + Offline copy of pages)
+// Import Workbox libraries
+importScripts('https://storage.googleapis.com/workbox-cdn/releases/6.4.1/workbox-sw.js');
 
-const CACHE = "pwabuilder-offline-page";
+const { registerRoute } = workbox.routing;
+const { CacheFirst, StaleWhileRevalidate, NetworkFirst } = workbox.strategies;
+const { CacheableResponsePlugin } = workbox.cacheable_response;
+const { ExpirationPlugin } = workbox.expiration;
 
-importScripts('https://storage.googleapis.com/workbox-cdn/releases/5.1.2/workbox-sw.js');
-
-// TODO: replace the following with the correct offline fallback page i.e.: const offlineFallbackPage = "offline.html";
-const offlineFallbackPage = "offline.html";
-
-self.addEventListener("message", (event) => {
-  if (event.data && event.data.type === "SKIP_WAITING") {
-    self.skipWaiting();
-  }
-});
-
-self.addEventListener('install', async (event) => {
-  event.waitUntil(
-    caches.open(CACHE)
-      .then((cache) => cache.add(offlineFallbackPage))
-  );
-});
-
-if (workbox.navigationPreload.isSupported()) {
-  workbox.navigationPreload.enable();
-}
-
-workbox.routing.registerRoute(
-  new RegExp('/*'),
-  new workbox.strategies.StaleWhileRevalidate({
-    cacheName: CACHE
+// 1. App Shell ko Cache Karein (Buniyadi Dhancha)
+// Yeh files app ko kholne ke liye zaroori hain
+registerRoute(
+  ({ request }) => request.mode === 'navigate',
+  new NetworkFirst({
+    cacheName: 'pages-cache',
+    plugins: [
+      new CacheableResponsePlugin({
+        statuses: [200],
+      }),
+    ],
   })
 );
 
-self.addEventListener('fetch', (event) => {
-  if (event.request.mode === 'navigate') {
-    event.respondWith((async () => {
-      try {
-        const preloadResp = await event.preloadResponse;
+// 2. CSS, JS, aur doosri static files ko Cache Karein
+// Is se app taizi se load hoti hai
+registerRoute(
+  ({ request }) =>
+    request.destination === 'style' ||
+    request.destination === 'script' ||
+    request.destination === 'worker',
+  new StaleWhileRevalidate({
+    cacheName: 'static-resources-cache',
+  })
+);
 
-        if (preloadResp) {
-          return preloadResp;
-        }
+// 3. Images ko Cache Karein
+registerRoute(
+    ({request}) => request.destination === 'image',
+    new CacheFirst({
+        cacheName: 'images-cache',
+        plugins: [
+            new ExpirationPlugin({
+                maxEntries: 20, // Sirf 20 images cache karein
+                maxAgeSeconds: 7 * 24 * 60 * 60, // 7 din ke liye
+            }),
+            new CacheableResponsePlugin({
+                statuses: [0, 200]
+            })
+        ]
+    })
+);
 
-        const networkResp = await fetch(event.request);
-        return networkResp;
-      } catch (error) {
+// 4. Zaroori Configuration File ko Cache Karein (Sab se Ahem Hissa)
+// Yeh aapki /.netlify/functions/get-config wali request ko handle karega
+registerRoute(
+  ({ url }) => url.pathname.includes('/.netlify/functions/get-config'),
+  new NetworkFirst({
+    cacheName: 'config-cache',
+    plugins: [
+      new CacheableResponsePlugin({
+        statuses: [200],
+      }),
+    ],
+  })
+);
 
-        const cache = await caches.open(CACHE);
-        const cachedResp = await cache.match(offlineFallbackPage);
-        return cachedResp;
-      }
-    })());
+// Yeh sunishchit karta hai ke naya service worker foran activate ho jaye
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
   }
 });
