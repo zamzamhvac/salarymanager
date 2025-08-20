@@ -1,59 +1,55 @@
-// Workbox (Google's Service Worker library) ko import karein
-importScripts('https://storage.googleapis.com/workbox-cdn/releases/6.4.1/workbox-sw.js');
+// Cache ka ek unique naam aur version
+const CACHE_NAME = 'salary-pro-cache-v2'; 
 
-// Agar Workbox load ho gaya hai to aage barhein
-if (workbox) {
-  console.log(`Yay! Workbox is loaded 🎉`);
+// Woh files jinke baghair app bilkul nahi chal sakti (App ka Jism)
+const APP_SHELL_URLS = [
+  '/index.html',
+  '/manifest.json'
+];
 
-  const { precacheAndRoute } = workbox.precaching;
-  const { registerRoute } = workbox.routing;
-  const { StaleWhileRevalidate, CacheFirst, NetworkFirst } = workbox.strategies;
-  const { CacheableResponsePlugin } = workbox.cacheable_response;
+// Event 1: Jab Service Worker install ho
+self.addEventListener('install', event => {
+  console.log('Service Worker: Install');
+  event.waitUntil(
+    caches.open(CACHE_NAME)
+      .then(cache => {
+        console.log('Service Worker: Caching App Shell');
+        return cache.addAll(APP_SHELL_URLS);
+      })
+  );
+});
 
-  // === PRE-CACHING (Sab se Zaroori Hissa) ===
-  // In files ko foran download karke save kar lo, jaise hi Service Worker install ho.
-  // Yeh aapka "App Shell" hai.
-  precacheAndRoute([
-    { url: '/', revision: null }, // Main page (index.html)
-    { url: '/manifest.json', revision: null }, // Manifest file
-    { url: '/offline.html', revision: null } // Safety-net offline page
-  ]);
-
-  // === RUNTIME CACHING STRATEGIES (Rules) ===
-
-  // Rule 1: Static Resources (CSS, JS) ke liye
-  // Pehle cache se do, background mein update karo (taake app taiz khule)
-  registerRoute(
-    ({ request }) => request.destination === 'style' || request.destination === 'script',
-    new StaleWhileRevalidate({
-      cacheName: 'static-resources-cache',
+// Event 2: Jab Service Worker activate ho
+self.addEventListener('activate', event => {
+  console.log('Service Worker: Activate');
+  // Purane version ke tamam caches ko delete kar do
+  event.waitUntil(
+    caches.keys().then(cacheNames => {
+      return Promise.all(
+        cacheNames.map(cache => {
+          if (cache !== CACHE_NAME) {
+            console.log('Service Worker: Clearing old cache');
+            return caches.delete(cache);
+          }
+        })
+      );
     })
   );
+});
 
-  // Rule 2: Images ke liye
-  // Pehle cache se do. Agar cache mein nahi hai to network se lao.
-  registerRoute(
-    ({ request }) => request.destination === 'image',
-    new CacheFirst({
-      cacheName: 'images-cache',
-      plugins: [
-        new CacheableResponsePlugin({
-          statuses: [0, 200],
-        }),
-      ],
-    })
+// Event 3: Jab app koi file maange (Fetch)
+self.addEventListener('fetch', event => {
+  event.respondWith(
+    // Pehle cache mein dhoondo
+    caches.match(event.request)
+      .then(response => {
+        // Agar cache mein mil jaye, to foran de do
+        if (response) {
+          return response;
+        }
+
+        // Agar cache mein na mile, to internet se lao
+        return fetch(event.request);
+      })
   );
-
-  // Rule 3: Zaroori Configuration File ke liye (Aapka masla)
-  // Pehle network se lane ki koshish karo (taake hamesha latest config ho).
-  // Agar network na ho, to pichli dafa save ki hui config cache se de do.
-  registerRoute(
-    ({ url }) => url.pathname.includes('/.netlify/functions/get-config'),
-    new NetworkFirst({
-      cacheName: 'config-cache',
-    })
-  );
-
-} else {
-  console.log(`Boo! Workbox didn't load 😬`);
-}
+});
