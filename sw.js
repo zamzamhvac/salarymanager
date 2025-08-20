@@ -1,6 +1,6 @@
-// sw.js (Service Worker) File
+// sw.js (Final aur Behtareen Code)
 
-const CACHE_NAME = 'digital-munshi-cache-v1';
+const CACHE_NAME = 'digital-munshi-cache-v2'; // Humne version badal diya taake browser naya cache banaye
 const urlsToCache = [
   '/',
   '/20 PWA .html',
@@ -15,10 +15,9 @@ const urlsToCache = [
   'https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js'
 ];
 
-// Event 1: Install - Jab Service Worker pehli baar install hota hai
+// Event 1: Install - Foran activate ho jao
 self.addEventListener('install', event => {
-  self.skipWaiting();
-  // Ruko jab tak cache mein saari files save na ho jayein
+  self.skipWaiting(); // Intezar mat karo
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => {
@@ -28,18 +27,27 @@ self.addEventListener('install', event => {
   );
 });
 
-// Event 2: Fetch - Jab bhi app koi file ya data mangti hai
+// Event 2: Activate - Purana cache saaf karo aur foran control le lo
+self.addEventListener('activate', event => {
+  event.waitUntil(
+    caches.keys().then(cacheNames => {
+      return Promise.all(
+        cacheNames.map(cache => {
+          if (cache !== CACHE_NAME) {
+            return caches.delete(cache); // Purane saare cache delete kar do
+          }
+        })
+      );
+    }).then(() => self.clients.claim()) // Foran saare open tabs ka control le lo
+  );
+});
+
+// Event 3: Fetch - File ko cache se do ya internet se
 self.addEventListener('fetch', event => {
   event.respondWith(
     caches.match(event.request)
       .then(response => {
-        // Agar file cache mein mil jati hai, to wahan se de do
-        if (response) {
-          return response;
-        }
-        // Agar nahi milti, to internet se fetch karo
-        return fetch(event.request);
-      }
-    )
+        return response || fetch(event.request); // Agar cache mein hai to wahan se do, warna internet se lao
+      })
   );
 });
