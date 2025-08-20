@@ -1,71 +1,59 @@
-// Import Workbox libraries
+// Workbox (Google's Service Worker library) ko import karein
 importScripts('https://storage.googleapis.com/workbox-cdn/releases/6.4.1/workbox-sw.js');
 
-const { registerRoute } = workbox.routing;
-const { CacheFirst, StaleWhileRevalidate, NetworkFirst } = workbox.strategies;
-const { CacheableResponsePlugin } = workbox.cacheable_response;
-const { ExpirationPlugin } = workbox.expiration;
+// Agar Workbox load ho gaya hai to aage barhein
+if (workbox) {
+  console.log(`Yay! Workbox is loaded 🎉`);
 
-// 1. App Shell ko Cache Karein (Buniyadi Dhancha)
-// Yeh files app ko kholne ke liye zaroori hain
-registerRoute(
-  ({ request }) => request.mode === 'navigate',
-  new NetworkFirst({
-    cacheName: 'pages-cache',
-    plugins: [
-      new CacheableResponsePlugin({
-        statuses: [200],
-      }),
-    ],
-  })
-);
+  const { precacheAndRoute } = workbox.precaching;
+  const { registerRoute } = workbox.routing;
+  const { StaleWhileRevalidate, CacheFirst, NetworkFirst } = workbox.strategies;
+  const { CacheableResponsePlugin } = workbox.cacheable_response;
 
-// 2. CSS, JS, aur doosri static files ko Cache Karein
-// Is se app taizi se load hoti hai
-registerRoute(
-  ({ request }) =>
-    request.destination === 'style' ||
-    request.destination === 'script' ||
-    request.destination === 'worker',
-  new StaleWhileRevalidate({
-    cacheName: 'static-resources-cache',
-  })
-);
+  // === PRE-CACHING (Sab se Zaroori Hissa) ===
+  // In files ko foran download karke save kar lo, jaise hi Service Worker install ho.
+  // Yeh aapka "App Shell" hai.
+  precacheAndRoute([
+    { url: '/', revision: null }, // Main page (index.html)
+    { url: '/manifest.json', revision: null }, // Manifest file
+    { url: '/offline.html', revision: null } // Safety-net offline page
+  ]);
 
-// 3. Images ko Cache Karein
-registerRoute(
-    ({request}) => request.destination === 'image',
-    new CacheFirst({
-        cacheName: 'images-cache',
-        plugins: [
-            new ExpirationPlugin({
-                maxEntries: 20, // Sirf 20 images cache karein
-                maxAgeSeconds: 7 * 24 * 60 * 60, // 7 din ke liye
-            }),
-            new CacheableResponsePlugin({
-                statuses: [0, 200]
-            })
-        ]
+  // === RUNTIME CACHING STRATEGIES (Rules) ===
+
+  // Rule 1: Static Resources (CSS, JS) ke liye
+  // Pehle cache se do, background mein update karo (taake app taiz khule)
+  registerRoute(
+    ({ request }) => request.destination === 'style' || request.destination === 'script',
+    new StaleWhileRevalidate({
+      cacheName: 'static-resources-cache',
     })
-);
+  );
 
-// 4. Zaroori Configuration File ko Cache Karein (Sab se Ahem Hissa)
-// Yeh aapki /.netlify/functions/get-config wali request ko handle karega
-registerRoute(
-  ({ url }) => url.pathname.includes('/.netlify/functions/get-config'),
-  new NetworkFirst({
-    cacheName: 'config-cache',
-    plugins: [
-      new CacheableResponsePlugin({
-        statuses: [200],
-      }),
-    ],
-  })
-);
+  // Rule 2: Images ke liye
+  // Pehle cache se do. Agar cache mein nahi hai to network se lao.
+  registerRoute(
+    ({ request }) => request.destination === 'image',
+    new CacheFirst({
+      cacheName: 'images-cache',
+      plugins: [
+        new CacheableResponsePlugin({
+          statuses: [0, 200],
+        }),
+      ],
+    })
+  );
 
-// Yeh sunishchit karta hai ke naya service worker foran activate ho jaye
-self.addEventListener('message', (event) => {
-  if (event.data && event.data.type === 'SKIP_WAITING') {
-    self.skipWaiting();
-  }
-});
+  // Rule 3: Zaroori Configuration File ke liye (Aapka masla)
+  // Pehle network se lane ki koshish karo (taake hamesha latest config ho).
+  // Agar network na ho, to pichli dafa save ki hui config cache se de do.
+  registerRoute(
+    ({ url }) => url.pathname.includes('/.netlify/functions/get-config'),
+    new NetworkFirst({
+      cacheName: 'config-cache',
+    })
+  );
+
+} else {
+  console.log(`Boo! Workbox didn't load 😬`);
+}
