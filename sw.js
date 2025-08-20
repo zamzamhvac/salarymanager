@@ -17,6 +17,7 @@ const urlsToCache = [
 
 // Event 1: Install - Jab Service Worker pehli baar install hota hai
 self.addEventListener('install', event => {
+  self.skipWaiting();
   // Ruko jab tak cache mein saari files save na ho jayein
   event.waitUntil(
     caches.open(CACHE_NAME)
